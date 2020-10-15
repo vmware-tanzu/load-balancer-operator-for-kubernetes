@@ -10,6 +10,7 @@ VC_BUILD="$3"
 TESTBED="$4"
 NUM_ESX="$5"
 STATIC_IP_ENABLED="$6"
+AVI_CONTROLLER_OVF_URL="$7"
 
 # Use sc by default for Nimbus Pod choice
 [[ -z "${NIMBUS_LOC:-}" ]] && NIMBUS_LOC=sc
@@ -31,4 +32,5 @@ USER="${NIMBUS_USER}" NIMBUS_LOCATION=${NIMBUS_LOC} /mts/git/bin/nimbus-testbedd
   --vcenterBuild "${VC_BUILD}" \
   --esx-count "${NUM_ESX}" \
   --arg "static_ip_enabled:${STATIC_IP_ENABLED}" \
+  --arg "avi_controller_ovf_url:${AVI_CONTROLLER_OVF_URL}" \
   --resultsDir "${testbeddir}"

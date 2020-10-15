@@ -3,8 +3,23 @@ require_relative './lib/config.rb'
 config = Config.new
 config.parse
 
+avi_controller_ovf_url = ""
+
 $testbed = proc do |*args|
   static_ip_enabled = args.include?('static_ip_enabled:true')
+  args.each do |item|
+    parts = item.split(":")
+    key = parts.first
+    value = parts[1..-1].join(":")
+    case key
+    when 'avi_controller_ovf_url'
+      avi_controller_ovf_url = value
+    end
+  end
+
+  $stderr.puts
+  $stderr.puts "Args:"
+  $stderr.puts "  avi_controller_ovf_url: #{avi_controller_ovf_url}"
 
   default = {
     "name" => "tkg-vsan-datastore",
@@ -23,6 +38,18 @@ $testbed = proc do |*args|
         "freeLocalLuns" => 1,
         "ssd" => [ 100 * GB ],
       }
+    end,
+
+    'ovfVm' => [].tap do |vms|
+      vms.push(
+        'name' => 'avi-controller',
+        'ovfUrl' => avi_controller_ovf_url,
+        'nics' => 2,
+        'cpus' => 4,
+        'memory' => 8096,
+        'nicType' => ['vmxnet3', 'vmxnet3', 'vmxnet3', 'vmxnet3', 'vmxnet3'],
+        'network' => ['force_public', 'public', 'force_public', 'force_public', 'force_public']
+      )
     end,
 
     "vcs" => [

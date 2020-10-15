@@ -3,8 +3,23 @@ require_relative './lib/config.rb'
 config = Config.new
 config.parse
 
+avi_controller_ovf_url = ""
+
 $testbed = proc do |*args|
   static_ip_enabled = args.include?('static_ip_enabled:true')
+  args.each do |item|
+    parts = item.split(":")
+    key = parts.first
+    value = parts[1..-1].join(":")
+    case key
+    when 'avi_controller_ovf_url'
+      avi_controller_ovf_url = value
+    end
+  end
+
+  $stderr.puts
+  $stderr.puts "Args:"
+  $stderr.puts "  avi_controller_ovf_url: #{avi_controller_ovf_url}"
 
   default = {
     "name" => "tkg-iscsi-datastore",
@@ -40,7 +55,7 @@ $testbed = proc do |*args|
     'ovfVm' => [].tap do |vms|
       vms.push(
         'name' => 'avi-controller',
-        'ovfUrl' => 'http://sc-dbc1105.eng.vmware.com/fangyuanl/images/controller-20.1.2-9171.ova',
+        'ovfUrl' => avi_controller_ovf_url,
         'nics' => 2,
         'cpus' => 4,
         'memory' => 8096,

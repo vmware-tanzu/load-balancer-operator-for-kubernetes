@@ -13,9 +13,10 @@ pipeline {
     parameters {
        string(description: '[Optional] esx build, default to 6.7 u3', name: 'ESX_BUILD', defaultValue: 'ob-14320389')
        string(description: '[Optional] vc build, default to 6.7 u3', name: 'VC_BUILD', defaultValue: 'ob-14367737')
-       string(description: '[Optional] the testbed type (localdatastore/nfs/iscsi/vsan)', name: 'TESTBED', defaultValue: 'iscsi')
+       string(description: '[Optional] the testbed type (iscsi/vsan)', name: 'TESTBED', defaultValue: 'iscsi')
        string(description: '[Optional] number of ESX in testbed', name: 'NUMESX', defaultValue: '1')
        string(description: '[Optional] Static IP Service', name: 'STATIC_IP_ENABLED', defaultValue: 'true')
+       string(description: '[Optional] AVI Controller OVF URL', name: 'AVI_CONTROLLER_OVF_URL', defaultValue: 'http://sc-dbc1105.eng.vmware.com/fangyuanl/images/controller-20.1.2-9171.ovf')
        choice(
            name: 'NIMBUS_LOC',
            choices: ['sc,wdc', 'wdc', 'sc'],
@@ -35,7 +36,7 @@ pipeline {
                     }
                     sh './install_jq.sh'
 
-                    sh "./deploy_vc.sh ${userid} ${ESX_BUILD} ${VC_BUILD} ${TESTBED} ${NUMESX} ${STATIC_IP_ENABLED}"
+                    sh "./deploy_vc.sh ${userid} ${ESX_BUILD} ${VC_BUILD} ${TESTBED} ${NUMESX} ${STATIC_IP_ENABLED} ${AVI_CONTROLLER_OVF_URL}"
 
                     sh "./get_vc_ip.sh ${STATIC_IP_ENABLED}"
 
