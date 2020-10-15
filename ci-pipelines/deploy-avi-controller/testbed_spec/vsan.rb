@@ -25,6 +25,13 @@ $testbed = proc do |*args|
     "name" => "tkg-vsan-datastore",
     "version" => 3,
 
+    "network" => [
+       {
+         "name" => "net.0",
+         "enableDhcp" => true
+       }
+    ],
+
     "esx" => (0...config.num_hosts).map do | idx |
       {
         "name" => "esx.#{idx}",
@@ -47,8 +54,8 @@ $testbed = proc do |*args|
         'nics' => 2,
         'cpus' => 4,
         'memory' => 8096,
-        'nicType' => ['vmxnet3', 'vmxnet3', 'vmxnet3', 'vmxnet3', 'vmxnet3'],
-        'network' => ['force_public', 'public', 'force_public', 'force_public', 'force_public']
+        'nicType' => ['vmxnet3', 'vmxnet3'],
+        'network' => ['force_public', 'nsx::net.0']
       )
     end,
 

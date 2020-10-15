@@ -25,7 +25,7 @@ mkdir -p "${testbeddir}"
 RAND=$(openssl rand -hex 6)
 
 cat testbed_spec/"${TESTBED}.rb"
-USER="${NIMBUS_USER}" NIMBUS_LOCATION=${NIMBUS_LOC} /mts/git/bin/nimbus-testbeddeploy \
+NIMBUS_CONTEXTS=nsx USER="${NIMBUS_USER}" NIMBUS_LOCATION=${NIMBUS_LOC} /mts/git/bin/nimbus-testbeddeploy \
   --testbedSpecRubyFile testbed_spec/"${TESTBED}.rb" \
   --runName "tkg-networking-avi-${RAND}" \
   --esxBuild "${ESX_BUILD}" \
