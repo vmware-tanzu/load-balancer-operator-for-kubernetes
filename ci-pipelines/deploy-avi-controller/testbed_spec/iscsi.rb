@@ -36,8 +36,8 @@ $testbed = proc do |*args|
       {
       "name" => "esx.#{idx}",
       "vc" => "vc.0",
-      "dc" => "dc0",
-      "clusterName" => "cluster0",
+      "dc" => "Datancenter",
+      "clusterName" => "cluster",
       "style" => "fullInstall",
       "cpus" => 16,
       "memory" => 64 * 1024,
@@ -75,11 +75,11 @@ $testbed = proc do |*args|
       {
         "name" => "vc.0",
         "type" => "vcva",
-        "dcName" => ["dc0"],
+        "dcName" => ["Datacenter"],
         "clusters" => [
           {
-            "name" => "cluster0",
-            "dc" => "dc0",
+            "name" => "cluster",
+            "dc" => "Datacenter",
             "enableDrs" => true,
             "enableHA" => true,
           },
