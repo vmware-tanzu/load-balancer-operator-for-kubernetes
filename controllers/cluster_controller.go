@@ -83,12 +83,3 @@ func (r *ClusterReconciler) reconcileNormal(
 
 	return kerrors.NewAggregate(errs)
 }
-
-// reconcileCRS creates the CRS for AKO deployment in workload clusters
-func (r *ClusterReconciler) reconcileCRS(
-	ctx context.Context,
-	log logr.Logger,
-	obj *clusterv1alpha3.Cluster,
-) error {
-	return nil
-}
