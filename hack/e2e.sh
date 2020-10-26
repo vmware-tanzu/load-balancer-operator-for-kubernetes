@@ -63,11 +63,7 @@ EOF
 
 # If KIND_MINIMUM_VERSION is empty or unset, use "tkg-lcp"
 KIND_MANAGEMENT_CLUSTER="${KIND_MANAGEMENT_CLUSTER:-tkg-lcp}"
-CAPI_VERSION="v0.3.7"
-# The capd manager docker image name and tag. These have to be consistent with
-# what're used in capd default kustomize manifest.
-CAPD_IMAGE="andrewsykim/capd-manager:v0.3.7"
-CAPD_DEFAULT_IMAGE="gcr.io/k8s-staging-cluster-api/capd-manager:dev"
+CAPI_VERSION="v0.3.10"
 # Runtime setup
 # By default do not skip anything.
 SKIP_CAPD_IMAGE_LOAD="${SKIP_CAPD_IMAGE_LOAD:-}"
@@ -75,6 +71,11 @@ SKIP_CLEANUP_CAPD_CLUSTERS="${SKIP_CLEANUP_CAPD_CLUSTERS:-}"
 SKIP_CLEANUP_MGMT_CLUSTER="${SKIP_CLEANUP_MGMT_CLUSTER:-}"
 E2E_UP=""
 E2E_DOWN=""
+
+# The capd manager docker image name and tag. These have to be consistent with
+# what're used in capd default kustomize manifest.
+CAPD_DEFAULT_IMAGE="gcr.io/k8s-staging-cluster-api/capd-manager:dev"
+CAPD_IMAGE="gcr.io/k8s-staging-cluster-api/capd-manager:${CAPI_VERSION}"
 
 ROOT_DIR="$PWD"
 SCRIPTS_DIR="${ROOT_DIR}/hack"
@@ -164,7 +165,7 @@ spec:
         args:
         - --metrics-addr=127.0.0.1:8080
         - --webhook-port=9443
-        - --feature-gates=ClusterResourceSet=true
+        - --feature-gates=ClusterResourceSet=true,MachinePool=false
 EOF
     )"
 
@@ -178,7 +179,38 @@ spec:
       - name: manager
         args:
         - --metrics-addr=127.0.0.1:8080
-        - --feature-gates=ClusterResourceSet=true
+        - --enable-leader-election
+        - --feature-gates=ClusterResourceSet=true,MachinePool=false
+EOF
+    )"
+
+  kubectl_mgc -n capi-webhook-system patch deployment capi-kubeadm-bootstrap-controller-manager \
+    --type=strategic --patch="$(
+      cat <<EOF
+spec:
+  template:
+    spec:
+      containers:
+      - name: manager
+        args:
+        - --metrics-addr=127.0.0.1:8080
+        - --webhook-port=9443
+        - --feature-gates=ClusterResourceSet=true,MachinePool=false
+EOF
+    )"
+
+  kubectl_mgc -n capi-kubeadm-bootstrap-system patch deployment capi-kubeadm-bootstrap-controller-manager \
+    --type=strategic --patch="$(
+      cat <<EOF
+spec:
+  template:
+    spec:
+      containers:
+      - name: manager
+        args:
+        - --metrics-addr=127.0.0.1:8080
+        - --enable-leader-election
+        - --feature-gates=ClusterResourceSet=true,MachinePool=false
 EOF
     )"
 
@@ -190,6 +222,22 @@ EOF
   kustomize build "https://github.com/kubernetes-sigs/cluster-api/test/infrastructure/docker/config/?ref=${CAPI_VERSION}" |
     sed 's~'"${CAPD_DEFAULT_IMAGE}"'~'"${CAPD_IMAGE}"'~g' |
     kubectl_mgc apply -f -
+
+  kubectl_mgc -n capd-system patch deployment capd-controller-manager \
+    --type=strategic --patch="$(
+      cat <<EOF
+spec:
+  template:
+    spec:
+      containers:
+      - name: manager
+        args:
+        - -v=4
+        - --metrics-addr=127.0.0.1:8080
+        - --feature-gates=ClusterResourceSet=true,MachinePool=false
+EOF
+    )"
+
   kubectl_mgc wait --for=condition=Available --timeout=300s deployment/capd-controller-manager -n capd-system
 
   local clusters
@@ -197,7 +245,7 @@ EOF
 
   for cluster in "${clusters[@]}"; do
     create_cluster "${cluster}"
-    kubectl label cluster "${cluster}" cluster-role.tkg.tanzu.vmware.com/workload= --overwrite
+    kubectl_mgc label cluster "${cluster}" cluster-role.tkg.tanzu.vmware.com/workload= --overwrite
   done
 
   kind get kubeconfig --name "${KIND_MANAGEMENT_CLUSTER}" > "${ROOT_DIR}/${KIND_MANAGEMENT_CLUSTER}.kubeconfig"
@@ -233,8 +281,10 @@ function e2e_down() {
       # ignore status
       kind delete cluster --name "${cluster}" ||
         echo "cluster ${cluster} deleted."
-      rm -fv "${ROOT_DIR}/${cluster}".kubeconfig* 2>&1 ||
-        echo "${ROOT_DIR}/${cluster}.kubeconfig* deleted"
+      docker rm -f "${cluster}-lb" ||
+        echo "cluster ${cluster} lb deleted."
+      rm -fv "${ROOT_DIR}/${cluster}".kubeconfig 2>&1 ||
+        echo "${ROOT_DIR}/${cluster}.kubeconfig deleted"
     done
   fi
   # clean up kind cluster
@@ -259,13 +309,13 @@ function create_cluster() {
   if ! kind get clusters 2>/dev/null | grep -q "${clustername}"; then
     cat ${simple_cluster_yaml} |
       sed -e 's~my-cluster~'"${clustername}"'~g' \
-	-e 's~controlplane-0~'"${clustername}"'-controlplane-0~g' \
-	-e 's~worker-0~'"${clustername}"'-worker-0~g' |
+       -e 's~controlplane-0~'"${clustername}"'-controlplane-0~g' \
+       -e 's~worker-0~'"${clustername}"'-worker-0~g' |
       kubectl_mgc apply -f -
-    while ! kubectl get secret "${clustername}"-kubeconfig; do
-      sleep 5s
-    done
   fi
+  while ! kubectl_mgc get secret "${clustername}"-kubeconfig; do
+	  sleep 5s
+  done
 
   kubectl_mgc get secret "${clustername}"-kubeconfig -o json | jq -cr '.data.value' | base64d >"${kubeconfig_path}"
 
@@ -315,9 +365,9 @@ EOF
 
   # Wait until every machine has ExternalIP in status
   for machine in $(kubectl_mgc get machine -l "cluster.x-k8s.io/cluster-name=${clustername}" -o json | jq -cr '.items[].metadata.name'); do
-    while [[ -z $(kubectl get machine ${machine} -o json -o=jsonpath='{.status.addresses[?(@.type=="ExternalIP")].address}') ]]; do
-      sleep 5s;
-    done
+	  while [[ -z $(kubectl_mgc get machine "${machine}" -o json -o=jsonpath='{.status.addresses[?(@.type=="ExternalIP")].address}') ]]; do
+		  sleep 5s;
+	  done
   done
 }
 
@@ -326,7 +376,7 @@ EOF
 ################################################################################
 
 # Parse the command-line arguments.
-while getopts ":hc:ud" opt; do
+while getopts ":hud" opt; do
   case ${opt} in
     h)
       error "${usage}" && exit 1
