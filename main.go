@@ -67,8 +67,17 @@ func setupReconcilers(mgr ctrl.Manager) {
 	if err := (&controllers.ClusterReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Cluster"),
+		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Cluster")
+		os.Exit(1)
+	}
+	if err := (&controllers.MachineReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("Machine"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Machine")
 		os.Exit(1)
 	}
 }

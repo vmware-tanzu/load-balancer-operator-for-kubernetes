@@ -42,6 +42,8 @@ FLAGS
 Globals
   KIND_MANAGEMENT_CLUSTER
         name of the kind management cluster. default: tkg-lcp.
+  WORKLOAD_CLUSTERS
+        names of the workload clusters, separated by space. default: workload-cls
   SKIP_CAPD_IMAGE_LOAD
         skip loading CAPD manager docker image.
   SKIP_CLEANUP_CAPD_CLUSTERS

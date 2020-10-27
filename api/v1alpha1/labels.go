@@ -16,4 +16,7 @@ limitations under the License.
 
 package v1alpha1
 
-const ClusterFinalizer = "ako-operator.network.tanzu.vmware.com"
+const (
+	ClusterFinalizer = "ako-operator.network.tkg.tanzu.vmware.com"
+	AviClusterLabel  = "cluster-service.network.tkg.tanzu.vmware.com/avi"
+)
