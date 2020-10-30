@@ -7,6 +7,7 @@ import (
 	"flag"
 	"os"
 
+	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
@@ -30,6 +31,7 @@ func init() {
 	log.SetLogger(zap.New())
 	clientgoscheme.AddToScheme(scheme)
 	clusterv1.AddToScheme(scheme)
+	akoov1alpha1.AddToScheme(scheme)
 }
 
 func main() {
@@ -78,6 +80,14 @@ func setupReconcilers(mgr ctrl.Manager) {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Machine")
+		os.Exit(1)
+	}
+	if err := (&controllers.AKODeploymentConfigReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("AKODeploymentConfig"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "AKODeploymentConfig")
 		os.Exit(1)
 	}
 }

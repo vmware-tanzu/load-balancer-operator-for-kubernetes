@@ -43,6 +43,15 @@ for you.
 
 ## Run AKOO against the mangement cluster
 ```bash
+# Set current kubectl context to the local management cluster
+kubectl config use-context kind-tkg-lcp
+
+# Install AKODeploymentConfig CR
+make install
+
+# Build the AKO Operator binary
 go build -o bin/manager main.go
-./bin/manager -kubeconfig tkg-lcp.kubeconfig
+
+# Run AKO Operator in the local management cluster
+./bin/manager
 ```

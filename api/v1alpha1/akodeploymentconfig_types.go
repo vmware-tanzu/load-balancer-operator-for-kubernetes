@@ -18,24 +18,132 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
-// AKODeploymentConfigSpec defines the desired state of AKODeploymentConfig
+// AKODeploymentConfigSpec defines the desired state of an AKODeploymentConfig
+// AKODeploymentConfig describes the shared configurations for AKO deployments across a set
+// of Clusters.
 type AKODeploymentConfigSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// CloudName speficies the AVI Cloud AKO will be deployed with
+	CloudName string `json:"cloudName"`
 
-	// Foo is an example field of AKODeploymentConfig. Edit AKODeploymentConfig_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// Controller is the AVI Controller endpoint to which AKO talks to
+	// provision Load Balancer resources
+	// The format is [scheme://]address[:port]
+	// * scheme                     http or https, defaults to https if not
+	//                              specified
+	// * address                    IP address of the AVI Controller
+	//                              specified
+	// * port                       if not specified, use default port for
+	//                              the corresponding scheme
+	Controller string `json:"controller"`
+
+	// Label selector for Clusters. The Clusters that are
+	// selected by this will be the ones affected by this
+	// AKODeploymentConfig.
+	// It must match the Cluster labels. This field is immutable.
+	ClusterSelector metav1.LabelSelector `json:"clusterSelector"`
+
+	// WorkloadCredentialRef points to a Secret resource which includes the username
+	// and password to access and configure the Avi Controller.
+	//
+	// * username                   Username used with basic authentication for
+	//                              the Avi REST API
+	// * password                   Password used with basic authentication for
+	//                              the Avi REST API
+	//
+	// This field is optional. When it's not specified, username/password
+	// will be automatically generated for each Cluster and Tenant needs to
+	// be non-nil in this case.
+	// +optional
+	WorkloadCredentialRef SecretReference `json:"workloadCredentialRef,omitempty"`
+
+	// AdminCredentialRef points to a Secret resource which includes the username
+	// and password to access and configure the Avi Controller.
+	//
+	// * username                   Username used with basic authentication for
+	//                              the Avi REST API
+	// * password                   Password used with basic authentication for
+	//                              the Avi REST API
+	//
+	// This credential needs to be bound with admin tenant and will be used
+	// by AKO Operator to automate configurations and operations.
+	// +optional
+	AdminCredentialRef SecretReference `json:"adminCredentialRef"`
+	// CertificateAuthorityRef points to a Secret resource that includes the
+	// AVI Controller's CA
+	//
+	// * certificateAuthorityData   PEM-encoded certificate authority
+	//                              certificates
+	//
+	CertificateAuthorityRef SecretReference `json:"certificateAuthorityRef"`
+
+	// The AVI tenant for the current AKODeploymentConfig
+	// This field is optional. When this field is not provided,
+	// CredentialRef must be non-nil.
+	// +optional
+	Tenant AVITenant `json:"tenant,omitempty"`
+
+	// DataNetworks describes the Data Networks the AKO will be deployed
+	// with.
+	// This field is immutable.
+	DataNetworks []DataNetwork `json:"dataNetworks"`
+
+	// SpecRef points to a Secret that contains the deployment spec for AKO
+	//
+	// * akoDeployment              The deployment spec for AKO, which
+	//                              includes but is not limited to the
+	//                              ServiceAccount, RoleBinding, ConfigMap,
+	//                              StatefulSet
+	//
+	SpecRef SecretReference `json:"specRef"`
+}
+
+// AVITenant describes settings for an AVI Tenant object
+type AVITenant struct {
+	// Context is the type of AVI tenant context. Defaults to Provider. This field is immutable.
+	// +kubebuilder:validation:Enum=Provider;Tenant
+	Context string `json:"context,omitempty"`
+
+	// Name is the name of the tenant. This field is immutable.
+	Name string `json:"name"`
+}
+
+// DataNetwork describes one AVI Data Network
+type DataNetwork struct {
+	Name    string   `json:"name"`
+	CIDR    string   `json:"cidr"`
+	IPPools []IPPool `json:"ipPools"`
+}
+
+// IPPool defines a contiguous range of IP Addresses
+type IPPool struct {
+	// Address represents the starting IP address of the pool.
+	Address string `json:"address"`
+	// Count represents the number of IP addresses in the pool.
+	Count int64 `json:"count"`
+}
+
+// SecretReference references a Kind Secret object in the same kubernetes
+// cluster
+type SecretReference struct {
+	// Name is the name of resource being referenced.
+	Name string `json:"name"`
+	// Namespace of the resource being referenced.
+	Namespace string `json:"namespace"`
 }
 
 // AKODeploymentConfigStatus defines the observed state of AKODeploymentConfig
 type AKODeploymentConfigStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// ObservedGeneration reflects the generation of the most recently
+	// observed AKODeploymentConfig.
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// Conditions defines current state of the AKODeploymentConfig.
+	// +optional
+	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
