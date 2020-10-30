@@ -1,4 +1,4 @@
-module gitlab.eng.vmware.com/fangyuanl/akoo
+module gitlab.eng.vmware.com/core-build/ako-operator
 
 go 1.13
 
@@ -14,4 +14,3 @@ require (
 	sigs.k8s.io/cluster-api v0.3.10
 	sigs.k8s.io/controller-runtime v0.5.11
 )
-

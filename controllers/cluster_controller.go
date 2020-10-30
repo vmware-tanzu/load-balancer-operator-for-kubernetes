@@ -8,11 +8,11 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
-	akoov1alpha1 "gitlab.eng.vmware.com/fangyuanl/akoo/api/v1alpha1"
+	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	controllerruntime "gitlab.eng.vmware.com/fangyuanl/akoo/pkg/controller-runtime"
-	"gitlab.eng.vmware.com/fangyuanl/akoo/pkg/controller-runtime/patch"
+	controllerruntime "gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime"
+	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime/patch"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"

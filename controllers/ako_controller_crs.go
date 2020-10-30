@@ -12,7 +12,7 @@ import (
 	"text/template"
 
 	"github.com/go-logr/logr"
-	akoov1alpha1 "gitlab.eng.vmware.com/fangyuanl/akoo/api/v1alpha1"
+	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

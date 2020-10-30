@@ -18,7 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"gitlab.eng.vmware.com/fangyuanl/akoo/pkg/controller-runtime/patch"
+	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime/patch"
 )
 
 var _ = Describe("CreateOrPatch", func() {

@@ -13,7 +13,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	"gitlab.eng.vmware.com/fangyuanl/akoo/controllers"
+	"gitlab.eng.vmware.com/core-build/ako-operator/controllers"
 
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
