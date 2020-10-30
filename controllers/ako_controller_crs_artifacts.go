@@ -1,7 +1,7 @@
 package controllers
 
 var (
-  akoDeploymentYaml = `
+	akoDeploymentYaml = `
 ---
 apiVersion: v1
 kind: ServiceAccount

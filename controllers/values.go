@@ -8,13 +8,13 @@ import (
 )
 
 type Values struct {
-	Name         string
-	NameOverride string
-	Namespace    string
-	AppVersion   string
-	ChartName    string
+	Name                string
+	NameOverride        string
+	Namespace           string
+	AppVersion          string
+	ChartName           string
 	PsppolicyApiVersion string
-	IsClusterService bool
+	IsClusterService    bool
 
 	ReplicaCount       int
 	Image              Image
