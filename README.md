@@ -55,3 +55,8 @@ go build -o bin/manager main.go
 # Run AKO Operator in the local management cluster
 ./bin/manager
 ```
+
+## Run controller tests
+```bash
+make integration-test
+```

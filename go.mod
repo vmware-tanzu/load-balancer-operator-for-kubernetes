@@ -8,9 +8,11 @@ require (
 	github.com/onsi/ginkgo v1.12.1
 	github.com/onsi/gomega v1.10.1
 	github.com/pkg/errors v0.9.1
+	github.com/satori/go.uuid v1.2.0
 	k8s.io/api v0.17.9
 	k8s.io/apimachinery v0.17.9
 	k8s.io/client-go v0.17.9
+	k8s.io/klog v1.0.0
 	sigs.k8s.io/cluster-api v0.3.10
 	sigs.k8s.io/controller-runtime v0.5.11
 )

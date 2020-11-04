@@ -15,7 +15,7 @@ TOOLS_DIR := hack/tools
 TOOLS_BIN_DIR := $(TOOLS_DIR)/bin
 BIN_DIR := bin
 YTT := $(abspath $(TOOLS_BIN_DIR)/ytt)
-
+GINKGO := $(abspath $(TOOLS_BIN_DIR)/ginkgo)
 
 all: manager
 
@@ -85,8 +85,15 @@ else
 CONTROLLER_GEN=$(shell which controller-gen)
 endif
 
+.PHONY: integration-test
+integration-test: $(GINKGO)
+	$(GINKGO) -v controllers -- -enable-integration-tests
+
 .PHONY: ytt
 ytt: $(YTT)
 
 $(YTT): $(TOOLS_DIR)/go.mod # Build ytt from tools folder.
 	cd $(TOOLS_DIR); go build -tags=tools -o $(BIN_DIR)/ytt github.com/k14s/ytt/cmd/ytt
+
+$(GINKGO): $(TOOLS_DIR)/go.mod # Build ginkgo from tools folder.
+	cd $(TOOLS_DIR); go build -tags=tools -o $(BIN_DIR)/ginkgo github.com/onsi/ginkgo/ginkgo

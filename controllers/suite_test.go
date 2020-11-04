@@ -14,68 +14,62 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package controllers_test
 
 import (
 	"path/filepath"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"gitlab.eng.vmware.com/core-build/ako-operator/controllers"
+	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/test/builder"
+	testutil "gitlab.eng.vmware.com/core-build/ako-operator/pkg/test/util"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	ctrlmgr "sigs.k8s.io/controller-runtime/pkg/manager"
 
 	networkv1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
-	// +kubebuilder:scaffold:imports
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
 )
 
-// These tests use Ginkgo (BDD-style Go testing framework). Refer to
-// http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
+// suite is used for unit and integration testing this controller.
+var suite = builder.NewTestSuiteForController(
+	func(mgr ctrlmgr.Manager) error {
+		if err := controllers.SetupReconcilers(mgr); err != nil {
+			return err
+		}
+		return nil
+	},
+	func(scheme *runtime.Scheme) (err error) {
+		err = networkv1alpha1.AddToScheme(scheme)
+		if err != nil {
+			return err
+		}
+		err = corev1.AddToScheme(scheme)
+		if err != nil {
+			return err
+		}
+		err = clusterv1.AddToScheme(scheme)
+		if err != nil {
+			return err
+		}
+		return nil
+	},
+	filepath.Join(testutil.FindModuleDir("sigs.k8s.io/cluster-api"), "config", "crd", "bases"),
+)
 
-var cfg *rest.Config
-var k8sClient client.Client
-var testEnv *envtest.Environment
-
-func TestAPIs(t *testing.T) {
-	RegisterFailHandler(Fail)
-
-	RunSpecsWithDefaultAndCustomReporters(t,
-		"Controller Suite",
-		[]Reporter{printer.NewlineReporter{}})
+func TestController(t *testing.T) {
+	suite.Register(t, "AKO Operator", intgTests, unitTests)
 }
 
-var _ = BeforeSuite(func(done Done) {
-	logf.SetLogger(zap.LoggerTo(GinkgoWriter, true))
+var _ = BeforeSuite(suite.BeforeSuite)
 
-	By("bootstrapping test environment")
-	testEnv = &envtest.Environment{
-		CRDDirectoryPaths: []string{filepath.Join("..", "config", "crd", "bases")},
-	}
+var _ = AfterSuite(suite.AfterSuite)
 
-	var err error
-	cfg, err = testEnv.Start()
-	Expect(err).ToNot(HaveOccurred())
-	Expect(cfg).ToNot(BeNil())
+func intgTests() {
+	Describe("MachineDeletionHook Test", intgTestMachineDeletionHook)
+}
 
-	err = networkv1alpha1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
-
-	// +kubebuilder:scaffold:scheme
-
-	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
-	Expect(err).ToNot(HaveOccurred())
-	Expect(k8sClient).ToNot(BeNil())
-
-	close(done)
-}, 60)
-
-var _ = AfterSuite(func() {
-	By("tearing down the test environment")
-	err := testEnv.Stop()
-	Expect(err).ToNot(HaveOccurred())
-})
+func unitTests() {
+	// No integration test case now
+}
