@@ -30,10 +30,11 @@ var (
 
 func init() {
 	log.SetLogger(zap.New())
-	clientgoscheme.AddToScheme(scheme)
-	clusterv1.AddToScheme(scheme)
-	akoov1alpha1.AddToScheme(scheme)
-	clustereaddonv1alpha3.AddToScheme(scheme)
+	// ignoring errors
+	_ = clientgoscheme.AddToScheme(scheme)
+	_ = clusterv1.AddToScheme(scheme)
+	_ = akoov1alpha1.AddToScheme(scheme)
+	_ = clustereaddonv1alpha3.AddToScheme(scheme)
 }
 
 func main() {

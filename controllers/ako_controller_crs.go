@@ -185,7 +185,7 @@ func (r *ClusterReconciler) reconcileCRS(
 		Namespace: ns,
 	}, s); err == nil {
 		// Secret already exists
-		s, err = getWorkloadClusterDeploymentSecret(ns)
+		_, err = getWorkloadClusterDeploymentSecret(ns)
 		if err != nil {
 			errs = append(errs, err)
 		}

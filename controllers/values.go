@@ -32,7 +32,7 @@ type Values struct {
 	PersistentVolumeClaim string
 	MountPath             string
 	LogFile               string
-	nameOverride          string
+	//nameOverride          string
 }
 
 type Image struct {
@@ -108,7 +108,7 @@ type Requests struct {
 	Memory string
 }
 
-type podSecurityContext struct{}
+// type podSecurityContext struct{}
 
 // Creates the pod security policy if set to true
 type Rbac struct {

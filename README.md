@@ -27,9 +27,9 @@ When AVI is upgraded to Enterprise version, AKO Operator could:
    2. security
    3. Note: AKO is agnostic of all these changes
 
-# Getting Started
+## Getting Started
 
-## Setup
+### Setup
 
 Creating a CAPD based testing environment
 
@@ -41,7 +41,8 @@ hack/e2e.sh -u
 This will create a management cluster and a workload cluster locally in Docker
 for you.
 
-## Run AKOO against the mangement cluster
+### Run AKOO against the mangement cluster
+
 ```bash
 # Set current kubectl context to the local management cluster
 kubectl config use-context kind-tkg-lcp
@@ -56,12 +57,14 @@ go build -o bin/manager main.go
 ./bin/manager
 ```
 
-## Run controller tests
+### Run controller tests
+
 ```bash
 make integration-test
 ```
 
-## Run e2e test in kind
+### Run e2e test in kind
+
 ```bash
 # Create a management cluster and a workload cluster
 make ytt

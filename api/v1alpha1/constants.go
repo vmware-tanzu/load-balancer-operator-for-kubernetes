@@ -24,6 +24,6 @@ const (
 	ClusterFinalizer = "ako-operator.network.tkg.tanzu.vmware.com"
 	AviClusterLabel  = "cluster-service.network.tkg.tanzu.vmware.com/avi"
 
-	AviResourceCleanupSucceededCondition clusterv1.ConditionType = "AviResourceCleanupSucceeded"
 	AviResourceCleanupReason                                     = "AviResourceCleanup"
+	AviResourceCleanupSucceededCondition clusterv1.ConditionType = "AviResourceCleanupSucceeded"
 )
