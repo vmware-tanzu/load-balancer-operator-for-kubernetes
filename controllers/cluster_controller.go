@@ -9,15 +9,18 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	controllerruntime "gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime"
-	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime/patch"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	"sigs.k8s.io/cluster-api/controllers/remote"
 	capiutil "sigs.k8s.io/cluster-api/util"
+	"sigs.k8s.io/cluster-api/util/conditions"
+	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -31,6 +34,11 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&clusterv1.Cluster{}).
 		Complete(r)
 }
+
+// +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters;clusters/status,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines;machines/status,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch
+// +kubebuilder:rbac:groups=addons.cluster.x-k8s.io,resources=clusterresourcesets;clusterresourcesets/status,verbs=get;list;watch;create;update;patch;delete
 
 type ClusterReconciler struct {
 	client.Client
@@ -59,11 +67,16 @@ func (r *ClusterReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, reterr e
 			obj.GroupVersionKind(), req.NamespacedName)
 	}
 	defer func() {
-		if err := patchHelper.Patch(ctx, obj); err != nil {
-			if reterr == nil {
-				reterr = err
+		patchOpts := []patch.Option{}
+		if reterr == nil {
+			patchOpts = append(patchOpts, patch.WithStatusObservedGeneration{})
+		}
+
+		if err := patchHelper.Patch(ctx, obj, patchOpts...); err != nil {
+			reterr = kerrors.NewAggregate([]error{reterr, err})
+			if reterr != nil {
+				log.Error(err, "patch failed")
 			}
-			log.Error(err, "patch failed")
 		}
 	}()
 
@@ -94,17 +107,17 @@ func (r *ClusterReconciler) reconcileDelete(
 	if controllerruntime.ContainsFinalizer(obj, akoov1alpha1.ClusterFinalizer) {
 		log.Info("Handling deleted Cluster")
 
-		if err := r.cleanup(ctx, log, obj); err != nil {
+		finished, err := r.cleanup(ctx, log, obj)
+		if err != nil {
 			log.Error(err, "Error cleaning up")
 			return err
 		}
 
 		// The resources are deleted so remove the finalizer.
-		// TODO(fangyuanl): comment out the removal of finalizer to help
-		// with manual test. should be removed in future when cleanup is
-		// implemented
-		//ctrlutil.RemoveFinalizer(obj, akoov1alpha1.ClusterFinalizer)
-		log.Info("Removing finalizer", "finalizer", akoov1alpha1.ClusterFinalizer)
+		if finished {
+			log.Info("Removing finalizer", "finalizer", akoov1alpha1.ClusterFinalizer)
+			ctrlutil.RemoveFinalizer(obj, akoov1alpha1.ClusterFinalizer)
+		}
 	}
 
 	return nil
@@ -114,10 +127,59 @@ func (r *ClusterReconciler) cleanup(
 	ctx context.Context,
 	log logr.Logger,
 	obj *clusterv1.Cluster,
-) error {
-	// TODO(fangyuanl): add the logic to trigger the in cluster AKO self destruction
-	//time.Sleep(time.Second * 3600)
-	return nil
+) (bool, error) {
+	// Firstly we check if there is a cleanup condition in the Cluster
+	// status , if not, we update it
+	if conditions.Get(obj, akoov1alpha1.AviResourceCleanupSucceededCondition) == nil {
+		conditions.MarkFalse(obj, akoov1alpha1.AviResourceCleanupSucceededCondition, akoov1alpha1.AviResourceCleanupReason, clusterv1.ConditionSeverityInfo, "Cleaning up the AVI load balancing resources before deletion")
+		log.Info("Trigger the AKO cleanup in the target Cluster and set Cluster condition", "condition", akoov1alpha1.AviResourceCleanupSucceededCondition)
+	}
+
+	remoteClient, err := remote.NewClusterClient(ctx, r.Client, client.ObjectKey{
+		Name:      obj.Name,
+		Namespace: obj.Namespace,
+	}, r.Scheme)
+	if err != nil {
+		log.Info("Failed to create remote client for cluster, requeue the request")
+		return false, err
+	}
+
+	// We then retrieve the AKO ConfigMap from the workload cluster and
+	// update the `deleteConfig` field to trigger AKO's cleanup
+	akoConfigMap := &corev1.ConfigMap{}
+	akoConfigMapKey := client.ObjectKey{
+		Name:      "avi-k8s-config",
+		Namespace: "avi-system",
+	}
+	if err := remoteClient.Get(ctx, akoConfigMapKey, akoConfigMap); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Info("Cannot find AKO ConfigMap, requeue the request", "configMap", "avi-system/test")
+		}
+		return false, err
+	}
+	cleanupSetting := akoConfigMap.Data["deleteConfig"]
+	log.Info("Found AKO Configmap", "deleteConfig", cleanupSetting)
+
+	// true is the only accepted string in AKO
+	if cleanupSetting != "true" {
+		log.Info("Updating deleteConfig in AKO's ConfigMap")
+		akoConfigMap.Data["deleteConfig"] = "true"
+
+		if err := remoteClient.Update(ctx, akoConfigMap); err != nil {
+			log.Info("Failed to update AKO ConfigMap, requeue the request")
+			return false, err
+		}
+	}
+
+	// TODO(fangyuanl): use the real finalizer value by importing from AKO's
+	// repo
+	if !controllerruntime.ContainsFinalizer(obj, "finalizer-placeholder") {
+		log.Info("AKO finished cleanup, updating Cluster condition")
+		conditions.MarkTrue(obj, akoov1alpha1.AviResourceCleanupSucceededCondition)
+		return true, nil
+	}
+
+	return false, nil
 }
 
 func (r *ClusterReconciler) reconcileNormal(
@@ -125,7 +187,7 @@ func (r *ClusterReconciler) reconcileNormal(
 	log logr.Logger,
 	obj *clusterv1.Cluster,
 ) (ctrl.Result, error) {
-	log.V(1).Info("Start reconciling")
+	log.Info("Start reconciling")
 
 	res := ctrl.Result{}
 	if _, exist := obj.Labels[akoov1alpha1.AviClusterLabel]; !exist {

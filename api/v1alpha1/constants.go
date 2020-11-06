@@ -16,7 +16,14 @@ limitations under the License.
 
 package v1alpha1
 
+import (
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+)
+
 const (
 	ClusterFinalizer = "ako-operator.network.tkg.tanzu.vmware.com"
 	AviClusterLabel  = "cluster-service.network.tkg.tanzu.vmware.com/avi"
+
+	AviResourceCleanupSucceededCondition clusterv1.ConditionType = "AviResourceCleanupSucceeded"
+	AviResourceCleanupReason                                     = "AviResourceCleanup"
 )

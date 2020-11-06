@@ -1,6 +1,6 @@
-
+IMAGE_REGISTRY ?= harbor-pks.vmware.com/tkgextensions
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+IMG ?= $(IMAGE_REGISTRY)/tkg-networking/tanzu-ako-operator:dev
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
 

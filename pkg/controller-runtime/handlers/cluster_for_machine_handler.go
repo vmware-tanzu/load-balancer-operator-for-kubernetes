@@ -38,14 +38,14 @@ func (r *machinesForCluster) Map(o handler.MapObject) []reconcile.Request {
 		client.MatchingLabels(map[string]string{clusterv1.ClusterLabelName: cluster.Name}),
 	}
 
-	r.log.Info("Start listing machines for cluster", "cluster", cluster.Namespace+"/"+cluster.Name)
+	r.log.V(3).Info("Start listing machines for cluster", "cluster", cluster.Namespace+"/"+cluster.Name)
 
 	var machines clusterv1.MachineList
 	if err := r.Client.List(ctx, &machines, listOptions...); err != nil {
 		return []reconcile.Request{}
 	}
 
-	r.log.Info("Finished listing machines for cluster", "cluster", cluster.Namespace+"/"+cluster.Name, "machines-count", len(machines.Items))
+	r.log.V(3).Info("Finished listing machines for cluster", "cluster", cluster.Namespace+"/"+cluster.Name, "machines-count", len(machines.Items))
 
 	// Create a reconcile request for each machine resource.
 	requests := []ctrl.Request{}
@@ -58,7 +58,7 @@ func (r *machinesForCluster) Map(o handler.MapObject) []reconcile.Request {
 		})
 	}
 
-	r.log.Info("Generating requests", "requests", requests)
+	r.log.V(3).Info("Generating requests", "requests", requests)
 
 	// Return reconcile requests for the Machine resources.
 	return requests
