@@ -37,7 +37,7 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters;clusters/status,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines;machines/status,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch
+// +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;create;list;watch
 // +kubebuilder:rbac:groups=addons.cluster.x-k8s.io,resources=clusterresourcesets;clusterresourcesets/status,verbs=get;list;watch;create;update;patch;delete
 
 type ClusterReconciler struct {
@@ -173,7 +173,7 @@ func (r *ClusterReconciler) cleanup(
 
 	// TODO(fangyuanl): use the real finalizer value by importing from AKO's
 	// repo
-	if !controllerruntime.ContainsFinalizer(obj, "finalizer-placeholder") {
+	if !controllerruntime.ContainsFinalizer(obj, akoov1alpha1.ClusterFinalizer) {
 		log.Info("AKO finished cleanup, updating Cluster condition")
 		conditions.MarkTrue(obj, akoov1alpha1.AviResourceCleanupSucceededCondition)
 		return true, nil
