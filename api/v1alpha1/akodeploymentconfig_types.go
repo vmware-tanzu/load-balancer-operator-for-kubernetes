@@ -88,7 +88,7 @@ type AKODeploymentConfigSpec struct {
 	// DataNetworks describes the Data Networks the AKO will be deployed
 	// with.
 	// This field is immutable.
-	DataNetworks []DataNetwork `json:"dataNetworks"`
+	DataNetwork DataNetwork `json:"dataNetworks"`
 
 	// SpecRef points to a Secret that contains the deployment spec for AKO
 	//

@@ -79,13 +79,7 @@ func (in *AKODeploymentConfigSpec) DeepCopyInto(out *AKODeploymentConfigSpec) {
 	out.AdminCredentialRef = in.AdminCredentialRef
 	out.CertificateAuthorityRef = in.CertificateAuthorityRef
 	out.Tenant = in.Tenant
-	if in.DataNetworks != nil {
-		in, out := &in.DataNetworks, &out.DataNetworks
-		*out = make([]DataNetwork, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
-	}
+	in.DataNetwork.DeepCopyInto(&out.DataNetwork)
 	out.SpecRef = in.SpecRef
 }
 

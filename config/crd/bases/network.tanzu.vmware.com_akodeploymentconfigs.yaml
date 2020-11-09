@@ -94,35 +94,32 @@ spec:
               type: string
             dataNetworks:
               description: DataNetworks describes the Data Networks the AKO will be deployed with. This field is immutable.
-              items:
-                description: DataNetwork describes one AVI Data Network
-                properties:
-                  cidr:
-                    type: string
-                  ipPools:
-                    items:
-                      description: IPPool defines a contiguous range of IP Addresses
-                      properties:
-                        address:
-                          description: Address represents the starting IP address of the pool.
-                          type: string
-                        count:
-                          description: Count represents the number of IP addresses in the pool.
-                          format: int64
-                          type: integer
-                      required:
-                      - address
-                      - count
-                      type: object
-                    type: array
-                  name:
-                    type: string
-                required:
-                - cidr
-                - ipPools
-                - name
-                type: object
-              type: array
+              properties:
+                cidr:
+                  type: string
+                ipPools:
+                  items:
+                    description: IPPool defines a contiguous range of IP Addresses
+                    properties:
+                      address:
+                        description: Address represents the starting IP address of the pool.
+                        type: string
+                      count:
+                        description: Count represents the number of IP addresses in the pool.
+                        format: int64
+                        type: integer
+                    required:
+                    - address
+                    - count
+                    type: object
+                  type: array
+                name:
+                  type: string
+              required:
+              - cidr
+              - ipPools
+              - name
+              type: object
             specRef:
               description: "SpecRef points to a Secret that contains the deployment spec for AKO \n * akoDeployment              The deployment spec for AKO, which                              includes but is not limited to the                              ServiceAccount, RoleBinding, ConfigMap,                              StatefulSet"
               properties:
