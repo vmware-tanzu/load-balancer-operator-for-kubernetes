@@ -308,12 +308,10 @@ function create_cluster() {
 
   # Create per cluster deployment manifest, replace the original resource
   # names with our desired names, parameterized by clustername.
-  if ! kind get clusters 2>/dev/null | grep -q "${clustername}"; then
-      sed -e 's~my-cluster~'"${clustername}"'~g' ${simple_cluster_yaml} \
-       -e 's~controlplane-0~'"${clustername}"'-controlplane-0~g' \
-       -e 's~worker-0~'"${clustername}"'-worker-0~g' |
-      kubectl_mgc apply -f -
-  fi
+  sed -e 's~my-cluster~'"${clustername}"'~g' \
+      -e 's~controlplane-0~'"${clustername}"'-controlplane-0~g' \
+      -e 's~worker-0~'"${clustername}"'-worker-0~g' ${simple_cluster_yaml} |
+  kubectl_mgc apply -f -
   while ! kubectl_mgc get secret "${clustername}"-kubeconfig; do
 	  sleep 5s
   done
