@@ -3,5 +3,4 @@ kind: AKODeploymentConfig
 metadata:
   name: akodeploymentconfig-sample
 spec:
-  # Add fields here
-  foo: bar
+  CloudName: "Default-Cloud"
