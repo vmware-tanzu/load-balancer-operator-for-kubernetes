@@ -60,7 +60,7 @@ spec:
               description: CloudName speficies the AVI Cloud AKO will be deployed with
               type: string
             clusterSelector:
-              description: Label selector for Clusters. The Clusters that are selected by this will be the ones affected by this AKODeploymentConfig. It must match the Cluster labels. This field is immutable.
+              description: Label selector for Clusters. The Clusters that are selected by this will be the ones affected by this AKODeploymentConfig. It must match the Cluster labels. This field is immutable. By default AviClusterLabel is used
               properties:
                 matchExpressions:
                   description: matchExpressions is a list of label selector requirements. The requirements are ANDed.
@@ -92,7 +92,7 @@ spec:
             controller:
               description: Controller is the AVI Controller endpoint to which AKO talks to provision Load Balancer resources The format is [scheme://]address[:port] * scheme                     http or https, defaults to https if not                              specified * address                    IP address of the AVI Controller                              specified * port                       if not specified, use default port for                              the corresponding scheme
               type: string
-            dataNetworks:
+            dataNetwork:
               description: DataNetworks describes the Data Networks the AKO will be deployed with. This field is immutable.
               properties:
                 cidr:
@@ -101,16 +101,21 @@ spec:
                   items:
                     description: IPPool defines a contiguous range of IP Addresses
                     properties:
-                      address:
-                        description: Address represents the starting IP address of the pool.
+                      end:
+                        description: End represents the ending IP address of the pool.
                         type: string
-                      count:
-                        description: Count represents the number of IP addresses in the pool.
-                        format: int64
-                        type: integer
+                      start:
+                        description: Start represents the starting IP address of the pool.
+                        type: string
+                      type:
+                        description: Type represents the type of IP Address
+                        enum:
+                        - V4
+                        type: string
                     required:
-                    - address
-                    - count
+                    - end
+                    - start
+                    - type
                     type: object
                   type: array
                 name:
@@ -120,21 +125,11 @@ spec:
               - ipPools
               - name
               type: object
-            specRef:
-              description: "SpecRef points to a Secret that contains the deployment spec for AKO \n * akoDeployment              The deployment spec for AKO, which                              includes but is not limited to the                              ServiceAccount, RoleBinding, ConfigMap,                              StatefulSet"
-              properties:
-                name:
-                  description: Name is the name of resource being referenced.
-                  type: string
-                namespace:
-                  description: Namespace of the resource being referenced.
-                  type: string
-              required:
-              - name
-              - namespace
+            extraAviConfig:
+              description: ExtraConfigRef points to a Secret that contains the extra configurations for AKO to override defaults
               type: object
             tenant:
-              description: The AVI tenant for the current AKODeploymentConfig This field is optional. When this field is not provided, CredentialRef must be non-nil.
+              description: The AVI tenant for the current AKODeploymentConfig This field is optional.
               properties:
                 context:
                   description: Context is the type of AVI tenant context. Defaults to Provider. This field is immutable.
@@ -164,10 +159,8 @@ spec:
           required:
           - certificateAuthorityRef
           - cloudName
-          - clusterSelector
           - controller
-          - dataNetworks
-          - specRef
+          - dataNetwork
           type: object
         status:
           description: AKODeploymentConfigStatus defines the observed state of AKODeploymentConfig

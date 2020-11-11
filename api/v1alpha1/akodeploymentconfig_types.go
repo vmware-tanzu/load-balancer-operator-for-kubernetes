@@ -43,7 +43,9 @@ type AKODeploymentConfigSpec struct {
 	// selected by this will be the ones affected by this
 	// AKODeploymentConfig.
 	// It must match the Cluster labels. This field is immutable.
-	ClusterSelector metav1.LabelSelector `json:"clusterSelector"`
+	// By default AviClusterLabel is used
+	// +optional
+	ClusterSelector metav1.LabelSelector `json:"clusterSelector,omitempty"`
 
 	// WorkloadCredentialRef points to a Secret resource which includes the username
 	// and password to access and configure the Avi Controller.
@@ -71,6 +73,7 @@ type AKODeploymentConfigSpec struct {
 	// by AKO Operator to automate configurations and operations.
 	// +optional
 	AdminCredentialRef SecretReference `json:"adminCredentialRef"`
+
 	// CertificateAuthorityRef points to a Secret resource that includes the
 	// AVI Controller's CA
 	//
@@ -80,24 +83,24 @@ type AKODeploymentConfigSpec struct {
 	CertificateAuthorityRef SecretReference `json:"certificateAuthorityRef"`
 
 	// The AVI tenant for the current AKODeploymentConfig
-	// This field is optional. When this field is not provided,
-	// CredentialRef must be non-nil.
+	// This field is optional.
 	// +optional
 	Tenant AVITenant `json:"tenant,omitempty"`
 
 	// DataNetworks describes the Data Networks the AKO will be deployed
 	// with.
 	// This field is immutable.
-	DataNetwork DataNetwork `json:"dataNetworks"`
+	DataNetwork DataNetwork `json:"dataNetwork"`
 
-	// SpecRef points to a Secret that contains the deployment spec for AKO
+	// ExtraConfigRef points to a Secret that contains the extra
+	// configurations for AKO to override defaults
 	//
-	// * akoDeployment              The deployment spec for AKO, which
-	//                              includes but is not limited to the
-	//                              ServiceAccount, RoleBinding, ConfigMap,
-	//                              StatefulSet
-	//
-	SpecRef SecretReference `json:"specRef"`
+	// +optional
+	ExtraConfig ExtraAviConfig `json:"extraAviConfig,omitempty"`
+}
+
+// TODO(fangyuanl): move Values in controllers/values.go to ExtraAviConfig
+type ExtraAviConfig struct {
 }
 
 // AVITenant describes settings for an AVI Tenant object
@@ -119,10 +122,13 @@ type DataNetwork struct {
 
 // IPPool defines a contiguous range of IP Addresses
 type IPPool struct {
-	// Address represents the starting IP address of the pool.
-	Address string `json:"address"`
-	// Count represents the number of IP addresses in the pool.
-	Count int64 `json:"count"`
+	// Start represents the starting IP address of the pool.
+	Start string `json:"start"`
+	// End represents the ending IP address of the pool.
+	End string `json:"end"`
+	// Type represents the type of IP Address
+	// +kubebuilder:validation:Enum=V4;
+	Type string `json:"type"`
 }
 
 // SecretReference references a Kind Secret object in the same kubernetes

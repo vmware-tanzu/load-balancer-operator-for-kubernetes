@@ -71,5 +71,5 @@ func intgTests() {
 }
 
 func unitTests() {
-	// No integration test case now
+	Describe("ensureStaticRanges", unitTestEnsureStaticRanges)
 }

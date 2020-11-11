@@ -18,7 +18,7 @@ var SharedAviClient *Client
 
 type Client struct {
 	config *AviClientConfig
-	Client *clients.AviClient
+	*clients.AviClient
 }
 
 type AviClientConfig struct {
@@ -26,23 +26,31 @@ type AviClientConfig struct {
 	Username  string
 	Password  string
 	CA        string
-	Insecure  bool
+	Insecure  bool // Should only be used for tests
 	Transport *http.Transport
+
+	// ServerName is used to verify the hostname on the returned
+	// certificates unless Insecure is true. It is also included
+	// in the client's handshake to support virtual hosting unless it is
+	// an IP address.
+	ServerName string
 }
 
-// NewAVIClient creates an Client
-func NewAVIClient(config *AviClientConfig) (*Client, error) {
+// NewAviClient creates an Client
+func NewAviClient(config *AviClientConfig) (*Client, error) {
 	// Initialize transport
 	var transport *http.Transport
 	if config.CA != "" {
 		caCertPool := x509.NewCertPool()
 		caCertPool.AppendCertsFromPEM([]byte(config.CA))
-		transport =
-			&http.Transport{
-				TLSClientConfig: &tls.Config{
-					RootCAs: caCertPool,
-				},
-			}
+		transport = &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs: caCertPool,
+			},
+		}
+		if config.ServerName != "" {
+			transport.TLSClientConfig.ServerName = config.ServerName
+		}
 	}
 	// Passed in transport overwrites the one created above
 	if config.Transport != nil {
@@ -63,7 +71,7 @@ func NewAVIClient(config *AviClientConfig) (*Client, error) {
 		return nil, err
 	}
 	return &Client{
-		Client: client,
-		config: config,
+		AviClient: client,
+		config:    config,
 	}, nil
 }

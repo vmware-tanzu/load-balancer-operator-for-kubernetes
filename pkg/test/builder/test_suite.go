@@ -42,7 +42,7 @@ type Reconciler interface{}
 type NewReconcilerFunc func() Reconciler
 
 func init() {
-	klog.InitFlags(nil)
+	//klog.InitFlags(nil)
 	klog.SetOutput(GinkgoWriter)
 	logf.SetLogger(klogr.New())
 }

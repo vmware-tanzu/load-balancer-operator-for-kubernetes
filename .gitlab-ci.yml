@@ -24,6 +24,17 @@ lint:
     - "**/*.go"
     - "hack/*.sh"
 
+unit-test:
+  stage: test
+  script: make test
+  only:
+    changes:
+    - .gitlab-ci.yml
+    - Makefile
+    - "**/*.go"
+    - "config/**/*"
+    - "go.{mod,sum}"
+
 integration-test:
   stage: test
   script: make integration-test
