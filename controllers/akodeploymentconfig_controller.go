@@ -21,6 +21,7 @@ import (
 	"context"
 	"net"
 	"sort"
+	"time"
 
 	"github.com/avinetworks/sdk/go/models"
 	"github.com/go-logr/logr"
@@ -162,6 +163,7 @@ func (r *AKODeploymentConfigReconciler) reconcileNormal(
 
 	phases := []func(ctx context.Context, log logr.Logger, obj *akoov1alpha1.AKODeploymentConfig) (ctrl.Result, error){
 		r.reconcileNetworkSubnets,
+		r.reconcileCloudUsableNetwork,
 	}
 	errs := []error{}
 	for _, phase := range phases {
@@ -178,6 +180,8 @@ func (r *AKODeploymentConfigReconciler) reconcileNormal(
 	return res, kerrors.NewAggregate(errs)
 }
 
+// reconcileNetworkSubnets ensures the Datanetwork configuration is in sync with
+// AVI Controller configuration
 func (r *AKODeploymentConfigReconciler) reconcileNetworkSubnets(
 	ctx context.Context,
 	log logr.Logger,
@@ -225,49 +229,103 @@ func (r *AKODeploymentConfigReconciler) reconcileNetworkSubnets(
 	return res, nil
 }
 
-func GetAddr(addr string, addrType string) *models.IPAddr {
-	return &models.IPAddr{
-		Addr: &addr,
-		Type: &addrType,
+func (r *AKODeploymentConfigReconciler) reconcileCloudUsableNetwork(
+	ctx context.Context,
+	log logr.Logger,
+	obj *akoov1alpha1.AKODeploymentConfig,
+) (ctrl.Result, error) {
+	res := ctrl.Result{}
+
+	log = log.WithValues("cloud", obj.Spec.CloudName)
+	log.Info("Start reconciling AVI cloud usable networks")
+
+	requeueAfter := ctrl.Result{
+		Requeue:      true,
+		RequeueAfter: time.Second * 60,
 	}
+
+	network, err := r.aviClient.Network.GetByName(obj.Spec.DataNetwork.Name)
+	if err != nil {
+		log.Error(err, "Failed to get the Data Network from AVI Controller")
+		return requeueAfter, nil
+	}
+
+	cloud, err := r.aviClient.Cloud.GetByName(obj.Spec.CloudName)
+	if err != nil {
+		log.Error(err, "Faild to find cloud, requeue the request")
+		// Cannot find the configured cloud, requeue the request but
+		// leave enough time for operators to resolve this issue
+		return requeueAfter, nil
+	}
+	if cloud.IPAMProviderRef == nil {
+		log.Info("No IPAM Provider is registered for the cloud, requeue the request")
+		// Cannot find any configured IPAM Provider, requeue the request but
+		// leave enough time for operators to resolve this issue
+		return requeueAfter, nil
+	}
+
+	ipamProviderUUID := aviclient.GetUUIDFromRef(*(cloud.IPAMProviderRef))
+
+	log = log.WithValues("ipam-profile", *(cloud.IPAMProviderRef))
+
+	ipam, err := r.aviClient.IPAMDNSProviderProfile.Get(ipamProviderUUID)
+	if err != nil {
+		log.Error(err, "Failed to find ipam profile")
+		return requeueAfter, nil
+	}
+
+	// Ensure network is added to the cloud's IPAM Profile as one of its
+	// usable Networks
+	var foundUsableNetwork bool
+	for _, net := range ipam.InternalProfile.UsableNetworkRefs {
+		if net == *(network.URL) {
+			foundUsableNetwork = true
+			break
+		}
+	}
+	if !foundUsableNetwork {
+		ipam.InternalProfile.UsableNetworkRefs = append(ipam.InternalProfile.UsableNetworkRefs, *(network.URL))
+		_, err := r.aviClient.IPAMDNSProviderProfile.Update(ipam)
+		if err != nil {
+			log.Error(err, "Failed to add usable network", "network", network.Name)
+			return res, nil
+		}
+	} else {
+		log.Info("Network is already one of the cloud's usable network")
+	}
+
+	return res, nil
 }
 
 // EnsureAviNetwork brings network to the intented state by ensuring there is
 // one subnet in network that has the specified cidr/mask and ipPools
 func EnsureAviNetwork(network *models.Network, addrType string, cidr *net.IPNet, mask int32, ipPools []akoov1alpha1.IPPool, log logr.Logger) bool {
 	var foundSubnet, modified bool
-	for i, subnet := range network.ConfiguredSubnets {
-		if *subnet.Prefix.IPAddr.Addr == cidr.IP.String() && *subnet.Prefix.Mask == mask {
-			foundSubnet = true
-			log.V(3).Info("Found matching subnet", "subnet", network.ConfiguredSubnets[i])
-			modified = EnsureStaticRanges(subnet, ipPools, addrType)
-			if modified {
-				// Update the original subnet in network
-				network.ConfiguredSubnets[i] = subnet
-				log.V(3).Info("Found matching subnet, after merging", "subnet", network.ConfiguredSubnets[i])
-			}
-			break
+	var index int
+	if index, foundSubnet = AviNetworkContainsSubnet(network, cidr.IP.String(), mask); foundSubnet {
+		log.V(3).Info("Found matching subnet", "subnet", network.ConfiguredSubnets[index])
+		subnet := network.ConfiguredSubnets[index]
+		modified = EnsureStaticRanges(subnet, ipPools, addrType)
+		if modified {
+			// Update the original subnet in network
+			network.ConfiguredSubnets[index] = subnet
+			log.V(3).Info("Found matching subnet, after merging", "subnet", network.ConfiguredSubnets[index])
 		}
-	}
-	// If there is no such subnet, create one
-	if !foundSubnet {
+	} else if len(ipPools) != 0 {
+		// If there is no such subnet, create one
 		subnet := &models.Subnet{
 			Prefix: &models.IPAddrPrefix{
-				IPAddr: &models.IPAddr{},
+				IPAddr: GetAddr(cidr.IP.String(), addrType),
 				Mask:   &mask,
 			},
-		}
-		// Add static IPs as static ranges in the subnet
-		for _, ipPool := range ipPools {
-			subnet.StaticRanges = append(subnet.StaticRanges, &models.IPAddrRange{
-				Begin: GetAddr(ipPool.Start, ipPool.Type),
-				End:   GetAddr(ipPool.End, ipPool.Type),
-			})
+			// Add IP pools as static ranges in the subnet
+			StaticRanges: CreateStaticRangeFromIPPools(ipPools),
 		}
 		// Add subnet into the network
 		network.ConfiguredSubnets = append(network.ConfiguredSubnets, subnet)
+		modified = true
 	}
-	return !foundSubnet || modified
+	return modified
 }
 
 // ensureStaticRanges creates or updates the subnet's static ranges to ensure IP
@@ -276,88 +334,7 @@ func EnsureAviNetwork(network *models.Network, addrType string, cidr *net.IPNet,
 // the hole.
 // Note: ippools are guaranteed to be non-overlapping by validation
 func EnsureStaticRanges(subnet *models.Subnet, ipPools []akoov1alpha1.IPPool, addrType string) bool {
-	SortSubnetStaticRanges(subnet)
-	SortIPPools(ipPools)
-
-	newStaticRanges := []*models.IPAddrRange{}
-	i, j := 0, 0
-	var start string
-	// merging intervals
-	for i < len(subnet.StaticRanges) && j < len(ipPools) {
-		// seeing a gap, we create a new range
-		if isIPLessThan(*subnet.StaticRanges[i].End.Addr, ipPools[j].Start) {
-			if start != "" {
-				newStaticRanges = append(newStaticRanges, &models.IPAddrRange{
-					Begin: GetAddr(start, addrType),
-					End:   subnet.StaticRanges[i].End,
-				})
-			} else {
-				newStaticRanges = append(newStaticRanges, subnet.StaticRanges[i])
-			}
-			start = ipPools[j].Start
-			i++
-		} else {
-			// seeing a gap, we create a new range
-			if isIPLessThan(ipPools[j].End, *subnet.StaticRanges[i].Begin.Addr) {
-				if start != "" {
-					newStaticRanges = append(newStaticRanges, &models.IPAddrRange{
-						Begin: GetAddr(start, addrType),
-						End:   GetAddr(ipPools[j].End, addrType),
-					})
-				} else {
-					newStaticRanges = append(newStaticRanges, &models.IPAddrRange{
-						Begin: GetAddr(ipPools[j].Start, addrType),
-						End:   GetAddr(ipPools[j].End, addrType),
-					})
-				}
-				start = *subnet.StaticRanges[i].Begin.Addr
-				j++
-			} else {
-				if start == "" {
-					if isIPLessThan(ipPools[j].Start, *subnet.StaticRanges[i].Begin.Addr) {
-						start = ipPools[j].Start
-					} else {
-						start = *subnet.StaticRanges[i].Begin.Addr
-					}
-				}
-				if isIPLessThan(ipPools[j].End, *subnet.StaticRanges[i].End.Addr) {
-					j++
-				} else {
-					i++
-				}
-			}
-		}
-	}
-
-	for i < len(subnet.StaticRanges) {
-		if start != "" {
-			newStaticRanges = append(newStaticRanges, &models.IPAddrRange{
-				Begin: GetAddr(start, addrType),
-				End:   subnet.StaticRanges[i].End,
-			})
-			start = ""
-		} else {
-			newStaticRanges = append(newStaticRanges, subnet.StaticRanges[i])
-		}
-		i++
-	}
-
-	for j < len(ipPools) {
-		if start != "" {
-			newStaticRanges = append(newStaticRanges, &models.IPAddrRange{
-				Begin: GetAddr(start, addrType),
-				End:   GetAddr(ipPools[j].End, addrType),
-			})
-			start = ""
-		} else {
-			newStaticRanges = append(newStaticRanges, &models.IPAddrRange{
-				Begin: GetAddr(ipPools[j].Start, addrType),
-				End:   GetAddr(ipPools[j].End, addrType),
-			})
-		}
-		j++
-	}
-
+	newStaticRanges := CreateStaticRangeFromIPPools(ipPools)
 	res := !IsStaticRangeEqual(newStaticRanges, subnet.StaticRanges)
 	if res {
 		subnet.StaticRanges = newStaticRanges
@@ -366,6 +343,8 @@ func EnsureStaticRanges(subnet *models.Subnet, ipPools []akoov1alpha1.IPPool, ad
 }
 
 func IsStaticRangeEqual(r1, r2 []*models.IPAddrRange) bool {
+	SortStaticRanges(r1)
+	SortStaticRanges(r2)
 	if len(r1) != len(r2) {
 		return false
 	}
@@ -377,18 +356,9 @@ func IsStaticRangeEqual(r1, r2 []*models.IPAddrRange) bool {
 	return true
 }
 
-func SortIPPools(pools []akoov1alpha1.IPPool) {
-	sort.Slice(pools, func(i, j int) bool {
-		return isIPLessThan(pools[i].Start, pools[j].Start)
-	})
-}
-
-func SortSubnetStaticRanges(subnet *models.Subnet) {
-	if subnet == nil {
-		return
-	}
-	sort.Slice(subnet.StaticRanges, func(i, j int) bool {
-		return isIPLessThan(*subnet.StaticRanges[i].Begin.Addr, *subnet.StaticRanges[j].Begin.Addr)
+func SortStaticRanges(staticRanges []*models.IPAddrRange) {
+	sort.Slice(staticRanges, func(i, j int) bool {
+		return isIPLessThan(*staticRanges[i].Begin.Addr, *staticRanges[j].Begin.Addr)
 	})
 }
 
@@ -396,4 +366,31 @@ func isIPLessThan(a, b string) bool {
 	aIP := net.ParseIP(a)
 	bIP := net.ParseIP(b)
 	return bytes.Compare(aIP, bIP) < 0
+}
+
+func AviNetworkContainsSubnet(network *models.Network, startAddr string, mask int32) (int, bool) {
+	for i, subnet := range network.ConfiguredSubnets {
+		if *(subnet.Prefix.IPAddr.Addr) == startAddr && *(subnet.Prefix.Mask) == mask {
+			return i, true
+		}
+	}
+	return -1, false
+}
+
+func CreateStaticRangeFromIPPools(ipPools []akoov1alpha1.IPPool) []*models.IPAddrRange {
+	newStaticRanges := []*models.IPAddrRange{}
+	for _, ipPool := range ipPools {
+		newStaticRanges = append(newStaticRanges, &models.IPAddrRange{
+			Begin: GetAddr(ipPool.Start, ipPool.Type),
+			End:   GetAddr(ipPool.End, ipPool.Type),
+		})
+	}
+	return newStaticRanges
+}
+
+func GetAddr(addr string, addrType string) *models.IPAddr {
+	return &models.IPAddr{
+		Addr: &addr,
+		Type: &addrType,
+	}
 }

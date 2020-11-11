@@ -9,6 +9,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"net/http"
+	"strings"
 
 	"github.com/avinetworks/sdk/go/clients"
 	"github.com/avinetworks/sdk/go/session"
@@ -74,4 +75,14 @@ func NewAviClient(config *AviClientConfig) (*Client, error) {
 		AviClient: client,
 		config:    config,
 	}, nil
+}
+
+// GetUUIDFromRef takes a AVI Ref, parses it as a classic URL and returns the
+// last part
+func GetUUIDFromRef(ref string) string {
+	parts := strings.Split(ref, "/")
+	if len(parts) == 0 {
+		return ""
+	}
+	return parts[len(parts)-1]
 }

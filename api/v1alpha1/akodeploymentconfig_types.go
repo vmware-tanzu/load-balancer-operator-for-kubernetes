@@ -92,8 +92,8 @@ type AKODeploymentConfigSpec struct {
 	// This field is immutable.
 	DataNetwork DataNetwork `json:"dataNetwork"`
 
-	// ExtraConfigRef points to a Secret that contains the extra
-	// configurations for AKO to override defaults
+	// ExtraConfig contains the extra configurations for AKO to override
+	// defaults
 	//
 	// +optional
 	ExtraConfig ExtraAviConfig `json:"extraAviConfig,omitempty"`

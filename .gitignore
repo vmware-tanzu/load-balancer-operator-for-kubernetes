@@ -30,3 +30,4 @@ vendor
 *.kubeconfig
 
 hack/tools/bin
+local

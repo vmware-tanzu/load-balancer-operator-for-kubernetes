@@ -13,10 +13,10 @@ spec:
     namespace: default
   dataNetwork:
     name: 'VM Network'
-    cidr: 10.92.224.0/19
+    cidr: 10.92.241.0/24
     ipPools:
-      - start: 10.92.240.117
-        end: 10.92.240.119
+      - start: 10.92.241.117
+        end: 10.92.241.119
         type: V4
 ---
 apiVersion: v1

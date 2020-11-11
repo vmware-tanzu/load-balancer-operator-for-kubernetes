@@ -126,7 +126,7 @@ spec:
               - name
               type: object
             extraAviConfig:
-              description: ExtraConfigRef points to a Secret that contains the extra configurations for AKO to override defaults
+              description: ExtraConfig contains the extra configurations for AKO to override defaults
               type: object
             tenant:
               description: The AVI tenant for the current AKODeploymentConfig This field is optional.

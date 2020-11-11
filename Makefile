@@ -81,7 +81,7 @@ docker-push:
 
 .PHONY: integration-test
 integration-test: $(GINKGO) $(ETCD)
-	$(GINKGO) -v controllers -- -enable-integration-tests
+	$(GINKGO) -v controllers -- -enable-integration-tests -enable-unit-tests=false
 
 .PHONY: ytt
 ytt: $(YTT)
