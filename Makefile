@@ -1,4 +1,5 @@
 IMAGE_REGISTRY ?= harbor-pks.vmware.com/tkgextensions
+CACHE_IMAGE_REGISTRY ?= harbor-repo.vmware.com/dockerhub-proxy-cache
 # Image URL to use all building/pushing image targets
 IMG ?= $(IMAGE_REGISTRY)/tkg-networking/tanzu-ako-operator:dev
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
@@ -16,6 +17,7 @@ TOOLS_DIR := hack/tools
 TOOLS_BIN_DIR := $(TOOLS_DIR)/bin
 export PATH := $(abspath $(BIN_DIR)):$(abspath $(TOOLS_BIN_DIR)):$(PATH)
 export KUBEBUILDER_ASSETS := $(abspath $(TOOLS_BIN_DIR))
+export GOPROXY := https://build-artifactory.eng.vmware.com/gocenter.io,direct
 
 CONTROLLER_GEN     := $(TOOLS_BIN_DIR)/controller-gen
 GOLANGCI_LINT      := $(TOOLS_BIN_DIR)/golangci-lint
@@ -110,11 +112,11 @@ lint-go-full: lint-go ## Run slower linters to detect possible issues
 
 .PHONY: lint-markdown
 lint-markdown: ## Lint the project's markdown
-	docker run -i --rm -v "$$(pwd)":/work harbor-repo.vmware.com/dockerhub-proxy-cache/tmknom/markdownlint -c /work/md-config.json .
+	docker run -i --rm -v "$$(pwd)":/work $(CACHE_IMAGE_REGISTRY)/tmknom/markdownlint -c /work/md-config.json .
 
 .PHONY: lint-shell
 lint-shell: ## Lint the project's shell scripts
-	docker run --rm -v "$$(pwd):/mnt" harbor-repo.vmware.com/dockerhub-proxy-cache/koalaman/shellcheck:stable  hack/*.sh
+	docker run --rm -v "$$(pwd):/mnt" $(CACHE_IMAGE_REGISTRY)/koalaman/shellcheck:stable  hack/*.sh
 
 .PHONY: fix
 fix: GOLANGCI_LINT_FLAGS = --fast=false --fix
