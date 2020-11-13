@@ -144,7 +144,7 @@ function e2e_up() {
   # Create the management cluster.
   if ! kind get clusters 2>/dev/null | grep -q "${KIND_MANAGEMENT_CLUSTER}"; then
     echo "creating kind management cluster ${KIND_MANAGEMENT_CLUSTER}"
-    kind create cluster --config "${SCRIPTS_DIR}/kind/kind-cluster-with-extramounts.yaml" --name "${KIND_MANAGEMENT_CLUSTER}"
+    kind create cluster --image harbor-repo.vmware.com/dockerhub-proxy-cache/kindest/node:v1.17.0 --config "${SCRIPTS_DIR}/kind/kind-cluster-with-extramounts.yaml" --name "${KIND_MANAGEMENT_CLUSTER}"
   fi
 
   # Install and wait for the cert manager webhook service to become available

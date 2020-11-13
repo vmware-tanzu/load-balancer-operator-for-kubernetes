@@ -35,6 +35,7 @@ metadata:
 spec:
   template:
     spec:
+      customImage: harbor-repo.vmware.com/dockerhub-proxy-cache/kindest/node:v1.17.0
       extraMounts:
         - containerPath: "/var/run/docker.sock"
           hostPath: "/var/run/docker.sock"
@@ -74,7 +75,8 @@ metadata:
   namespace: default
 spec:
   template:
-    spec: {}
+    spec:
+      customImage: harbor-repo.vmware.com/dockerhub-proxy-cache/kindest/node:v1.17.0
 ---
 apiVersion: bootstrap.cluster.x-k8s.io/v1alpha3
 kind: KubeadmConfigTemplate
