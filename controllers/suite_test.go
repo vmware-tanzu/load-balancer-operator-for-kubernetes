@@ -30,6 +30,7 @@ import (
 
 	networkv1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	clustereaddonv1alpha3 "sigs.k8s.io/cluster-api/exp/addons/api/v1alpha3"
 )
 
 // suite is used for unit and integration testing this controller.
@@ -53,6 +54,10 @@ var suite = builder.NewTestSuiteForController(
 		if err != nil {
 			return err
 		}
+		err = clustereaddonv1alpha3.AddToScheme(scheme)
+		if err != nil {
+			return err
+		}
 		return nil
 	},
 	filepath.Join(testutil.FindModuleDir("sigs.k8s.io/cluster-api"), "config", "crd", "bases"),
@@ -68,6 +73,7 @@ var _ = AfterSuite(suite.AfterSuite)
 
 func intgTests() {
 	Describe("MachineDeletionHook Test", intgTestMachineDeletionHook)
+	Describe("CRS Test", intgTestCRS)
 }
 
 func unitTests() {

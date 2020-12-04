@@ -2,19 +2,23 @@ package controllers
 
 var (
 	akoDeploymentYaml = `
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: avi-system
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: ako-sa
-  namespace: {{ .Values.Namespace }}  
+  namespace: avi-system
 
 ---
 apiVersion: v1
 kind: Secret
 metadata:
   name: avi-secret
-  namespace: {{ .Values.Namespace }}
+  namespace: avi-system
 type: Opaque
 data:
   username: {{ .Values.Avicredentials.Username }}
@@ -25,7 +29,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: avi-k8s-config
-  namespace: {{ .Values.Namespace }}
+  namespace: avi-system
 data:
   controllerIP: "{{ .Values.ControllerSettings.ControllerIP }}"
   controllerVersion: "{{ .Values.ControllerSettings.ControllerVersion }}"
@@ -110,14 +114,14 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: ako-sa
-  namespace: {{ .Values.Namespace }}
+  namespace: avi-system
 
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: ako
-  namespace: {{ .Values.Namespace }}
+  namespace: avi-system
   labels:
     app.kubernetes.io/name: {{ .Values.Name }}
     app.kubernetes.io/version: "{{ .Values.AppVersion }}"

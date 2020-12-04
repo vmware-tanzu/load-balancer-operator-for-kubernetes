@@ -17,14 +17,14 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
-	clusterv1alpha3 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
 	clustereaddonv1alpha3 "sigs.k8s.io/cluster-api/exp/addons/api/v1alpha3"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
-	crsWorkloadClusterResourceName = "ako-deployment"
+	CrsWorkloadClusterResourceName = "ako-deployment"
 )
 
 func getAKODeploymentYaml() (string, error) {
@@ -37,8 +37,9 @@ func getAKODeploymentYaml() (string, error) {
 
 	// default setting
 	values.AKOSettings.ApiServerPort = 8080
+	values.NetworkSettings.NodeNetworkList = make([]NodeNetwork, 0)
 
-	// user setting
+	// TODO(lxinqi): use the real value defined by user
 	values.ReplicaCount = 1
 
 	values.Image.Repository = "avinetworks/ako"
@@ -49,22 +50,13 @@ func getAKODeploymentYaml() (string, error) {
 	values.AKOSettings.ApiServerPort = 8080
 	values.AKOSettings.DeleteConfig = false
 	values.AKOSettings.DisableStaticRouteSync = false
-	values.AKOSettings.ClusterName = "avi-wc"
+	values.AKOSettings.ClusterName = "workload-cls"
 	values.AKOSettings.CniPlugin = "calico"
 	values.AKOSettings.SyncNamespace = ""
 
-	values.NetworkSettings.SubnetIP = "10.78.96.0"
+	values.NetworkSettings.SubnetIP = "10.182.0.0"
 	values.NetworkSettings.SubnetPrefix = "20"
 	values.NetworkSettings.NetworkName = "VM Network"
-	values.NetworkSettings.NodeNetworkList = append(values.NetworkSettings.NodeNetworkList, NodeNetwork{
-		NetworkName: "network1",
-		Cidrs:       []string{"10.0.0.1/24", " 11.0.0.1/24"},
-	})
-
-	values.NetworkSettings.NodeNetworkList = append(values.NetworkSettings.NodeNetworkList, NodeNetwork{
-		NetworkName: "network2",
-		Cidrs:       []string{"12.0.0.1/24"},
-	})
 
 	values.L7Settings.DefaultIngController = true
 	values.L7Settings.L7ShardingScheme = "hostname"
@@ -77,7 +69,7 @@ func getAKODeploymentYaml() (string, error) {
 	values.ControllerSettings.ServiceEngineGroupName = "Default-Group"
 	values.ControllerSettings.ControllerVersion = "20.1.2"
 	values.ControllerSettings.CloudName = "Default-Cloud"
-	values.ControllerSettings.ControllerIP = "10.78.104.180"
+	values.ControllerSettings.ControllerIP = "10.182.15.127"
 
 	values.NodePortSelector.Key = ""
 	values.NodePortSelector.Value = ""
@@ -98,8 +90,6 @@ func getAKODeploymentYaml() (string, error) {
 	values.PersistentVolumeClaim = ""
 	values.MountPath = "/log"
 	values.LogFile = "avi.log"
-
-	values.Namespace = "default"
 
 	values.NameOverride = ""
 	values.Name = values.GetName(values.NameOverride)
@@ -132,7 +122,7 @@ func getAKODeploymentYaml() (string, error) {
 func getWorkloadClusterDeploymentSecret(namespace string) (*corev1.Secret, error) {
 	workloadClusterDeploymentSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      crsWorkloadClusterResourceName,
+			Name:      CrsWorkloadClusterResourceName,
 			Namespace: namespace,
 		},
 		Type: clustereaddonv1alpha3.ClusterResourceSetSecretType,
@@ -150,7 +140,7 @@ func getWorkloadClusterDeploymentSecret(namespace string) (*corev1.Secret, error
 var (
 	workloadClusterCRS = &clustereaddonv1alpha3.ClusterResourceSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: crsWorkloadClusterResourceName,
+			Name: CrsWorkloadClusterResourceName,
 		},
 		Spec: clustereaddonv1alpha3.ClusterResourceSetSpec{
 			ClusterSelector: metav1.LabelSelector{
@@ -160,7 +150,7 @@ var (
 			},
 			Resources: []clustereaddonv1alpha3.ResourceRef{
 				{
-					Name: crsWorkloadClusterResourceName,
+					Name: CrsWorkloadClusterResourceName,
 					Kind: "Secret",
 				},
 			},
@@ -172,31 +162,42 @@ var (
 func (r *ClusterReconciler) reconcileCRS(
 	ctx context.Context,
 	log logr.Logger,
-	obj *clusterv1alpha3.Cluster,
+	obj *clusterv1.Cluster,
 ) (ctrl.Result, error) {
-	log.Info("starts reconciling ClusterResourceSet", "cluster", obj.Namespace+"/"+obj.Name)
+	log.Info("Starts reconciling ClusterResourceSet", "cluster", obj.Namespace+"/"+obj.Name)
 	ns := obj.Namespace
 
 	res := ctrl.Result{}
 	var errs []error
 	s := &corev1.Secret{}
 	if err := r.Get(ctx, client.ObjectKey{
-		Name:      crsWorkloadClusterResourceName,
+		Name:      CrsWorkloadClusterResourceName,
 		Namespace: ns,
 	}, s); err == nil {
-		// Secret already exists
-		_, err = getWorkloadClusterDeploymentSecret(ns)
+		// Update Secret since it already exists
+		s, err = getWorkloadClusterDeploymentSecret(ns)
+		log.Info("Update existing secret")
 		if err != nil {
 			errs = append(errs, err)
+			log.Error(err, "Cann't get secret")
+		} else {
+			if err := r.Update(ctx, s); err != nil {
+				errs = append(errs, err)
+				log.Error(err, "Cann't update secret")
+			}
 		}
 	} else {
 		if apierrors.IsNotFound(err) {
 			s, err = getWorkloadClusterDeploymentSecret(ns)
+
 			if err != nil {
 				errs = append(errs, err)
 			} else {
 				if err := r.Create(ctx, s); err != nil {
 					errs = append(errs, err)
+					log.Error(err, "Cann't create secret")
+				} else {
+					log.Info("Creating secret")
 				}
 			}
 		} else {
@@ -209,16 +210,22 @@ func (r *ClusterReconciler) reconcileCRS(
 		Name:      workloadClusterCRS.Name,
 		Namespace: ns,
 	}, crs); err != nil {
+		log.Info("Ready to get crs")
 		if !apierrors.IsNotFound(err) {
 			errs = append(errs, err)
+			log.Error(err, "Cann't get crs")
 		} else {
 			crs = workloadClusterCRS.DeepCopy()
 			crs.Namespace = ns
 			if err := r.Create(ctx, crs); err != nil {
 				errs = append(errs, err)
+				log.Error(err, "Cann't create crs")
+			} else {
+				log.Info("CRS created")
 			}
 		}
+	} else {
+		log.Info("CRS already exists")
 	}
-
 	return res, kerrors.NewAggregate(errs)
 }

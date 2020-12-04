@@ -600,10 +600,14 @@ k8s.io/apiextensions-apiserver v0.17.9/go.mod h1:p2C9cDflVAUPMl5/QOMHxnSzQWF/cDq
 k8s.io/apimachinery v0.17.0/go.mod h1:b9qmWdKlLuU9EBh+06BtLcSf/Mu89rWL33naRxs1uZg=
 k8s.io/apimachinery v0.17.9 h1:knQxNgMu57Oxlm12J6DS375kmGMeuWV0VNzRRUBB2Yk=
 k8s.io/apimachinery v0.17.9/go.mod h1:Lg8zZ5iC/O8UjCqW6DNhcQG2m4TdjF9kwG3891OWbbA=
+k8s.io/apimachinery v0.19.3 h1:bpIQXlKjB4cB/oNpnNnV+BybGPR7iP5oYpsOTEJ4hgc=
+k8s.io/apimachinery v0.19.4 h1:+ZoddM7nbzrDCp0T3SWnyxqf8cbWPT2fkZImoyvHUG0=
 k8s.io/apiserver v0.17.9 h1:q50QEJ51xdHy2Gl1lo9yJexiyixxof/yDUFdWNnZxh0=
 k8s.io/apiserver v0.17.9/go.mod h1:Qaxd3EbeoPRBHVMtFyuKNAObqP6VAkzIMyWYz8KuE2k=
 k8s.io/client-go v0.17.9 h1:qUPhohX4bUBx0L7pfye02aPnu3PQ0t+B8dqHfGvt++k=
 k8s.io/client-go v0.17.9/go.mod h1:3cM92qAd1XknA5IRkRfpJhl9OQjkYy97ZEUio70wVnI=
+k8s.io/client-go v1.5.1 h1:XaX/lo2/u3/pmFau8HN+sB5C/b4dc4Dmm2eXjBH4p1E=
+k8s.io/client-go v11.0.0+incompatible h1:LBbX2+lOwY9flffWlJM7f1Ct8V2SRNiMRDFeiwnJo9o=
 k8s.io/cluster-bootstrap v0.17.9 h1:IH/MwGor5/7bwHClz0PO/8pKq+SU1eSB1rs645pGu8Y=
 k8s.io/cluster-bootstrap v0.17.9/go.mod h1:Q6nXn/sqVfMvT1VIJVPxFboYAoqH06PCjZnaYzbpZC0=
 k8s.io/code-generator v0.17.9/go.mod h1:iiHz51+oTx+Z9D0vB3CH3O4HDDPWrvZyUgUYaIE9h9M=

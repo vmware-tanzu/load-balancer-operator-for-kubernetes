@@ -42,6 +42,7 @@ KUBEBUILDER     := $(BIN_DIR)/kubebuilder
 KUBECTL         := $(BIN_DIR)/kubectl
 ETCD            := $(BIN_DIR)/etcd
 KIND            := $(BIN_DIR)/kind
+JQ              := $(BIN_DIR)/jq
 
 ## --------------------------------------
 ## Help
@@ -83,6 +84,11 @@ kind: $(KIND) $(SRCS)
 kind: ## Build kind
 $(KIND):
 	go build -tags=tools -o $@ sigs.k8s.io/kind
+
+jq: $(JQ) ## Install jq
+$(JQ):  
+	curl -o $(@) -L https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 && \
+		chmod a+x $(@)
 
 etcd: $(ETCD) ## Install etcd
 kube-apiserver: $(KUBE_APISERVER) ## Install kube-apiserver

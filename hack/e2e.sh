@@ -144,7 +144,7 @@ function e2e_up() {
   # Create the management cluster.
   if ! kind get clusters 2>/dev/null | grep -q "${KIND_MANAGEMENT_CLUSTER}"; then
     echo "creating kind management cluster ${KIND_MANAGEMENT_CLUSTER}"
-    kind create cluster --image harbor-repo.vmware.com/dockerhub-proxy-cache/kindest/node:v1.17.0 --config "${SCRIPTS_DIR}/kind/kind-cluster-with-extramounts.yaml" --name "${KIND_MANAGEMENT_CLUSTER}"
+    kind create cluster --config "${SCRIPTS_DIR}/kind/kind-cluster-with-extramounts.yaml" --name "${KIND_MANAGEMENT_CLUSTER}" --image harbor-repo.vmware.com/dockerhub-proxy-cache/kindest/node:v1.17.0
   fi
 
   # Install and wait for the cert manager webhook service to become available
@@ -223,6 +223,7 @@ EOF
   # replace the default image name to our desired image name.
   kustomize build "https://github.com/kubernetes-sigs/cluster-api/test/infrastructure/docker/config/?ref=${CAPI_VERSION}" |
     sed 's~'"${CAPD_DEFAULT_IMAGE}"'~'"${CAPD_IMAGE}"'~g' |
+    sed 's~'"name: system"'~'"name: capd-system"'~g' |
     kubectl_mgc apply -f -
 
   kubectl_mgc -n capd-system patch deployment capd-controller-manager \

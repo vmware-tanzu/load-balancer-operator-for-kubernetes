@@ -173,7 +173,7 @@ func (r *ClusterReconciler) cleanup(
 
 	// TODO(fangyuanl): use the real finalizer value by importing from AKO's
 	// repo
-	if !controllerruntime.ContainsFinalizer(obj, akoov1alpha1.ClusterFinalizer) {
+	if !controllerruntime.ContainsFinalizer(akoConfigMap, akoov1alpha1.ClusterFinalizer) {
 		log.Info("AKO finished cleanup, updating Cluster condition")
 		conditions.MarkTrue(obj, akoov1alpha1.AviResourceCleanupSucceededCondition)
 		return true, nil

@@ -4,6 +4,7 @@ stages:
 - lint
 - test
 - build
+- e2etest
 
 variables:
   DOCKER_HOST: tcp://localhost:2375/
@@ -53,3 +54,10 @@ build-images:
   before_script:
   - docker info
   script: make docker-build
+
+e2e-test:
+  stage: e2etest
+  services:
+    - docker:19.03.8-dind
+  script: make e2e-test
+  timeout: 30m
