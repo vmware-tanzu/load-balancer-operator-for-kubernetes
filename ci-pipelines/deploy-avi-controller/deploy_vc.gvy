@@ -17,6 +17,7 @@ pipeline {
        string(description: '[Optional] number of ESX in testbed', name: 'NUMESX', defaultValue: '3')
        string(description: '[Optional] Static IP Service', name: 'STATIC_IP_ENABLED', defaultValue: 'true')
        string(description: '[Optional] AVI Controller OVF URL', name: 'AVI_CONTROLLER_OVF_URL', defaultValue: 'http://sc-dbc1105.eng.vmware.com/fangyuanl/images/controller-20.1.2-9171.ovf')
+       string(description: '[Optional] Deploy TKG', name: 'DEPLOY_TKG_ENABLED', defaultValue: 'true')
        choice(
            name: 'NIMBUS_LOC',
            choices: ['wdc', 'sc,wdc', 'sc'],
@@ -40,7 +41,9 @@ pipeline {
 
                     sh "./get_vc_ip.sh ${STATIC_IP_ENABLED}"
 
-                    archiveArtifacts artifacts: 'vc.txt', fingerprint: true
+                    sh "./deploy_tkg.sh ${DEPLOY_TKG_ENABLED}"
+
+                    archiveArtifacts artifacts: 'vc.txt, config.yaml, kubeconfig', fingerprint: true
                   }
                 }
             }

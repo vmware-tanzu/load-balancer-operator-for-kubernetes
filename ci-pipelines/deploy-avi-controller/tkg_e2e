@@ -1,0 +1,625 @@
+#!/bin/bash
+
+# Copyright (c) 2020 VMware, Inc. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+################################################################################
+# usage: tkg_e2e
+#  This program deploys a testbed with vSan enabled on Nimbus then uses tkgcli
+#  to provision a management cluster and workload clusters.
+################################################################################
+
+################################################################################
+##                                  usage
+################################################################################
+
+usage="$(
+  cat <<EOF
+usage: ${0} [FLAGS]
+  Deploys a three hosts Nimbus testbed with vSan enabled, then leverages tkg cli
+  to deploy a management cluster and workload clusters.
+  Each command is supposed to be idempotent, which means you can simply rerun it
+  if anything unexpected happened. If you find it not so, please kindly shoot me
+  (fangyuanl@vmware.com) an email!
+
+FLAGS
+  Others
+    -h    show this help and exit.
+  Required
+    -n    required: specify the Nimbus username.
+    -e    required: specify the name of the vCenter and the prefix of the ESXi
+          host names on Nimbus. It's also be used to save the testbed
+          information in a tkg compatible config yaml file.
+  Optional
+    -u    deploy a three-hosts Nimbus testbed with vSan enabled.
+    -d    destroy the Nimbus testbed.
+    -f    print default environment variable suggestions.
+    -c    deploy one workload cluster with the name specified. repeat this option
+          if you want to add more than one cluster.
+    -i    deploys tkg management cluster and workload clusters on the Nimbus
+          testbed specified by the name.
+    -a    deploys harbor in the kubernetes cluster specified by the context
+          name.
+    -b    adds an Ubuntu 1.18 template in the vCenter
+
+Globals
+  ESX_BUILD
+        The build number of ESXi. Either 'ob-' or 'sb-' prefix is expected.
+  VC_BUILD
+        The build number of vCenter. Either 'ob-' or 'sb-' prefix is expected.
+  SSH_PUB_KEY
+        The ssh public key used for tkg deployment. Only required when -i is
+        used.
+  TKG_BUILD
+	The TKG build number, defaults to 16625500(1.1.3 RTM build)
+  KUBE_VERSION
+        The kube image version, defaults to v1.18.3+vmware.1
+  HAPROXY_VERSION
+        The haproxy image version, defaults to v1.2.4+vmware.1
+
+Examples
+  Get default environmental variable value suggestions.
+        bash hack/tkg_e2e -f
+  Create a three-hosts Nimbus testbed on Nimbus with vSan enabled.
+        bash hack/tkg_e2e -n fangyuanl -e tkg_e2e -u
+  Create a three-hosts Nimbus testbed on Nimbus with vSan enabled, and deploys
+  tkg management cluster and one workload cluster.
+        bash hack/tkg_e2e -n fangyuanl -e tkg_e2e -i -c "workcluster1"
+  Deploys Harbor into the Kubernetes cluster.
+        bash hack/tkg_e2e -n fangyuanl -e tkg_e2e -a "c1-admin@c1"
+  Destroys the Nimbus testbed.
+        bash hack/tkg_e2e -n fangyuanl -e tkg_e2e -d
+
+Warnings
+  1. This script doesn't handle the case well where multiple vCenter or ESXi
+  hosts have the same name, Even though Nimbus allows you to do that on
+  different pods.
+EOF
+)"
+
+################################################################################
+##                                   args
+################################################################################
+
+DEFAULT_CLUSTERS=()
+E2E_UP=""
+E2E_DOWN=""
+TKG_INSTALL=""
+NIMBUS_USER=""
+DBC_MACHINE="${DBC_MACHINE:-}"
+TB_NAME=""
+DEPLOY_HARBOR=""
+DEPLOY_UBUNTU=""
+
+################################################################################
+##                                  require
+################################################################################
+
+function check_up_dependencies() {
+  command -v govc >/dev/null 2>&1 || fatal "govc is required"
+  command -v go >/dev/null 2>&1 || fatal "go is required"
+  command -v nimbus-goclient >/dev/null 2>&1 || (pushd "$(mktemp -d)" &&
+    GO111MODULE="on" go get gitlab.eng.vmware.com/fangyuanl/nimbus-goclient && popd || exit)
+
+  : "${ESX_BUILD:?ESX_BUILD is required}"
+  : "${VC_BUILD:?VC_BUILD is required}"
+}
+
+function check_install_dependencies() {
+  : "${SSH_PUB_KEY:?SSH_PUB_KEY is required}"
+
+  command -v tkg >/dev/null 2>&1 || fatal "tkg is required"
+}
+
+################################################################################
+##                                   funcs
+################################################################################
+
+# error stores exit code, writes arguments to STDERR, and returns stored exit code
+# fatal is like error except it will exit program if exit code >0
+function error() {
+  local exit_code="${?}"
+  echo "${@}" 1>&2
+  return "${exit_code}"
+}
+function fatal() { error "${@}" || exit "${?}"; }
+
+function print_default() {
+  cat <<EOF
+Please make sure the NIMBUS_USER is your VMware username. The one
+listed below serves nothing more than a kind suggestion.
+Also, please set the SSH_PUB_KEY on your own.
+
+# vsphere7.0.1
+export VC_BUILD=ob-16555997
+# vsphere67u2
+export ESX_BUILD=ob-16555998
+
+# vc-6.9.1-p1
+export VC_BUILD=ob-14699973
+# esx-6.9.1-p1
+export ESX_BUILD=ob-15150309
+
+# vsphere67u3
+export VC_BUILD=ob-14367737
+export ESX_BUILD=ob-14320389
+
+EOF
+  cat <<'EOF'
+export SSH_PUB_KEY="$(</path/to/your/ssh_pub_key)"
+EOF
+}
+
+function get_ip() {
+  local name="$1"
+  nimbus-goclient -u "${NIMBUS_USER}" vm list --output-format csv | awk -F',' -v vmname="${name}" '{if ($1 == vmname) {print $2}}'
+}
+
+function deploy_nimbus_testbed() {
+  if [[ -s "${TB_HOME}/ids" ]]; then
+    cat <<EOF
+Testbed is already deployed, will skip.
+Check the task ids in ${TB_HOME}/ids for more details or manually remove it to
+start over.
+
+$(cat "${TB_HOME}"/ids)
+EOF
+    for id in $(<"${TB_HOME}/ids"); do
+      echo "Waiting for task $id to finish..."
+      nimbus-goclient -u "${NIMBUS_USER}" lc logs -rw --id "${id}"
+    done
+    return
+  fi
+
+  local ids=()
+  if [[ -n "${NIMBUS}" ]]; then
+    id="$(nimbus-goclient -u "${NIMBUS_USER}" lc run "nimbus deploy vcva --vcvaBuild=${VC_BUILD} --cpus 8 --nics 1 --nicType vmxnet3 --memory 18384 --disk=20971520 ${TB_NAME}" -e NIMBUS="${NIMBUS}")"
+  else
+    id="$(nimbus-goclient -u "${NIMBUS_USER}" lc run "nimbus deploy vcva --vcvaBuild=${VC_BUILD} --cpus 8 --nics 1 --nicType vmxnet3 --memory 18384 --disk=20971520 ${TB_NAME}")"
+  fi
+  echo "$id"
+  ids+=("${id}")
+  for i in $(seq 1 "${ESXI_HOSTS_NUM}"); do
+    local ESX_NAME="${TB_NAME}-${i}"
+    if [[ -n "${NIMBUS}" ]]; then
+      id="$(nimbus-goclient -u "${NIMBUS_USER}" -e "HOME=/dbc/${DBC_MACHINE}/${NIMBUS_USER}" -e NIMBUS="${NIMBUS}" lc run "nimbus deploy esx --disableNfsMounts --destroyAllVmfs --cpus 8 --nics 4 --nicType vmxnet3 --nicType vmxnet3 --nicType vmxnet3 --nicType vmxnet3 --memory 65536 --disk=536870912 --pvscsiDisk=536870912 --nvmeSsd=52428800 --desiredPassword ca\$hc0w ${ESX_NAME} ${ESX_BUILD}")"
+    else
+      id="$(nimbus-goclient -u "${NIMBUS_USER}" -e "HOME=/dbc/${DBC_MACHINE}/${NIMBUS_USER}" lc run "nimbus deploy esx --disableNfsMounts --destroyAllVmfs --cpus 8 --nics 4 --nicType vmxnet3 --nicType vmxnet3 --nicType vmxnet3 --nicType vmxnet3 --memory 65536 --disk=536870912 --pvscsiDisk=536870912 --nvmeSsd=52428800 --desiredPassword ca\$hc0w ${ESX_NAME} ${ESX_BUILD}")"
+    fi
+    echo "$id"
+    ids+=("${id}")
+  done
+
+  mkdir -p "$HOME/.nimbuscli/${TB_NAME}"
+  cat >"$HOME/.nimbuscli/${TB_NAME}/ids" <<EOF
+${ids[*]}
+EOF
+
+  for id in "${ids[@]}"; do
+    nimbus-goclient -u "${NIMBUS_USER}" lc logs -rw --id "${id}"
+  done
+}
+
+function set_env() {
+  if [[ -n "${GOVC_URL:-}" && -n "${ESXI_HOSTS:-}" ]]; then
+	  echo "Using predefined GOVC_URL:${GOVC_URL} ESXI_HOSTS:${ESXI_HOSTS}"
+	  env | grep GOVC
+	  return
+  fi
+  echo "Discovering GOVC_URL and ESXI_HOSTS"
+  export GOVC_URL
+  export ESXI_HOSTS
+  local esxi_hosts=()
+  for i in $(seq 1 "${ESXI_HOSTS_NUM}"); do
+    local ESX_NAME="${NIMBUS_USER}-${TB_NAME}-${i}"
+    esxi_hosts+=("$(get_ip "${ESX_NAME}")")
+  done
+
+  GOVC_URL="$(get_ip "${NIMBUS_USER}-${TB_NAME}")"
+  # Remove the blanks
+  GOVC_URL="${GOVC_URL//[[:blank:]]/}"
+
+  ESXI_HOSTS="${esxi_hosts[*]}"
+  # Remove the blanks
+  ESXI_HOSTS="${ESXI_HOSTS//[[:blank:]]/}"
+
+  if [[ -z "${GOVC_URL}" && -z "${ESXI_HOSTS}" ]]; then
+	  echo "Failed to auto-discover GOVC_URL and ESXI_HOSTS. Please consider manually exporting them"
+	  exit 0
+  fi
+  echo "Using GOVC_URL:${GOVC_URL} ESXI_HOSTS:${ESXI_HOSTS}"
+  env | grep GOVC
+}
+
+function set_static_env() {
+  export GOVC_DATASTORE=${GOVC_DATASTORE:-vsanDatastore}
+  export GOVC_USERNAME='administrator@vsphere.local'
+  export GOVC_PASSWORD='Admin!23'
+  export GOVC_INSECURE=1
+  export GOVC_DATACENTER=${GOVC_DATACENTER:-Datacenter}
+  export GOVC_CLUSTER=${GOVC_CLUSTER:-cluster}
+  export GOVC_RESOURCE_POOL="${GOVC_RESOURCE_POOL:-/${GOVC_DATACENTER}/host/${GOVC_CLUSTER}/Resources/pool1}"
+  export GOVC_CONTENT_LIBRARY="capv"
+
+  export ESXI_HOSTS_NUM="${ESXI_HOSTS_NUM:-3}"
+  export ESXI_USERNAME="${ESXI_USERNAME:-root}"
+  export ESXI_PASSWORD="${ESXI_PASSWORD:-ca\$hc0w}"
+  export NIMBUS="${NIMBUS:-}"
+
+  export TKG_BUILD="${TKG_BUILD:-17274478}" # 1.2.1 RTM
+  export KUBE_VERSION="${KUBE_VERSION:-v1.19.3+vmware.1}"
+  export KUBE_IMAGE_LINK="${KUBE_IMAGE_LINK:-http://build-squid.eng.vmware.com/build/mts/release/bora-${TKG_BUILD}/publish/lin64/tkg_release/node/node-${KUBE_VERSION}/images/photon-3-kube-${KUBE_VERSION}.ova}"
+  export KUBE_IMAGE_NAME="${KUBE_IMAGE_LINK##*/}"
+  # need to remove the + sign from vm name
+  export KUBE_IMAGE_NAME="${KUBE_IMAGE_NAME%%+*}"
+  export KUBE_IMAGE_NAME="${KUBE_IMAGE_NAME%%.ova}"
+
+  export GOVC_UBUNTU_CONTENT_LIBRARY="ubuntu"
+  export UBUNTU_IMAGE_LINK="https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.ova"
+  export UBUNTU_IMAGE_NAME="ubuntu-bionic-beaver"
+
+  export NSXT_2_5_MANAGER_LINK="http://build-squid.eng.vmware.com/build/mts/release/bora-15971036/publish/nsx-unified-appliance/exports/ova/nsx-unified-appliance-2.5.1.0.3.15971040.ova"
+  export NSXT_2_5_EDGE_LINK="http://build-squid.eng.vmware.com/build/mts/release/bora-15971036/publish/nsx-edgenode/exports/ova/nsx-edge-2.5.1.0.3.15971043.ova"
+
+  export TB_HOME="$HOME/.nimbuscli/${TB_NAME}"
+  mkdir -p "${TB_HOME}"
+}
+
+function bootstrap() {
+  local hosts
+  IFS=' ' read -r -a hosts <<<"${ESXI_HOSTS}"
+  if ! govc ls / | grep -q "${GOVC_DATACENTER}"; then
+    govc datacenter.create "${GOVC_DATACENTER}"
+  fi
+  if ! govc ls "/${GOVC_DATACENTER}/host" | grep -q "${GOVC_CLUSTER}"; then
+    govc cluster.create "${GOVC_CLUSTER}"
+  fi
+  govc cluster.change -drs-enabled -vsan-enabled -vsan-autoclaim "${GOVC_CLUSTER}"
+  if ! govc find / -type p | grep -q "${GOVC_RESOURCE_POOL}"; then
+    govc pool.create "${GOVC_RESOURCE_POOL}"
+  fi
+  for host in "${hosts[@]}"; do
+    if ! govc ls "/${GOVC_DATACENTER}/host/${GOVC_CLUSTER}/" | grep -q "${host}"; then
+      govc cluster.add -cluster "${GOVC_CLUSTER}" -hostname "${host}" -username "${ESXI_USERNAME}" -password "${ESXI_PASSWORD}" -noverify -force
+      govc host.vnic.service -host.ip="${host}" -enable vsan vmk0
+      # Sometimes this operation gets lost on vCenter, run it twice
+      govc host.vnic.service -host.ip="${host}" -enable vsan vmk0
+    fi
+  done
+}
+
+function deploy_ubuntu() {
+  set_env
+  while ! govc library.ls | grep -q "${GOVC_UBUNTU_CONTENT_LIBRARY}"; do
+    # It's possible that vSanDatastore is not ready yet.
+    while ! govc library.create "${GOVC_UBUNTU_CONTENT_LIBRARY}"; do
+      sleep 5s
+    done
+  done
+  ova_to_template "${UBUNTU_IMAGE_LINK}" "${UBUNTU_IMAGE_NAME}" "${GOVC_UBUNTU_CONTENT_LIBRARY}"
+}
+
+function ova_to_template() {
+  local link="${1}"
+  local name="${2}"
+  local path
+#  if ! govc library.ls "/${lib}/" | grep -q "${name}"; then
+    #govc library.import -pull "${lib}" "${link}"
+  #fi
+  path="${link##*/}"
+  path="${path%%.ova}"
+  if [[ -z "$(govc ls "/${GOVC_DATACENTER}/vm/${name}")" ]]; then
+    #govc library.deploy "/${lib}/${path}" "${name}"
+    govc import.ova -name "${name}" "${link}"
+    govc snapshot.create -vm "${name}" "${name}"
+    govc vm.markastemplate "${name}"
+  fi
+}
+
+function import_image() {
+   # Don't use content library
+#  while ! govc library.ls | grep -q "${GOVC_CONTENT_LIBRARY}"; do
+    ## It's possible that vSanDatastore is not ready yet.
+    #while ! govc library.create "${GOVC_CONTENT_LIBRARY}"; do
+      #sleep 5s
+    #done
+  #done
+  # ova_to_template "${KUBE_IMAGE_LINK}" "${KUBE_IMAGE_NAME}" "${GOVC_CONTENT_LIBRARY}"
+  ova_to_template "${KUBE_IMAGE_LINK}" "${KUBE_IMAGE_NAME}"
+}
+
+function populate_tkgcli_config() {
+  mkdir -p "$HOME/.nimbuscli/${TB_NAME}"
+  cat >"$HOME/.nimbuscli/${TB_NAME}/govc.env" <<EOF
+export GOVC_DATASTORE=${GOVC_DATASTORE}
+export GOVC_USERNAME=${GOVC_USERNAME}
+export GOVC_PASSWORD=${GOVC_PASSWORD}
+export GOVC_INSECURE=${GOVC_INSECURE}
+export GOVC_DATACENTER=${GOVC_DATACENTER}
+export GOVC_CLUSTER=${GOVC_CLUSTER}
+export GOVC_RESOURCE_POOL="${GOVC_RESOURCE_POOL}
+export GOVC_CONTENT_LIBRARY=${GOVC_CONTENT_LIBRARY}
+EOF
+  cat >"$HOME/.nimbuscli/${TB_NAME}/config.yaml" <<EOF
+KUBERNETES_VERSION: ${KUBE_VERSION} 
+VSPHERE_PASSWORD: ${GOVC_PASSWORD}
+VSPHERE_NETWORK: VM Network
+VSPHERE_FOLDER: /${GOVC_DATACENTER}/vm
+VSPHERE_TEMPLATE: /${GOVC_DATACENTER}/vm/${KUBE_IMAGE_NAME}
+VSPHERE_MEM_MIB: "4096"
+VSPHERE_DATASTORE: /${GOVC_DATACENTER}/datastore/${GOVC_DATASTORE} 
+CLUSTER_CIDR: 100.96.0.0/11
+SERVICE_CIDR: 100.64.0.0/13
+VSPHERE_USERNAME: ${GOVC_USERNAME}
+VSPHERE_RESOURCE_POOL: ${GOVC_RESOURCE_POOL}
+VSPHERE_DISK_GIB: "40"
+VSPHERE_NUM_CPUS: "2"
+VSPHERE_SERVER: ${GOVC_URL} 
+VSPHERE_DATACENTER: /${GOVC_DATACENTER} 
+EOF
+}
+
+function e2e_up() {
+  check_up_dependencies
+  deploy_nimbus_testbed
+  set_env
+  bootstrap
+  import_image
+  populate_tkgcli_config
+}
+
+function tkg_install() {
+  check_install_dependencies
+  install
+}
+
+function install() {
+  local tkg_config
+  # install management cluster
+  tkg_config="${TB_HOME}/config.yaml"
+  [[ -s "${tkg_config}" ]] || fatal "expecting ${tkg_config} exist."
+
+  if ! grep -q "VSPHERE_SSH_AUTHORIZED_KEY" <"${tkg_config}"; then
+    cat >>"${tkg_config}" <<EOF
+VSPHERE_SSH_AUTHORIZED_KEY: ${SSH_PUB_KEY}
+EOF
+  fi
+
+  tkg --config "${tkg_config}" init --infrastructure vsphere --plan prod
+  if [[ ! "${#DEFAULT_CLUSTERS[@]}" -eq "0" ]]; then
+    for cls in ${DEFAULT_CLUSTERS[*]}; do
+      tkg --config "${tkg_config}" create cluster "${cls}" --plan dev --kubernetes-version "${KUBE_VERSION}" --controlplane-machine-count 1
+    done
+  fi
+  cat <<EOF
+
+TKG management cluster successfully deployed!
+
+Run the following command to use your tkg CLI with Nimbus environment
+${TB_NAME}:
+
+alias tkg-${TB_NAME}="tkg --config ${tkg_config}"
+tkg-${TB_NAME} get mc
+tkg-${TB_NAME} get clusters
+EOF
+}
+
+function e2e_down() {
+  if [[ -s "${TB_HOME}/dids" ]]; then
+    cat <<EOF
+Testbed deletion was already triggered, will skip.
+Check the task ids in ${TB_HOME}/dids for more details or manually remove it to
+start over.
+
+$(cat "${TB_HOME}"/dids)
+EOF
+    for id in $(<"${TB_HOME}/dids"); do
+      echo "Waiting for task $id to finish..."
+      nimbus-goclient -u "${NIMBUS_USER}" lc logs -rw --id "${id}"
+    done
+    rm -rf "${TB_HOME}"
+    return
+  fi
+
+  local ids=()
+  ids+=("$(nimbus-goclient -u "${NIMBUS_USER}" lc run "nimbus-ctl kill ${NIMBUS_USER}-${TB_NAME}")")
+  for i in $(seq 1 "${ESXI_HOSTS_NUM}"); do
+    ids+=("$(nimbus-goclient -u "${NIMBUS_USER}" lc run "nimbus-ctl kill ${NIMBUS_USER}-${TB_NAME}-${i}")")
+  done
+
+  cat >"$HOME/.nimbuscli/${TB_NAME}/dids" <<EOF
+${ids[*]}
+EOF
+
+  for i in "${ids[@]}"; do
+    nimbus-goclient -u "${NIMBUS_USER}" lc logs -rw --id "${i}"
+  done
+  rm -rf "${TB_HOME}"
+}
+
+function deploy_harbor() {
+  local shared_service_context
+  local harbor_https_port
+  local harbor_fqdn
+
+  # Defaults to the current context
+  shared_service_context="${1:-$(kubectl config current-context)}"
+  harbor_https_port="${2:-31234}"
+  harbor_fqdn="${3:-harbor.tkg.cluster.local}"
+
+  command -v helm >/dev/null 2>&1 || fatal "helm is required"
+  command -v curl >/dev/null 2>&1 || fatal "curl is required"
+
+  kubectlss="kubectl --context=${shared_service_context}"
+
+  helm repo add bitnami https://charts.bitnami.com/bitnami
+  if ! ${kubectlss} get ns | grep harbor; then
+    # Create a namespace for Harbor
+    ${kubectlss} create ns harbor
+  fi
+  # Create the default StorageClass for Harbor
+  cat <<EOF | ${kubectlss} apply -f -
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: default
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: csi.vsphere.vmware.com
+parameters:
+    storagePolicyName: "vSAN Default Storage Policy"
+    fstype: ext4
+EOF
+
+# --set service.tls.commonName="${harbor_fqdn}" \
+  # https://github.com/bitnami/charts/tree/master/bitnami/harbor
+  helm upgrade --install --kube-context "${shared_service_context}" harbor bitnami/harbor \
+    --set global.storageClass=default \
+    --set service.tls.existingSecret=harbor-certmanager-tls \
+    --set service.type=NodePort \
+    --set ingress.hosts.core="${harbor_fqdn}" \
+    --set service.nodePorts.https="${harbor_https_port}" \
+    --set externalURL="${harbor_fqdn}":"${harbor_https_port}" \
+    -n harbor
+
+  # Wait for Harbor becoming ready
+  local harbor_deployments
+  harbor_deployments=("harbor-registry" "harbor-portal" "harbor-notary-server" "harbor-notary-signer" "harbor-nginx" "harbor-chartmuseum" "harbor-clair" "harbor-jobservice" "harbor-core")
+  for d in "${harbor_deployments[@]}"; do
+    ${kubectlss} wait --for=condition=Available --timeout=300s deployment/"${d}" -n harbor
+  done
+
+  # Print out harbor password
+  password="$(${kubectlss} get secret --namespace harbor harbor-core-envvars -o jsonpath="{.data.HARBOR_ADMIN_PASSWORD}" | base64 --decode)"
+
+  local nodeip
+  nodeip="$(${kubectlss} get nodes -o json | jq -cr '.items[0].status.addresses[] | select( .type == "ExternalIP") | .address')"
+  curl -s -k -L https://"${nodeip}:${harbor_https_port}"/api/v2.0/systeminfo/getcert >"${harbor_fqdn}-${harbor_https_port}-harbor-ca.crt"
+
+  if ! grep -q "${nodeip} ${harbor_fqdn}" /etc/hosts; then
+    echo "About to configure your local /etc/hosts which might require your credentials"
+    echo "${nodeip} ${harbor_fqdn}" | sudo tee -a /etc/hosts
+  fi
+
+  cat <<EOF
+
+Congratulations! You've just deployed Harbor successfully into k8s context ${shared_service_context}.
+
+Run the following command to get Harbor password:
+${kubectlss} get secret --namespace harbor harbor-core-envvars -o jsonpath="{.data.HARBOR_ADMIN_PASSWORD}" | base64 --decode
+
+Run the following command to get Harbor ca cert:
+1. curl -k -L https://${nodeip}:${harbor_https_port}/api/v2.0/systeminfo/getcert > "${harbor_fqdn}-${harbor_https_port}-harbor-ca.crt"
+
+You can access Habor from link:
+https://${nodeip}:${harbor_https_port} with credentials: admin/${password}
+
+Harbor's CA cert is available at "${harbor_fqdn}-${harbor_https_port}-harbor-ca.crt". To register it with your
+root trust chain, run the following command if you're using a Docker on Mac:
+
+1. security add-trusted-cert -d -r trustRoot -k ~/Library/Keychains/login.keychain "${harbor_fqdn}-${harbor_https_port}-harbor-ca.crt"
+2. Manually restart your Docker on Mac;
+
+Otherwise if you're on Linux, run this instead:
+1. cp ${harbor_fqdn}-${harbor_https_port}-harbor-ca.crt /etc/docker/certs.d/${harbor_fqdn}:${harbor_https_port}/ca.crt
+(You don't need to restart Docker)
+
+If you're using Windows or you've got any other questions, please refer to:
+https://docs.docker.com/registry/insecure/#use-self-signed-certificates for more
+information.
+
+At last, please run:
+1. cat /etc/hosts | grep ${harbor_fqdn}
+2. docker login ${harbor_fqdn}:${harbor_https_port}
+to verify everything is setup properly.
+
+Enjoy!
+EOF
+  exit 0
+}
+
+################################################################################
+##                                   main
+################################################################################
+
+function main() {
+  set -o errexit  # Exits immediately on unexpected errors (does not bypass traps)
+  set -o nounset  # Errors if variables are used without first being defined
+  set -o pipefail # Non-zero exit codes in piped commands causes pipeline to fail
+  # with that code
+
+  # Change directories to the parent directory of the one in which this script is
+  # located.
+  cd "$(dirname "${BASH_SOURCE[0]}")/.."
+  # Parse the command-line arguments.
+  while getopts ":c:hc:e:udin:fa:b" opt; do
+    case ${opt} in
+      h)
+        error "${usage}" && exit 1
+        ;;
+      c)
+        DEFAULT_CLUSTERS+=("${OPTARG}")
+        ;;
+      n)
+        NIMBUS_USER="${OPTARG}"
+        ;;
+      c)
+        DBC_MACHINE="${OPTARG}"
+        ;;
+      e)
+        TB_NAME="${OPTARG}"
+        ;;
+      f)
+        print_default
+        exit 0
+        ;;
+      a)
+        DEPLOY_HARBOR="${OPTARG}"
+        ;;
+      u)
+        E2E_UP="1"
+        ;;
+      d)
+        E2E_DOWN="1"
+        ;;
+      i)
+        TKG_INSTALL="1"
+        ;;
+      b)
+        DEPLOY_UBUNTU="1"
+        ;;
+      \?)
+        error "invalid option: -${OPTARG} ${usage}" && exit 1
+        ;;
+      :)
+        error "option -${OPTARG} requires an argument" && exit 1
+        ;;
+    esac
+  done
+  shift $((OPTIND - 1))
+
+  [[ ! "${#}" -eq "0" ]] && fatal "$(
+    cat <<EOF
+invalid option: $@
+${usage}
+EOF
+  )"
+
+  # Harbor deployment takes priority
+  [[ -n "${DEPLOY_HARBOR}" ]] && deploy_harbor "${DEPLOY_HARBOR}"
+
+  : "${NIMBUS_USER:?NIMBUS_USER is required}"
+  : "${DBC_MACHINE:?DBC_MACHINE is required}"
+  : "${TB_NAME:?TB_NAME is required}"
+  set_static_env
+
+  [[ -n "${DEPLOY_UBUNTU}" ]] && deploy_ubuntu
+  [[ -n "${E2E_UP}" ]] && e2e_up
+  [[ -n "${E2E_DOWN}" ]] && e2e_down
+  [[ -n "${TKG_INSTALL}" ]] && tkg_install
+  exit 0
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  main "$@"
+fi
