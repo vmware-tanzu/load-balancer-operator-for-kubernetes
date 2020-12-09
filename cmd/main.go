@@ -11,7 +11,7 @@ import (
 
 func main() {
 	var transport *http.Transport
-	client, err := clients.NewAviClient("10.184.69.25", "admin", session.SetPassword("Admin!23"), session.SetNoControllerStatusCheck, session.SetTransport(transport), session.SetInsecure)
+	client, err := clients.NewAviClient("10.184.69.25", "admin", session.SetPassword("Admin!23"), session.SetTransport(transport), session.SetInsecure)
 	if err != nil {
 		log.Fatalf("%s\n", err.Error())
 	}

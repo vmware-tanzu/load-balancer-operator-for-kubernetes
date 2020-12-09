@@ -45,20 +45,21 @@ func init() {
 	cmdLine := flag.NewFlagSet("test", flag.PanicOnError)
 	var args []string
 	for i := 0; i < len(os.Args); {
-		if strings.HasPrefix(os.Args[i], "-enable-integration-tests") || strings.HasPrefix(os.Args[i], "-enable-unit-tests") {
+		if strings.HasPrefix(os.Args[i], "-enable-integration-tests") ||
+			strings.HasPrefix(os.Args[i], "-enable-unit-tests") ||
+			strings.HasPrefix(os.Args[i], "-root-dir") {
 			args = append(args, os.Args[i])
 		}
 		i++
 	}
 	cmdLine.BoolVar(&flags.IntegrationTestsEnabled, "enable-integration-tests", false, "Enables integration tests")
 	cmdLine.BoolVar(&flags.UnitTestsEnabled, "enable-unit-tests", true, "Enables unit tests")
-	cmdLine.StringVar(&flags.RootDir, "root-dir", "../../", "Root project directory")
+	cmdLine.StringVar(&flags.RootDir, "root-dir", "..", "Root project directory")
 	_ = cmdLine.Parse(args)
-
 	// We still need to add the flags to the default flagset, because otherwise
 	// Ginkgo will complain that the flags are not recognized.
 	flag.Bool("enable-integration-tests", false, "Enables integration tests")
 	flag.Bool("enable-unit-tests", true, "Enables unit tests")
 	// This is the relative path from the current folder to the repo's root folder
-	flag.StringVar(&flags.RootDir, "root-dir", "..", "Root project directory")
+	flag.StringVar(&flags.RootDir, "root-dir", flags.RootDir, "Root project directory")
 }

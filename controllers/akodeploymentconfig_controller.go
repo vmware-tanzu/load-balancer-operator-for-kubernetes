@@ -19,9 +19,13 @@ package controllers
 import (
 	"bytes"
 	"context"
+	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/reconciler"
 	"net"
 	"sort"
 	"time"
+
+	controllerruntime "gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime"
+	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/avinetworks/sdk/go/models"
 	"github.com/go-logr/logr"
@@ -29,29 +33,40 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/aviclient"
+	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime/handlers"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 func (r *AKODeploymentConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&akoov1alpha1.AKODeploymentConfig{}).
+		Watches(
+			&source.Kind{Type: &clusterv1.Cluster{}},
+			&handler.EnqueueRequestsFromMapFunc{
+				ToRequests: handlers.AkoDeploymentConfigForCluster(r.Client, r.Log),
+			},
+		).
 		Complete(r)
 }
 
 // AKODeploymentConfigReconciler reconciles a AKODeploymentConfig object
 type AKODeploymentConfigReconciler struct {
 	client.Client
-	aviClient *aviclient.Client
-	Log       logr.Logger
-	Scheme    *runtime.Scheme
+	aviClient      *aviclient.Client
+	Log            logr.Logger
+	Scheme         *runtime.Scheme
+	userReconciler *reconciler.AkoUserReconciler
 }
 
 // +kubebuilder:rbac:groups=network.tanzu.vmware.com,resources=akodeploymentconfigs,verbs=get;list;watch;create;update;patch;delete
@@ -66,7 +81,7 @@ func (r *AKODeploymentConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Resu
 	obj := &akoov1alpha1.AKODeploymentConfig{}
 	if err := r.Client.Get(ctx, req.NamespacedName, obj); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("Machine not found, will not reconcile")
+			log.Info("AKODeploymentConfig not found, will not reconcile")
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err
@@ -128,6 +143,11 @@ func (r *AKODeploymentConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Resu
 		log.Info("AVI Client initialized successfully")
 	}
 
+	if r.userReconciler == nil {
+		r.userReconciler = reconciler.NewProvider(r.Client, r.aviClient, r.Log, r.Scheme)
+		log.Info("Ako User Reconciler initialized")
+	}
+
 	// Handle deleted cluster resources.
 	if !obj.GetDeletionTimestamp().IsZero() {
 		res, err := r.reconcileDelete(ctx, log, obj)
@@ -151,7 +171,18 @@ func (r *AKODeploymentConfigReconciler) reconcileDelete(
 	log logr.Logger,
 	obj *akoov1alpha1.AKODeploymentConfig,
 ) (ctrl.Result, error) {
-	return ctrl.Result{}, nil
+	res := ctrl.Result{}
+	if controllerruntime.ContainsFinalizer(obj, akoov1alpha1.AkoDeploymentConfigFinalizer) {
+		log.Info("Handling deleting AkoDeploymentConfig")
+		if err := r.userReconciler.ReconcileAviUsersDelete(ctx, log, obj); err != nil {
+			log.Error(err, "Fail to delete all workload cluster avi user secrets")
+			return res, err
+		}
+		// remove finalizer
+		log.Info("Removing finalizer", "finalizer", akoov1alpha1.AkoDeploymentConfigFinalizer)
+		ctrlutil.RemoveFinalizer(obj, akoov1alpha1.AkoDeploymentConfigFinalizer)
+	}
+	return res, nil
 }
 
 func (r *AKODeploymentConfigReconciler) reconcileNormal(
@@ -161,9 +192,18 @@ func (r *AKODeploymentConfigReconciler) reconcileNormal(
 ) (ctrl.Result, error) {
 	res := ctrl.Result{}
 
+	if !controllerruntime.ContainsFinalizer(obj, akoov1alpha1.AkoDeploymentConfigFinalizer) {
+		log.Info("Add finalizer", "finalizer", akoov1alpha1.AkoDeploymentConfigFinalizer)
+		// The finalizer must be present before proceeding in order to ensure that all avi user account
+		// resources are released when the interface is destroyed. Return immediately after here to let the
+		// patcher helper update the object, and then proceed on the next reconciliation.
+		ctrlutil.AddFinalizer(obj, akoov1alpha1.AkoDeploymentConfigFinalizer)
+	}
+
 	phases := []func(ctx context.Context, log logr.Logger, obj *akoov1alpha1.AKODeploymentConfig) (ctrl.Result, error){
 		r.reconcileNetworkSubnets,
 		r.reconcileCloudUsableNetwork,
+		r.userReconciler.ReconcileAviUsers,
 	}
 	errs := []error{}
 	for _, phase := range phases {

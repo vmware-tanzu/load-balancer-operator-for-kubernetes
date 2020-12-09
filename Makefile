@@ -85,6 +85,7 @@ docker-push:
 .PHONY: integration-test
 integration-test: $(GINKGO) $(ETCD)
 	$(GINKGO) -v controllers -- -enable-integration-tests -enable-unit-tests=false
+	$(GINKGO) -v controllers/reconciler -- -enable-integration-tests -enable-unit-tests=false -root-dir="../../"
 
 .PHONY: e2e-test
 e2e-test: $(KUSTOMIZE) $(KIND) $(KUBECTL) $(JQ) $(YTT)

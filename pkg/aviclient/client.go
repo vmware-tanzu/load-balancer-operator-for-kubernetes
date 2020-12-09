@@ -60,7 +60,6 @@ func NewAviClient(config *AviClientConfig) (*Client, error) {
 
 	options := []func(*session.AviSession) error{
 		session.SetPassword(config.Password),
-		session.SetNoControllerStatusCheck,
 		session.SetTransport(transport),
 	}
 	if config.CA == "" {

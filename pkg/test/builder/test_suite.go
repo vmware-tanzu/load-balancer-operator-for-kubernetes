@@ -70,8 +70,25 @@ func (s *TestSuite) GetEnvTestConfg() *rest.Config {
 	return s.config
 }
 
+func (s *TestSuite) GetManager() manager.Manager {
+	return s.manager
+}
+
 // NewTestSuiteForController returns a new test suite used for integration test
 func NewTestSuiteForController(addToManagerFn AddToManagerFunc, addToSchemeFn AddToSchemeFunc, crdpaths ...string) *TestSuite {
+
+	testSuite := &TestSuite{
+		Context:        context.Background(),
+		addToScheme:    addToSchemeFn,
+		addToManagerFn: addToManagerFn,
+	}
+	testSuite.init(crdpaths)
+
+	return testSuite
+}
+
+// NewTestSuiteForController returns a new test suite used for integration test
+func NewTestSuiteForReconciler(addToManagerFn AddToManagerFunc, addToSchemeFn AddToSchemeFunc, crdpaths ...string) *TestSuite {
 
 	testSuite := &TestSuite{
 		Context:        context.Background(),

@@ -12,18 +12,7 @@ kind: ServiceAccount
 metadata:
   name: ako-sa
   namespace: avi-system
-
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: avi-secret
-  namespace: avi-system
-type: Opaque
-data:
-  username: {{ .Values.Avicredentials.Username }}
-  password: {{ .Values.Avicredentials.Password }}
-    
+ 
 ---
 apiVersion: v1
 kind: ConfigMap

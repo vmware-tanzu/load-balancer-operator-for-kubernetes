@@ -22,8 +22,16 @@ import (
 
 const (
 	ClusterFinalizer = "ako-operator.network.tkg.tanzu.vmware.com"
-	AviClusterLabel  = "cluster-service.network.tkg.tanzu.vmware.com/avi"
 
+	AkoDeploymentConfigFinalizer = "akodeploymentconfig.ako-operator.network.tkg.tanzu.vmware.com"
+	AkoDeploymentConfigKind      = "AKODeploymentConfig"
+	AkoDeploymentConfigVersion   = "network.tanzu.vmware.com/v1alpha1"
+
+	AviClusterLabel                                              = "cluster-service.network.tkg.tanzu.vmware.com/avi"
+	AviClusterSecretType                                         = "avi.cluster.x-k8s.io/secret"
+	AviSecretName                                                = "avi-secret"
+	AviNamespace                                                 = "avi-system"
+	AviCertificateKey                                            = "certificateAuthorityData"
 	AviResourceCleanupReason                                     = "AviResourceCleanup"
 	AviResourceCleanupSucceededCondition clusterv1.ConditionType = "AviResourceCleanupSucceeded"
 )
