@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako"
 	controllerruntime "gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -171,9 +172,10 @@ func (r *ClusterReconciler) cleanup(
 		}
 	}
 
-	// TODO(fangyuanl): use the real finalizer value by importing from AKO's
-	// repo
-	if !controllerruntime.ContainsFinalizer(akoConfigMap, akoov1alpha1.ClusterFinalizer) {
+	if finished, err := ako.CleanupFinished(ctx, remoteClient, log); err != nil {
+		log.Error(err, "Failed to retrieve AKO cleanup status")
+		return false, err
+	} else if finished {
 		log.Info("AKO finished cleanup, updating Cluster condition")
 		conditions.MarkTrue(obj, akoov1alpha1.AviResourceCleanupSucceededCondition)
 		return true, nil
