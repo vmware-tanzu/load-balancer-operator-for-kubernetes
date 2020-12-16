@@ -45,23 +45,6 @@ manager: generate fmt vet
 run: generate fmt vet manifests
 	go run ./main.go
 
-# Install CRDs into a cluster
-install: manifests
-	kustomize build config/crd | kubectl apply -f -
-
-# Uninstall CRDs from a cluster
-uninstall: manifests
-	kustomize build config/crd | kubectl delete -f -
-
-# Deploy controller in the configured Kubernetes cluster in ~/.kube/config
-deploy: manifests
-	cd config/manager && kustomize edit set image controller=${IMG}
-	kustomize build config/default | kubectl apply -f -
-
-# Generate manifests e.g. CRD, RBAC etc.
-manifests: $(CONTROLLER_GEN) 
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
-
 # Run go fmt against code
 fmt:
 	go fmt ./...
@@ -96,6 +79,46 @@ ytt: $(YTT)
 
 $(YTT): $(TOOLS_DIR)/go.mod # Build ytt from tools folder.
 	cd $(TOOLS_DIR); go build -tags=tools -o $(BIN_DIR)/ytt github.com/k14s/ytt/cmd/ytt
+
+## --------------------------------------
+## AKO Operator
+## --------------------------------------
+
+# Deploy AKO Operator
+.PHONY: deploy-ako-operator
+deploy-ako-operator: $(YTT)
+	$(YTT) -f manifests | kubectl apply -f
+
+# Delete AKO Operator
+.PHONY: delete-ako-operator
+delete-ako-operator: $(YTT)
+	$(YTT) -f manifests | kubectl delete -f
+
+## --------------------------------------
+## Manifests and Specs
+## --------------------------------------
+
+# Install CRDs into a cluster
+install: manifests
+	kustomize build config/crd | kubectl apply -f -
+
+# Uninstall CRDs from a cluster
+uninstall: manifests
+	kustomize build config/crd | kubectl delete -f -
+
+# Deploy controller in the configured Kubernetes cluster in ~/.kube/config
+deploy: manifests
+	cd config/manager && kustomize edit set image controller=${IMG}
+	kustomize build config/default | kubectl apply -f -
+
+# Generate manifests e.g. CRD, RBAC etc.
+manifests: $(CONTROLLER_GEN)
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+
+# Generate manifests from ytt
+.PHONY: ytt-manifests
+ytt-manifests: $(YTT)
+	$(YTT) -f manifests
 
 ## --------------------------------------
 ## Linting and fixing linter errors

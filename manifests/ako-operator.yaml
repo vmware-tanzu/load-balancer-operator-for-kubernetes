@@ -1,0 +1,246 @@
+#@ load("@ytt:data", "data")
+
+#@ def labels():
+app: tkg-ako-operator
+#@ end
+#@
+#@ def akooImage():
+#@   return  ":".join(["/".join([data.values.imageRegistry, data.values.imageName]),  data.values.imageTag])
+#@ end
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: #@ data.values.namespace
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: akoo-leader-election-role
+  namespace: #@ data.values.namespace
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - configmaps/status
+  verbs:
+  - get
+  - update
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: akoo-manager-role
+rules:
+- apiGroups:
+  - addons.cluster.x-k8s.io
+  resources:
+  - clusterresourcesets
+  - clusterresourcesets/status
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - cluster.x-k8s.io
+  resources:
+  - clusters
+  - clusters/status
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - cluster.x-k8s.io
+  resources:
+  - machines
+  - machines/status
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+- apiGroups:
+  - network.tanzu.vmware.com
+  resources:
+  - akodeploymentconfigs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - network.tanzu.vmware.com
+  resources:
+  - akodeploymentconfigs/status
+  verbs:
+  - get
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: akoo-proxy-role
+rules:
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: akoo-metrics-reader
+rules:
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: akoo-leader-election-rolebinding
+  namespace: #@ data.values.namespace
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: akoo-leader-election-role
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: #@ data.values.namespace
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: akoo-manager-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: akoo-manager-role
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: #@ data.values.namespace
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: akoo-proxy-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: akoo-proxy-role
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: #@ data.values.namespace
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels: #@ labels()
+  name: akoo-controller-manager-metrics-service
+  namespace: #@ data.values.namespace
+spec:
+  ports:
+  - name: https
+    port: 8443
+    targetPort: https
+  selector:
+    control-plane: controller-manager
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels: #@ labels()
+  name: akoo-controller-manager
+  namespace: #@ data.values.namespace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+  template:
+    metadata:
+      labels:
+        control-plane: controller-manager
+    spec:
+      containers:
+      - args:
+        - --secure-listen-address=0.0.0.0:8443
+        - --upstream=http://127.0.0.1:8080/
+        - --logtostderr=true
+        - --v=10
+        image: gcr.io/kubebuilder/kube-rbac-proxy:v0.4.1
+        name: kube-rbac-proxy
+        ports:
+        - containerPort: 8443
+          name: https
+      - args:
+        - --metrics-addr=127.0.0.1:8080
+        command:
+        - /manager
+        image: #@ akooImage()
+        name: manager
+        resources:
+          limits:
+            cpu: 100m
+            memory: 30Mi
+          requests:
+            cpu: 100m
+            memory: 20Mi
+      terminationGracePeriodSeconds: 10

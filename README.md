@@ -29,6 +29,14 @@ When AVI is upgraded to Enterprise version, AKO Operator could:
 
 ## Getting Started
 
+### Install AKO Operator in TKGm
+
+```bash
+make deploy-ako-operator
+```
+
+## Local Development
+
 ### Setup
 
 Creating a CAPD based testing environment
