@@ -1,10 +1,11 @@
 // Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package reconciler
+package user
 
 import (
 	"context"
+
 	"github.com/avinetworks/sdk/go/models"
 	"github.com/go-logr/logr"
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"

@@ -14,7 +14,7 @@ spec:
     listKind: AKODeploymentConfigList
     plural: akodeploymentconfigs
     singular: akodeploymentconfig
-  scope: Namespaced
+  scope: Cluster
   validation:
     openAPIV3Schema:
       description: AKODeploymentConfig is the Schema for the akodeploymentconfigs API

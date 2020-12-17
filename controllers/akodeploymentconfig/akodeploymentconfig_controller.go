@@ -1,28 +1,16 @@
-/*
+// Copyright (c) 2020 VMware, Inc. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-package controllers
+package akodeploymentconfig
 
 import (
 	"bytes"
 	"context"
-	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/reconciler"
 	"net"
 	"sort"
 	"time"
+
+	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/user"
 
 	controllerruntime "gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -66,7 +54,7 @@ type AKODeploymentConfigReconciler struct {
 	aviClient      *aviclient.Client
 	Log            logr.Logger
 	Scheme         *runtime.Scheme
-	userReconciler *reconciler.AkoUserReconciler
+	userReconciler *user.AkoUserReconciler
 }
 
 // +kubebuilder:rbac:groups=network.tanzu.vmware.com,resources=akodeploymentconfigs,verbs=get;list;watch;create;update;patch;delete
@@ -144,7 +132,7 @@ func (r *AKODeploymentConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Resu
 	}
 
 	if r.userReconciler == nil {
-		r.userReconciler = reconciler.NewProvider(r.Client, r.aviClient, r.Log, r.Scheme)
+		r.userReconciler = user.NewProvider(r.Client, r.aviClient, r.Log, r.Scheme)
 		log.Info("Ako User Reconciler initialized")
 	}
 

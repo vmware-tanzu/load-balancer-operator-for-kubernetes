@@ -1,7 +1,7 @@
 // Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package controllers_test
+package akodeploymentconfig_test
 
 import (
 	"bytes"
@@ -12,7 +12,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
-	"gitlab.eng.vmware.com/core-build/ako-operator/controllers"
+	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
@@ -28,19 +28,19 @@ func unitTestEnsureStaticRanges() {
 			addrType = "V4"
 		})
 		JustBeforeEach(func() {
-			controllers.SortStaticRanges(subnet.StaticRanges)
+			akodeploymentconfig.SortStaticRanges(subnet.StaticRanges)
 		})
 		When("subnet static ranges are not sorted", func() {
 			BeforeEach(func() {
 				subnet = &models.Subnet{
 					StaticRanges: []*models.IPAddrRange{
 						&models.IPAddrRange{
-							Begin: controllers.GetAddr("192.168.100.5", addrType),
-							End:   controllers.GetAddr("192.168.100.7", addrType),
+							Begin: akodeploymentconfig.GetAddr("192.168.100.5", addrType),
+							End:   akodeploymentconfig.GetAddr("192.168.100.7", addrType),
 						},
 						&models.IPAddrRange{
-							Begin: controllers.GetAddr("192.168.100.1", addrType),
-							End:   controllers.GetAddr("192.168.100.3", addrType),
+							Begin: akodeploymentconfig.GetAddr("192.168.100.1", addrType),
+							End:   akodeploymentconfig.GetAddr("192.168.100.3", addrType),
 						},
 					},
 				}
@@ -65,7 +65,7 @@ func unitTestEnsureStaticRanges() {
 			res bool
 		)
 		JustBeforeEach(func() {
-			res = controllers.IsStaticRangeEqual(r1, r2)
+			res = akodeploymentconfig.IsStaticRangeEqual(r1, r2)
 		})
 		When("both are empty", func() {
 			BeforeEach(func() {
@@ -80,22 +80,22 @@ func unitTestEnsureStaticRanges() {
 			BeforeEach(func() {
 				r1 = []*models.IPAddrRange{
 					&models.IPAddrRange{
-						Begin: controllers.GetAddr("192.168.100.1", "V4"),
-						End:   controllers.GetAddr("192.168.100.3", "V4"),
+						Begin: akodeploymentconfig.GetAddr("192.168.100.1", "V4"),
+						End:   akodeploymentconfig.GetAddr("192.168.100.3", "V4"),
 					},
 					&models.IPAddrRange{
-						Begin: controllers.GetAddr("192.168.100.9", "V4"),
-						End:   controllers.GetAddr("192.168.100.12", "V4"),
+						Begin: akodeploymentconfig.GetAddr("192.168.100.9", "V4"),
+						End:   akodeploymentconfig.GetAddr("192.168.100.12", "V4"),
 					},
 				}
 				r2 = []*models.IPAddrRange{
 					&models.IPAddrRange{
-						Begin: controllers.GetAddr("192.168.100.1", "V4"),
-						End:   controllers.GetAddr("192.168.100.3", "V4"),
+						Begin: akodeploymentconfig.GetAddr("192.168.100.1", "V4"),
+						End:   akodeploymentconfig.GetAddr("192.168.100.3", "V4"),
 					},
 					&models.IPAddrRange{
-						Begin: controllers.GetAddr("192.168.100.9", "V4"),
-						End:   controllers.GetAddr("192.168.100.12", "V4"),
+						Begin: akodeploymentconfig.GetAddr("192.168.100.9", "V4"),
+						End:   akodeploymentconfig.GetAddr("192.168.100.12", "V4"),
 					},
 				}
 			})
@@ -107,22 +107,22 @@ func unitTestEnsureStaticRanges() {
 			BeforeEach(func() {
 				r1 = []*models.IPAddrRange{
 					&models.IPAddrRange{
-						Begin: controllers.GetAddr("192.168.100.1", "V4"),
-						End:   controllers.GetAddr("192.168.100.4", "V4"),
+						Begin: akodeploymentconfig.GetAddr("192.168.100.1", "V4"),
+						End:   akodeploymentconfig.GetAddr("192.168.100.4", "V4"),
 					},
 					&models.IPAddrRange{
-						Begin: controllers.GetAddr("192.168.100.9", "V4"),
-						End:   controllers.GetAddr("192.168.100.12", "V4"),
+						Begin: akodeploymentconfig.GetAddr("192.168.100.9", "V4"),
+						End:   akodeploymentconfig.GetAddr("192.168.100.12", "V4"),
 					},
 				}
 				r2 = []*models.IPAddrRange{
 					&models.IPAddrRange{
-						Begin: controllers.GetAddr("192.168.100.1", "V4"),
-						End:   controllers.GetAddr("192.168.100.3", "V4"),
+						Begin: akodeploymentconfig.GetAddr("192.168.100.1", "V4"),
+						End:   akodeploymentconfig.GetAddr("192.168.100.3", "V4"),
 					},
 					&models.IPAddrRange{
-						Begin: controllers.GetAddr("192.168.100.9", "V4"),
-						End:   controllers.GetAddr("192.168.100.12", "V4"),
+						Begin: akodeploymentconfig.GetAddr("192.168.100.9", "V4"),
+						End:   akodeploymentconfig.GetAddr("192.168.100.12", "V4"),
 					},
 				}
 			})
@@ -144,23 +144,23 @@ func unitTestEnsureStaticRanges() {
 			addrType = "V4"
 		})
 		JustBeforeEach(func() {
-			modified = controllers.EnsureStaticRanges(subnet, ipPools, addrType)
+			modified = akodeploymentconfig.EnsureStaticRanges(subnet, ipPools, addrType)
 		})
 		When("all the intervals are contiguous", func() {
 			BeforeEach(func() {
 				subnet = &models.Subnet{
 					StaticRanges: []*models.IPAddrRange{
 						&models.IPAddrRange{
-							Begin: controllers.GetAddr("192.168.100.1", addrType),
-							End:   controllers.GetAddr("192.168.100.4", addrType),
+							Begin: akodeploymentconfig.GetAddr("192.168.100.1", addrType),
+							End:   akodeploymentconfig.GetAddr("192.168.100.4", addrType),
 						},
 						&models.IPAddrRange{
-							Begin: controllers.GetAddr("192.168.100.7", addrType),
-							End:   controllers.GetAddr("192.168.100.10", addrType),
+							Begin: akodeploymentconfig.GetAddr("192.168.100.7", addrType),
+							End:   akodeploymentconfig.GetAddr("192.168.100.10", addrType),
 						},
 						&models.IPAddrRange{
-							Begin: controllers.GetAddr("192.168.100.200", addrType),
-							End:   controllers.GetAddr("192.168.100.202", addrType),
+							Begin: akodeploymentconfig.GetAddr("192.168.100.200", addrType),
+							End:   akodeploymentconfig.GetAddr("192.168.100.202", addrType),
 						},
 					},
 				}
@@ -178,12 +178,12 @@ func unitTestEnsureStaticRanges() {
 				}
 				expected = []*models.IPAddrRange{
 					&models.IPAddrRange{
-						Begin: controllers.GetAddr("192.168.100.3", addrType),
-						End:   controllers.GetAddr("192.168.100.7", addrType),
+						Begin: akodeploymentconfig.GetAddr("192.168.100.3", addrType),
+						End:   akodeploymentconfig.GetAddr("192.168.100.7", addrType),
 					},
 					&models.IPAddrRange{
-						Begin: controllers.GetAddr("192.168.100.10", addrType),
-						End:   controllers.GetAddr("192.168.100.202", addrType),
+						Begin: akodeploymentconfig.GetAddr("192.168.100.10", addrType),
+						End:   akodeploymentconfig.GetAddr("192.168.100.202", addrType),
 					},
 				}
 				expectedModified = true
@@ -191,7 +191,7 @@ func unitTestEnsureStaticRanges() {
 			It("should update to ip pools", func() {
 				Expect(modified).To(Equal(expectedModified))
 				if modified {
-					Expect(controllers.IsStaticRangeEqual(subnet.StaticRanges, expected))
+					Expect(akodeploymentconfig.IsStaticRangeEqual(subnet.StaticRanges, expected))
 				}
 			})
 		})
@@ -200,12 +200,12 @@ func unitTestEnsureStaticRanges() {
 				subnet = &models.Subnet{
 					StaticRanges: []*models.IPAddrRange{
 						&models.IPAddrRange{
-							Begin: controllers.GetAddr("192.168.100.1", addrType),
-							End:   controllers.GetAddr("192.168.100.20", addrType),
+							Begin: akodeploymentconfig.GetAddr("192.168.100.1", addrType),
+							End:   akodeploymentconfig.GetAddr("192.168.100.20", addrType),
 						},
 						&models.IPAddrRange{
-							Begin: controllers.GetAddr("192.168.100.192", addrType),
-							End:   controllers.GetAddr("192.168.100.200", addrType),
+							Begin: akodeploymentconfig.GetAddr("192.168.100.192", addrType),
+							End:   akodeploymentconfig.GetAddr("192.168.100.200", addrType),
 						},
 					},
 				}
@@ -223,12 +223,12 @@ func unitTestEnsureStaticRanges() {
 				}
 				expected = []*models.IPAddrRange{
 					&models.IPAddrRange{
-						Begin: controllers.GetAddr("192.168.100.3", addrType),
-						End:   controllers.GetAddr("192.168.100.7", addrType),
+						Begin: akodeploymentconfig.GetAddr("192.168.100.3", addrType),
+						End:   akodeploymentconfig.GetAddr("192.168.100.7", addrType),
 					},
 					&models.IPAddrRange{
-						Begin: controllers.GetAddr("192.168.100.13", addrType),
-						End:   controllers.GetAddr("192.168.100.18", addrType),
+						Begin: akodeploymentconfig.GetAddr("192.168.100.13", addrType),
+						End:   akodeploymentconfig.GetAddr("192.168.100.18", addrType),
 					},
 				}
 				expectedModified = true
@@ -236,7 +236,7 @@ func unitTestEnsureStaticRanges() {
 			It("should update to ip pools", func() {
 				Expect(modified).To(Equal(expectedModified))
 				if modified {
-					Expect(controllers.IsStaticRangeEqual(subnet.StaticRanges, expected))
+					Expect(akodeploymentconfig.IsStaticRangeEqual(subnet.StaticRanges, expected))
 				}
 			})
 		})
@@ -245,20 +245,20 @@ func unitTestEnsureStaticRanges() {
 				subnet = &models.Subnet{
 					StaticRanges: []*models.IPAddrRange{
 						&models.IPAddrRange{
-							Begin: controllers.GetAddr("192.168.100.1", addrType),
-							End:   controllers.GetAddr("192.168.100.3", addrType),
+							Begin: akodeploymentconfig.GetAddr("192.168.100.1", addrType),
+							End:   akodeploymentconfig.GetAddr("192.168.100.3", addrType),
 						},
 						&models.IPAddrRange{
-							Begin: controllers.GetAddr("192.168.100.5", addrType),
-							End:   controllers.GetAddr("192.168.100.8", addrType),
+							Begin: akodeploymentconfig.GetAddr("192.168.100.5", addrType),
+							End:   akodeploymentconfig.GetAddr("192.168.100.8", addrType),
 						},
 						&models.IPAddrRange{
-							Begin: controllers.GetAddr("192.168.100.12", addrType),
-							End:   controllers.GetAddr("192.168.100.16", addrType),
+							Begin: akodeploymentconfig.GetAddr("192.168.100.12", addrType),
+							End:   akodeploymentconfig.GetAddr("192.168.100.16", addrType),
 						},
 						&models.IPAddrRange{
-							Begin: controllers.GetAddr("192.168.100.192", addrType),
-							End:   controllers.GetAddr("192.168.100.200", addrType),
+							Begin: akodeploymentconfig.GetAddr("192.168.100.192", addrType),
+							End:   akodeploymentconfig.GetAddr("192.168.100.200", addrType),
 						},
 					},
 				}
@@ -276,12 +276,12 @@ func unitTestEnsureStaticRanges() {
 				}
 				expected = []*models.IPAddrRange{
 					&models.IPAddrRange{
-						Begin: controllers.GetAddr("192.168.100.1", addrType),
-						End:   controllers.GetAddr("192.168.100.21", addrType),
+						Begin: akodeploymentconfig.GetAddr("192.168.100.1", addrType),
+						End:   akodeploymentconfig.GetAddr("192.168.100.21", addrType),
 					},
 					&models.IPAddrRange{
-						Begin: controllers.GetAddr("192.168.100.100", addrType),
-						End:   controllers.GetAddr("192.168.100.203", addrType),
+						Begin: akodeploymentconfig.GetAddr("192.168.100.100", addrType),
+						End:   akodeploymentconfig.GetAddr("192.168.100.203", addrType),
 					},
 				}
 				expectedModified = true
@@ -289,7 +289,7 @@ func unitTestEnsureStaticRanges() {
 			It("should update to ip pools", func() {
 				Expect(modified).To(Equal(expectedModified))
 				if modified {
-					Expect(controllers.IsStaticRangeEqual(subnet.StaticRanges, expected))
+					Expect(akodeploymentconfig.IsStaticRangeEqual(subnet.StaticRanges, expected))
 				}
 			})
 		})
@@ -298,12 +298,12 @@ func unitTestEnsureStaticRanges() {
 				subnet = &models.Subnet{
 					StaticRanges: []*models.IPAddrRange{
 						&models.IPAddrRange{
-							Begin: controllers.GetAddr("192.168.100.1", addrType),
-							End:   controllers.GetAddr("192.168.100.4", addrType),
+							Begin: akodeploymentconfig.GetAddr("192.168.100.1", addrType),
+							End:   akodeploymentconfig.GetAddr("192.168.100.4", addrType),
 						},
 						&models.IPAddrRange{
-							Begin: controllers.GetAddr("192.168.100.192", addrType),
-							End:   controllers.GetAddr("192.168.100.200", addrType),
+							Begin: akodeploymentconfig.GetAddr("192.168.100.192", addrType),
+							End:   akodeploymentconfig.GetAddr("192.168.100.200", addrType),
 						},
 					},
 				}
@@ -321,12 +321,12 @@ func unitTestEnsureStaticRanges() {
 				}
 				expected = []*models.IPAddrRange{
 					&models.IPAddrRange{
-						Begin: controllers.GetAddr("192.168.100.3", addrType),
-						End:   controllers.GetAddr("192.168.100.7", addrType),
+						Begin: akodeploymentconfig.GetAddr("192.168.100.3", addrType),
+						End:   akodeploymentconfig.GetAddr("192.168.100.7", addrType),
 					},
 					&models.IPAddrRange{
-						Begin: controllers.GetAddr("192.168.100.21", addrType),
-						End:   controllers.GetAddr("192.168.100.25", addrType),
+						Begin: akodeploymentconfig.GetAddr("192.168.100.21", addrType),
+						End:   akodeploymentconfig.GetAddr("192.168.100.25", addrType),
 					},
 				}
 				expectedModified = true
@@ -334,7 +334,7 @@ func unitTestEnsureStaticRanges() {
 			It("should update to ip pools", func() {
 				Expect(modified).To(Equal(expectedModified))
 				if modified {
-					Expect(controllers.IsStaticRangeEqual(subnet.StaticRanges, expected))
+					Expect(akodeploymentconfig.IsStaticRangeEqual(subnet.StaticRanges, expected))
 				}
 			})
 		})
@@ -357,12 +357,12 @@ func unitTestEnsureStaticRanges() {
 				}
 				expected = []*models.IPAddrRange{
 					&models.IPAddrRange{
-						Begin: controllers.GetAddr("192.168.100.1", addrType),
-						End:   controllers.GetAddr("192.168.100.2", addrType),
+						Begin: akodeploymentconfig.GetAddr("192.168.100.1", addrType),
+						End:   akodeploymentconfig.GetAddr("192.168.100.2", addrType),
 					},
 					&models.IPAddrRange{
-						Begin: controllers.GetAddr("192.168.100.3", addrType),
-						End:   controllers.GetAddr("192.168.100.17", addrType),
+						Begin: akodeploymentconfig.GetAddr("192.168.100.3", addrType),
+						End:   akodeploymentconfig.GetAddr("192.168.100.17", addrType),
 					},
 				}
 				expectedModified = true
@@ -373,12 +373,12 @@ func unitTestEnsureStaticRanges() {
 				subnet = &models.Subnet{
 					StaticRanges: []*models.IPAddrRange{
 						&models.IPAddrRange{
-							Begin: controllers.GetAddr("192.168.100.192", addrType),
-							End:   controllers.GetAddr("192.168.100.200", addrType),
+							Begin: akodeploymentconfig.GetAddr("192.168.100.192", addrType),
+							End:   akodeploymentconfig.GetAddr("192.168.100.200", addrType),
 						},
 						&models.IPAddrRange{
-							Begin: controllers.GetAddr("192.168.100.1", addrType),
-							End:   controllers.GetAddr("192.168.100.4", addrType),
+							Begin: akodeploymentconfig.GetAddr("192.168.100.1", addrType),
+							End:   akodeploymentconfig.GetAddr("192.168.100.4", addrType),
 						},
 					},
 				}
@@ -389,7 +389,7 @@ func unitTestEnsureStaticRanges() {
 			It("should update to ip pools", func() {
 				Expect(modified).To(Equal(expectedModified))
 				if modified {
-					Expect(controllers.IsStaticRangeEqual(subnet.StaticRanges, expected))
+					Expect(akodeploymentconfig.IsStaticRangeEqual(subnet.StaticRanges, expected))
 				}
 			})
 		})
@@ -398,16 +398,16 @@ func unitTestEnsureStaticRanges() {
 				subnet = &models.Subnet{
 					StaticRanges: []*models.IPAddrRange{
 						&models.IPAddrRange{
-							Begin: controllers.GetAddr("192.168.100.1", addrType),
-							End:   controllers.GetAddr("192.168.100.3", addrType),
+							Begin: akodeploymentconfig.GetAddr("192.168.100.1", addrType),
+							End:   akodeploymentconfig.GetAddr("192.168.100.3", addrType),
 						},
 						&models.IPAddrRange{
-							Begin: controllers.GetAddr("192.168.100.7", addrType),
-							End:   controllers.GetAddr("192.168.100.10", addrType),
+							Begin: akodeploymentconfig.GetAddr("192.168.100.7", addrType),
+							End:   akodeploymentconfig.GetAddr("192.168.100.10", addrType),
 						},
 						&models.IPAddrRange{
-							Begin: controllers.GetAddr("192.168.100.121", addrType),
-							End:   controllers.GetAddr("192.168.100.134", addrType),
+							Begin: akodeploymentconfig.GetAddr("192.168.100.121", addrType),
+							End:   akodeploymentconfig.GetAddr("192.168.100.134", addrType),
 						},
 					},
 				}
@@ -433,7 +433,7 @@ func unitTestEnsureStaticRanges() {
 			It("should not change anything", func() {
 				Expect(modified).To(Equal(expectedModified))
 				if modified {
-					Expect(controllers.IsStaticRangeEqual(subnet.StaticRanges, expected))
+					Expect(akodeploymentconfig.IsStaticRangeEqual(subnet.StaticRanges, expected))
 				}
 			})
 		})
@@ -459,8 +459,8 @@ func unitTestEnsureStaticRanges() {
 			logger = log.Log
 		})
 		JustBeforeEach(func() {
-			modified = controllers.EnsureAviNetwork(network, addrType, cidr, mask, ipPools, logger)
-			expected = controllers.CreateStaticRangeFromIPPools(ipPools)
+			modified = akodeploymentconfig.EnsureAviNetwork(network, addrType, cidr, mask, ipPools, logger)
+			expected = akodeploymentconfig.CreateStaticRangeFromIPPools(ipPools)
 		})
 		When("update is needed", func() {
 			When("ip pools overlaps with static ranges", func() {
@@ -469,13 +469,13 @@ func unitTestEnsureStaticRanges() {
 						ConfiguredSubnets: []*models.Subnet{
 							&models.Subnet{
 								Prefix: &models.IPAddrPrefix{
-									IPAddr: controllers.GetAddr("192.168.100.0", addrType),
+									IPAddr: akodeploymentconfig.GetAddr("192.168.100.0", addrType),
 									Mask:   &mask,
 								},
 								StaticRanges: []*models.IPAddrRange{
 									&models.IPAddrRange{
-										Begin: controllers.GetAddr("192.168.100.1", addrType),
-										End:   controllers.GetAddr("192.168.100.30", addrType),
+										Begin: akodeploymentconfig.GetAddr("192.168.100.1", addrType),
+										End:   akodeploymentconfig.GetAddr("192.168.100.30", addrType),
 									},
 								},
 							},
@@ -498,9 +498,9 @@ func unitTestEnsureStaticRanges() {
 				It("should update static range to ip pools", func() {
 					Expect(modified).To(Equal(expectedModified))
 					if modified {
-						index, contains := controllers.AviNetworkContainsSubnet(network, cidr.IP.String(), mask)
+						index, contains := akodeploymentconfig.AviNetworkContainsSubnet(network, cidr.IP.String(), mask)
 						Expect(contains).To(BeTrue())
-						Expect(controllers.IsStaticRangeEqual(network.ConfiguredSubnets[index].StaticRanges, expected)).To(BeTrue())
+						Expect(akodeploymentconfig.IsStaticRangeEqual(network.ConfiguredSubnets[index].StaticRanges, expected)).To(BeTrue())
 					}
 				})
 			})
@@ -510,13 +510,13 @@ func unitTestEnsureStaticRanges() {
 						ConfiguredSubnets: []*models.Subnet{
 							&models.Subnet{
 								Prefix: &models.IPAddrPrefix{
-									IPAddr: controllers.GetAddr("192.168.100.0", addrType),
+									IPAddr: akodeploymentconfig.GetAddr("192.168.100.0", addrType),
 									Mask:   &mask,
 								},
 								StaticRanges: []*models.IPAddrRange{
 									&models.IPAddrRange{
-										Begin: controllers.GetAddr("192.168.100.1", addrType),
-										End:   controllers.GetAddr("192.168.100.30", addrType),
+										Begin: akodeploymentconfig.GetAddr("192.168.100.1", addrType),
+										End:   akodeploymentconfig.GetAddr("192.168.100.30", addrType),
 									},
 								},
 							},
@@ -539,9 +539,9 @@ func unitTestEnsureStaticRanges() {
 				It("should update static range to ip pools", func() {
 					Expect(modified).To(Equal(expectedModified))
 					if modified {
-						index, contains := controllers.AviNetworkContainsSubnet(network, cidr.IP.String(), mask)
+						index, contains := akodeploymentconfig.AviNetworkContainsSubnet(network, cidr.IP.String(), mask)
 						Expect(contains).To(BeTrue())
-						Expect(controllers.IsStaticRangeEqual(network.ConfiguredSubnets[index].StaticRanges, expected)).To(BeTrue())
+						Expect(akodeploymentconfig.IsStaticRangeEqual(network.ConfiguredSubnets[index].StaticRanges, expected)).To(BeTrue())
 					}
 				})
 			})
@@ -551,13 +551,13 @@ func unitTestEnsureStaticRanges() {
 						ConfiguredSubnets: []*models.Subnet{
 							&models.Subnet{
 								Prefix: &models.IPAddrPrefix{
-									IPAddr: controllers.GetAddr("192.168.100.0", addrType),
+									IPAddr: akodeploymentconfig.GetAddr("192.168.100.0", addrType),
 									Mask:   &mask,
 								},
 								StaticRanges: []*models.IPAddrRange{
 									&models.IPAddrRange{
-										Begin: controllers.GetAddr("192.168.100.1", addrType),
-										End:   controllers.GetAddr("192.168.100.3", addrType),
+										Begin: akodeploymentconfig.GetAddr("192.168.100.1", addrType),
+										End:   akodeploymentconfig.GetAddr("192.168.100.3", addrType),
 									},
 								},
 							},
@@ -580,9 +580,9 @@ func unitTestEnsureStaticRanges() {
 				It("should update static range to ip pools", func() {
 					Expect(modified).To(Equal(expectedModified))
 					if modified {
-						index, contains := controllers.AviNetworkContainsSubnet(network, cidr.IP.String(), mask)
+						index, contains := akodeploymentconfig.AviNetworkContainsSubnet(network, cidr.IP.String(), mask)
 						Expect(contains).To(BeTrue())
-						Expect(controllers.IsStaticRangeEqual(network.ConfiguredSubnets[index].StaticRanges, expected)).To(BeTrue())
+						Expect(akodeploymentconfig.IsStaticRangeEqual(network.ConfiguredSubnets[index].StaticRanges, expected)).To(BeTrue())
 					}
 				})
 			})
@@ -599,9 +599,9 @@ func unitTestEnsureStaticRanges() {
 				It("should not update anything", func() {
 					Expect(modified).To(Equal(expectedModified))
 					if modified {
-						index, contains := controllers.AviNetworkContainsSubnet(network, cidr.IP.String(), mask)
+						index, contains := akodeploymentconfig.AviNetworkContainsSubnet(network, cidr.IP.String(), mask)
 						Expect(contains).To(BeTrue())
-						Expect(controllers.IsStaticRangeEqual(network.ConfiguredSubnets[index].StaticRanges, expected)).To(BeTrue())
+						Expect(akodeploymentconfig.IsStaticRangeEqual(network.ConfiguredSubnets[index].StaticRanges, expected)).To(BeTrue())
 					}
 				})
 			})
@@ -611,17 +611,17 @@ func unitTestEnsureStaticRanges() {
 						ConfiguredSubnets: []*models.Subnet{
 							&models.Subnet{
 								Prefix: &models.IPAddrPrefix{
-									IPAddr: controllers.GetAddr("192.168.100.0", addrType),
+									IPAddr: akodeploymentconfig.GetAddr("192.168.100.0", addrType),
 									Mask:   &mask,
 								},
 								StaticRanges: []*models.IPAddrRange{
 									&models.IPAddrRange{
-										Begin: controllers.GetAddr("192.168.100.5", addrType),
-										End:   controllers.GetAddr("192.168.100.7", addrType),
+										Begin: akodeploymentconfig.GetAddr("192.168.100.5", addrType),
+										End:   akodeploymentconfig.GetAddr("192.168.100.7", addrType),
 									},
 									&models.IPAddrRange{
-										Begin: controllers.GetAddr("192.168.100.1", addrType),
-										End:   controllers.GetAddr("192.168.100.3", addrType),
+										Begin: akodeploymentconfig.GetAddr("192.168.100.1", addrType),
+										End:   akodeploymentconfig.GetAddr("192.168.100.3", addrType),
 									},
 								},
 							},

@@ -67,8 +67,8 @@ docker-push:
 
 .PHONY: integration-test
 integration-test: $(GINKGO) $(ETCD)
-	$(GINKGO) -v controllers -- -enable-integration-tests -enable-unit-tests=false
-	$(GINKGO) -v controllers/reconciler -- -enable-integration-tests -enable-unit-tests=false -root-dir="../../"
+	$(GINKGO) -v controllers/akodeploymentconfig/user -- -enable-integration-tests -enable-unit-tests=false -root-dir="../../.."
+	$(GINKGO) -v controllers/cluster -- -enable-integration-tests -enable-unit-tests=false
 
 .PHONY: e2e-test
 e2e-test: $(KUSTOMIZE) $(KIND) $(KUBECTL) $(JQ) $(YTT)

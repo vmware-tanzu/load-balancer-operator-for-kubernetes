@@ -1,19 +1,20 @@
 // Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package reconciler
+package user
 
 import (
+	"path/filepath"
+	"testing"
+
 	networkv1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/test/builder"
 	testutil "gitlab.eng.vmware.com/core-build/ako-operator/pkg/test/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"path/filepath"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
 	clustereaddonv1alpha3 "sigs.k8s.io/cluster-api/exp/addons/api/v1alpha3"
 	ctrlmgr "sigs.k8s.io/controller-runtime/pkg/manager"
-	"testing"
 
 	. "github.com/onsi/ginkgo"
 )

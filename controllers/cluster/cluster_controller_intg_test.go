@@ -1,7 +1,7 @@
 // Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package controllers_test
+package cluster_test
 
 import (
 	. "github.com/onsi/ginkgo"

@@ -54,7 +54,7 @@ func init() {
 	}
 	cmdLine.BoolVar(&flags.IntegrationTestsEnabled, "enable-integration-tests", false, "Enables integration tests")
 	cmdLine.BoolVar(&flags.UnitTestsEnabled, "enable-unit-tests", true, "Enables unit tests")
-	cmdLine.StringVar(&flags.RootDir, "root-dir", "..", "Root project directory")
+	cmdLine.StringVar(&flags.RootDir, "root-dir", "../..", "Root project directory")
 	_ = cmdLine.Parse(args)
 	// We still need to add the flags to the default flagset, because otherwise
 	// Ginkgo will complain that the flags are not recognized.

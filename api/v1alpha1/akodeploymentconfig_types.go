@@ -92,15 +92,29 @@ type AKODeploymentConfigSpec struct {
 	// This field is immutable.
 	DataNetwork DataNetwork `json:"dataNetwork"`
 
-	// ExtraConfig contains the extra configurations for AKO to override
+	// CustomizedConfigs contains the customized configurations for AKO to override
 	// defaults
 	//
+	// When CustomizedConfigs is non-empty, AKO Operator will create
+	// ClusterResourceSet only associated with the specified configs
+	//
 	// +optional
-	ExtraConfig ExtraAviConfig `json:"extraAviConfig,omitempty"`
+	CustomizedConfigs []ConfigRef `json:"customizedConfigs,omitempty"`
 }
 
-// TODO(fangyuanl): move Values in controllers/values.go to ExtraAviConfig
-type ExtraAviConfig struct {
+// ConfigRef specifies a resource.
+type ConfigRef struct {
+	// Name of the resource
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+
+	// Kind of the resource. Supported kinds are: Secrets and ConfigMaps.
+	// +kubebuilder:validation:Enum=Secret;ConfigMap
+	Kind string `json:"kind"`
+
+	// Namespace of the resource
+	// +kubebuilder:validation:MinLength=1
+	Namespace string `json:"namespace"`
 }
 
 // AVITenant describes settings for an AVI Tenant object
