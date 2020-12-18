@@ -1,6 +1,6 @@
 module gitlab.eng.vmware.com/core-build/tkg-connectivity/hack/tools
 
-go 1.13
+go 1.15
 
 require (
 	github.com/blang/semver v3.5.1+incompatible

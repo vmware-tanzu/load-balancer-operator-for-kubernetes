@@ -1,5 +1,9 @@
+# Copyright (c) 2019 VMware, Inc. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 # Build the manager binary
-FROM harbor-repo.vmware.com/dockerhub-proxy-cache/library/golang:1.13 as builder
+FROM harbor-repo.vmware.com/dockerhub-proxy-cache/library/golang:1.15.0 AS builder
+# FROM golang:1.15.0 AS builder
 
 WORKDIR /workspace
 # Copy the Go Modules manifests

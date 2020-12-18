@@ -130,4 +130,3 @@ echo "Workload cluster is deleted"
 
 # Delete testing environment
 hack/e2e.sh -d
-echo "Testing environment is deleted"
