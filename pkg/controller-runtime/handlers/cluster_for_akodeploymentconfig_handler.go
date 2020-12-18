@@ -64,7 +64,7 @@ func (r *akoDeploymentConfigForCluster) Map(o handler.MapObject) []reconcile.Req
 	}
 	r.log.V(3).Info("Generating requests", "requests", requests)
 
-	// Return reconcile requests for the Machine resources.
+	// Return reconcile requests for the AKODeploymentConfig resources.
 	return requests
 }
 

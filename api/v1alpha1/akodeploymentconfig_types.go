@@ -1,18 +1,5 @@
-/*
-
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright (c) 2020 VMware, Inc. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 package v1alpha1
 
@@ -39,11 +26,14 @@ type AKODeploymentConfigSpec struct {
 	//                              the corresponding scheme
 	Controller string `json:"controller"`
 
+	// ServiceEngine is the Service Engine name that's to be used by the set
+	// of AKO Deployments
+	ServiceEngine string `json:"serviceEngine"`
+
 	// Label selector for Clusters. The Clusters that are
 	// selected by this will be the ones affected by this
 	// AKODeploymentConfig.
 	// It must match the Cluster labels. This field is immutable.
-	// By default AviClusterLabel is used
 	// +optional
 	ClusterSelector metav1.LabelSelector `json:"clusterSelector,omitempty"`
 
@@ -92,29 +82,69 @@ type AKODeploymentConfigSpec struct {
 	// This field is immutable.
 	DataNetwork DataNetwork `json:"dataNetwork"`
 
-	// CustomizedConfigs contains the customized configurations for AKO to override
-	// defaults
-	//
-	// When CustomizedConfigs is non-empty, AKO Operator will create
-	// ClusterResourceSet only associated with the specified configs
+	// ExtraConfigs contains extra configurations for AKO Deployment
 	//
 	// +optional
-	CustomizedConfigs []ConfigRef `json:"customizedConfigs,omitempty"`
+	ExtraConfigs ExtraConfigs `json:"extraConfigs,omitempty"`
 }
 
-// ConfigRef specifies a resource.
-type ConfigRef struct {
-	// Name of the resource
-	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name"`
+// ExtraConfigs contains extra configurations for AKO Deployment
+type ExtraConfigs struct {
+	// Image specifies the configuration for AKO docker image
+	// +optional
+	Image AKOImageConfig `json:"image,omitempty"`
 
-	// Kind of the resource. Supported kinds are: Secrets and ConfigMaps.
-	// +kubebuilder:validation:Enum=Secret;ConfigMap
-	Kind string `json:"kind"`
+	// Log specifies the configuration for AKO logging
+	// +optional
+	Log AKOLogConfig `json:"log,omitempty"`
 
-	// Namespace of the resource
-	// +kubebuilder:validation:MinLength=1
-	Namespace string `json:"namespace"`
+	// Rbac specifies the configuration for AKO Rbac
+	// +optional
+	Rbac AKORbacConfig `json:"rbac,omitempty"`
+
+	// DisableIngressClass will prevent AKO Operator to install AKO
+	// IngressClass into workload clusters for old version of K8s
+	//
+	// +optional
+	DisableIngressClass bool `json:"disableIngressClass,omitempty"`
+}
+
+type AKOImageConfig struct {
+	// Repository is the AKO Docker image repository
+	// +optional
+	Repository string `json:"repository,omitempty"`
+
+	// Version is the AKO Docker image version
+	// +optional
+	Version string `json:"version,omitempty"`
+
+	// +kubebuilder:validation:Enum=Always;Never;IfNotPresent
+	// +optional
+	PullPolicy string `json:"pullPolicy,omitempty"`
+}
+
+type AKOLogConfig struct {
+	// PersistentVolumeClaim specifies if a PVC should make for AKO logging
+	// +optional
+	PersistentVolumeClaim string `json:"persistentVolumeClaim,omitempty"`
+
+	// MountPath specifies the path to mount PVC
+	// +optional
+	MountPath string `json:"mountPath,omitempty"`
+
+	// LogFile specifies the log file name
+	// +optional
+	LogFile string `json:"logFile,omitempty"`
+}
+
+type AKORbacConfig struct {
+	// PspPolicyAPIVersion decides the API version of the PodSecurityPolicy
+	PspPolicyAPIVersion string `json:"pspPolicyAPIVersion,omitempty"`
+
+	// PspEnabled enables the deployment of a PodSecurityPolicy that grants
+	// AKO the proper role
+	// +optional
+	PspEnabled bool `json:"pspEnabled,omitempty"`
 }
 
 // AVITenant describes settings for an AVI Tenant object
@@ -167,6 +197,8 @@ type AKODeploymentConfigStatus struct {
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:resource:path=akodeploymentconfigs,scope=Cluster
+// +kubebuilder:subresource:status
 
 // AKODeploymentConfig is the Schema for the akodeploymentconfigs API
 type AKODeploymentConfig struct {

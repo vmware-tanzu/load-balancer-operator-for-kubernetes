@@ -7,8 +7,8 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
+	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/phases"
 	corev1 "k8s.io/api/core/v1"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -16,24 +16,20 @@ import (
 	controllerruntime "gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/controllers/remote"
-	capiutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/conditions"
-	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// SetupWithManager adds this reconciler to a new controller then to the
-// provided manager.
-func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		// Watch Cluster API v1alpha3 Cluster resources.
-		For(&clusterv1.Cluster{}).
-		Complete(r)
+// NewReconciler initializes a ClusterReconciler
+func NewReconciler(c client.Client, log logr.Logger, scheme *runtime.Scheme) *ClusterReconciler {
+	return &ClusterReconciler{
+		Client: c,
+		Log:    log,
+		Scheme: scheme,
+	}
 }
 
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters;clusters/status,verbs=get;list;watch;create;update;patch;delete
@@ -47,81 +43,33 @@ type ClusterReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-func (r *ClusterReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, reterr error) {
-	ctx := context.Background()
-	log := r.Log.WithValues("Cluster", req.NamespacedName)
-
-	// Get the resource for this request.
-	obj := &clusterv1.Cluster{}
-	if err := r.Client.Get(ctx, req.NamespacedName, obj); err != nil {
-		if apierrors.IsNotFound(err) {
-			log.Info("Cluster not found, will not reconcile")
-			return reconcile.Result{}, nil
-		}
-		return reconcile.Result{}, err
-	}
-
-	// Always Patch when exiting this function so changes to the resource are updated on the API server.
-	patchHelper, err := patch.NewHelper(obj, r.Client)
-	if err != nil {
-		return reconcile.Result{}, errors.Wrapf(err, "failed to init patch helper for %s %s",
-			obj.GroupVersionKind(), req.NamespacedName)
-	}
-	defer func() {
-		patchOpts := []patch.Option{}
-		if reterr == nil {
-			patchOpts = append(patchOpts, patch.WithStatusObservedGeneration{})
-		}
-
-		if err := patchHelper.Patch(ctx, obj, patchOpts...); err != nil {
-			reterr = kerrors.NewAggregate([]error{reterr, err})
-			if reterr != nil {
-				log.Error(err, "patch failed")
-			}
-		}
-	}()
-
-	// Handle deleted resources.
-	if !obj.GetDeletionTimestamp().IsZero() {
-		if err := r.reconcileDelete(ctx, log, obj); err != nil {
-			log.Error(err, "failed to reconcile Cluster deletion")
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{}, nil
-	}
-
-	// Handle non-deleted resources.
-	if res, err := r.reconcileNormal(ctx, log, obj); err != nil {
-		log.Error(err, "failed to reconcile Cluster")
-		return res, err
-	}
-	return ctrl.Result{}, nil
-}
-
-// reconcileDelete removes the finalizer on Cluster once AKO finishes its
+// ReconcileDelete removes the finalizer on Cluster once AKO finishes its
 // cleanup work
-func (r *ClusterReconciler) reconcileDelete(
+func (r *ClusterReconciler) ReconcileDelete(
 	ctx context.Context,
 	log logr.Logger,
-	obj *clusterv1.Cluster,
-) error {
-	if controllerruntime.ContainsFinalizer(obj, akoov1alpha1.ClusterFinalizer) {
+	cluster *clusterv1.Cluster,
+	obj *akoov1alpha1.AKODeploymentConfig,
+) (ctrl.Result, error) {
+	res := ctrl.Result{}
+
+	if controllerruntime.ContainsFinalizer(cluster, akoov1alpha1.ClusterFinalizer) {
 		log.Info("Handling deleted Cluster")
 
-		finished, err := r.cleanup(ctx, log, obj)
+		finished, err := r.cleanup(ctx, log, cluster)
 		if err != nil {
 			log.Error(err, "Error cleaning up")
-			return err
+			return res, err
 		}
 
 		// The resources are deleted so remove the finalizer.
 		if finished {
 			log.Info("Removing finalizer", "finalizer", akoov1alpha1.ClusterFinalizer)
-			ctrlutil.RemoveFinalizer(obj, akoov1alpha1.ClusterFinalizer)
+			ctrlutil.RemoveFinalizer(cluster, akoov1alpha1.ClusterFinalizer)
 		}
 	}
 
-	return nil
+	return res, nil
 }
 
 func (r *ClusterReconciler) cleanup(
@@ -184,42 +132,29 @@ func (r *ClusterReconciler) cleanup(
 	return false, nil
 }
 
-func (r *ClusterReconciler) reconcileNormal(
+func (r *ClusterReconciler) ReconcileNormal(
 	ctx context.Context,
 	log logr.Logger,
-	obj *clusterv1.Cluster,
+	cluster *clusterv1.Cluster,
+	obj *akoov1alpha1.AKODeploymentConfig,
 ) (ctrl.Result, error) {
 	log.Info("Start reconciling")
 
 	res := ctrl.Result{}
-	if _, exist := obj.Labels[akoov1alpha1.AviClusterLabel]; !exist {
+	if _, exist := cluster.Labels[akoov1alpha1.AviClusterLabel]; !exist {
 		log.Info("cluster doesn't have AVI enabled, skip reconciling")
 		return res, nil
 	}
 
-	if !controllerruntime.ContainsFinalizer(obj, akoov1alpha1.ClusterFinalizer) {
+	if !controllerruntime.ContainsFinalizer(cluster, akoov1alpha1.ClusterFinalizer) {
 		log.Info("Add finalizer", "finalizer", akoov1alpha1.ClusterFinalizer)
 		// The finalizer must be present before proceeding in order to ensure that any IPs allocated
 		// are released when the interface is destroyed. Return immediately after here to let the
 		// patcher helper update the object, and then proceed on the next reconciliation.
-		ctrlutil.AddFinalizer(obj, akoov1alpha1.ClusterFinalizer)
+		ctrlutil.AddFinalizer(cluster, akoov1alpha1.ClusterFinalizer)
 	}
 
-	reconcileFuns := []func(context.Context, logr.Logger, *clusterv1.Cluster) (ctrl.Result, error){
+	return phases.ReconcileClustersPhases(ctx, r.Client, log, obj, []phases.ReconcileClusterPhase{
 		r.reconcileCRS,
-	}
-
-	errs := []error{}
-	for _, reconcileFunc := range reconcileFuns {
-		// Call the inner reconciliation methods.
-		reconcileResult, err := reconcileFunc(ctx, log, obj)
-		if err != nil {
-			errs = append(errs, err)
-		}
-		if len(errs) > 0 {
-			continue
-		}
-		res = capiutil.LowestNonZeroResult(res, reconcileResult)
-	}
-	return res, kerrors.NewAggregate(errs)
+	})
 }

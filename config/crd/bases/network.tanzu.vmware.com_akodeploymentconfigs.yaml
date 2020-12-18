@@ -15,6 +15,8 @@ spec:
     plural: akodeploymentconfigs
     singular: akodeploymentconfig
   scope: Cluster
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       description: AKODeploymentConfig is the Schema for the akodeploymentconfigs API
@@ -60,7 +62,7 @@ spec:
               description: CloudName speficies the AVI Cloud AKO will be deployed with
               type: string
             clusterSelector:
-              description: Label selector for Clusters. The Clusters that are selected by this will be the ones affected by this AKODeploymentConfig. It must match the Cluster labels. This field is immutable. By default AviClusterLabel is used
+              description: Label selector for Clusters. The Clusters that are selected by this will be the ones affected by this AKODeploymentConfig. It must match the Cluster labels. This field is immutable.
               properties:
                 matchExpressions:
                   description: matchExpressions is a list of label selector requirements. The requirements are ANDed.
@@ -125,9 +127,55 @@ spec:
               - ipPools
               - name
               type: object
-            extraAviConfig:
-              description: ExtraConfig contains the extra configurations for AKO to override defaults
+            extraConfigs:
+              description: ExtraConfigs contains extra configurations for AKO Deployment
+              properties:
+                disableIngressClass:
+                  description: DisableIngressClass will prevent AKO Operator to install AKO IngressClass into workload clusters for old version of K8s
+                  type: boolean
+                image:
+                  description: Image specifies the configuration for AKO docker image
+                  properties:
+                    pullPolicy:
+                      enum:
+                      - Always
+                      - Never
+                      - IfNotPresent
+                      type: string
+                    repository:
+                      description: Repository is the AKO Docker image repository
+                      type: string
+                    version:
+                      description: Version is the AKO Docker image version
+                      type: string
+                  type: object
+                log:
+                  description: Log specifies the configuration for AKO logging
+                  properties:
+                    logFile:
+                      description: LogFile specifies the log file name
+                      type: string
+                    mountPath:
+                      description: MountPath specifies the path to mount PVC
+                      type: string
+                    persistentVolumeClaim:
+                      description: PersistentVolumeClaim specifies if a PVC should make for AKO logging
+                      type: string
+                  type: object
+                rbac:
+                  description: Rbac specifies the configuration for AKO Rbac
+                  properties:
+                    pspEnabled:
+                      description: PspEnabled enables the deployment of a PodSecurityPolicy that grants AKO the proper role
+                      type: boolean
+                    pspPolicyAPIVersion:
+                      description: PspPolicyAPIVersion decides the API version of the PodSecurityPolicy
+                      type: string
+                  type: object
               type: object
+            serviceEngine:
+              description: ServiceEngine is the Service Engine name that's to be used by the set of AKO Deployments
+              type: string
             tenant:
               description: The AVI tenant for the current AKODeploymentConfig This field is optional.
               properties:
@@ -161,6 +209,7 @@ spec:
           - cloudName
           - controller
           - dataNetwork
+          - serviceEngine
           type: object
         status:
           description: AKODeploymentConfigStatus defines the observed state of AKODeploymentConfig

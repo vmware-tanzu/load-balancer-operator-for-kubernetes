@@ -65,6 +65,7 @@ var _ = BeforeSuite(suite.BeforeSuite)
 var _ = AfterSuite(suite.AfterSuite)
 
 func intgTests() {
+	Describe("MachineDeletionHook Test", intgTestMachineDeletionHook)
 }
 
 func unitTests() {

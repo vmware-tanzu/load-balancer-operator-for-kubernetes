@@ -15,7 +15,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/utils/pointer"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/controllers/remote"
@@ -42,97 +41,61 @@ func NewProvider(client client.Client,
 		Scheme:    scheme}
 }
 
-// ReconcileAviUsers: reconcile akodeploymentconfig clusters' avi user
-func (r *AkoUserReconciler) ReconcileAviUsers(
-	ctx context.Context,
-	log logr.Logger,
-	obj *akoov1alpha1.AKODeploymentConfig,
-) (ctrl.Result, error) {
-	log.Info("Start reconciling workload cluster avi credentials")
-	// select all clusters deployed by current AKODeploymentConfig
-	clusters, err := r.listAkoDeplymentConfigDeployedClusters(ctx, obj)
-	if err != nil {
-		log.Error(err, "Fail to list clusters deployed by current AKODeploymentConfig")
-		return ctrl.Result{}, err
-	}
-	var errs []error
-	for _, cluster := range clusters.Items {
-		if _, exist := cluster.Labels[akoov1alpha1.AviClusterLabel]; !exist {
-			log.Info("Cluster doesn't have AVI enabled, skip reconciling")
-		} else if !cluster.GetDeletionTimestamp().IsZero() {
-			log.Info("reconcile deleting workload cluster avi user resource")
-			if err := r.reconcileAviUserDelete(ctx, log, &cluster, obj); err != nil {
-				log.Error(err, "Fail to reconcile delete cluster deployed by current AKODeploymentConfig")
-				errs = append(errs, err)
-			}
-		} else if _, err := r.reconcileAviUserNormal(ctx, log, obj, &cluster); err != nil {
-			log.Error(err, "Fail to reconcile cluster deployed by current AKODeploymentConfig")
-			errs = append(errs, err)
-		}
-	}
-	return ctrl.Result{}, kerrors.NewAggregate(errs)
-}
-
-func (r *AkoUserReconciler) ReconcileAviUsersDelete(
-	ctx context.Context,
-	log logr.Logger,
-	obj *akoov1alpha1.AKODeploymentConfig,
-) error {
-	clusters, err := r.listAkoDeplymentConfigDeployedClusters(ctx, obj)
-	if err != nil {
-		log.Error(err, "Fail to list clusters deployed by current AKODeploymentConfig")
-		return err
-	}
-	var errs []error
-	// clean up each clusters' avi user account resources
-	for _, cluster := range clusters.Items {
-		if err := r.reconcileAviUserDelete(ctx, log, &cluster, obj); err != nil {
-			errs = append(errs, err)
-		}
-	}
-	if len(errs) > 0 {
-		return kerrors.NewAggregate(errs)
-	}
-	return nil
-}
-
-// reconcileAviUserDelete clean up all avi user account related resources when workload cluster delete or
-// choose to disable avi
-func (r *AkoUserReconciler) reconcileAviUserDelete(
+// ReconcileAviUser: reconcile akodeploymentconfig clusters' avi user
+func (r *AkoUserReconciler) ReconcileAviUser(
 	ctx context.Context,
 	log logr.Logger,
 	cluster *clusterv1.Cluster,
 	obj *akoov1alpha1.AKODeploymentConfig,
-) error {
+) (ctrl.Result, error) {
+	log.V(1).Info("Start reconciling workload cluster avi credentials")
+	if !cluster.GetDeletionTimestamp().IsZero() {
+		log.Info("reconcile deleting workload cluster avi user resource")
+		return r.ReconcileAviUserDelete(ctx, log, cluster, obj)
+	}
+
+	return r.reconcileAviUserNormal(ctx, log, obj, cluster)
+}
+
+// ReconcileAviUserDelete clean up all avi user account related resources when workload cluster delete or
+// choose to disable avi
+func (r *AkoUserReconciler) ReconcileAviUserDelete(
+	ctx context.Context,
+	log logr.Logger,
+	cluster *clusterv1.Cluster,
+	obj *akoov1alpha1.AKODeploymentConfig,
+) (ctrl.Result, error) {
+	res := ctrl.Result{}
+
 	mcSecretName := r.getAviSecretName(cluster.Name, cluster.Namespace)
 	secret := &corev1.Secret{}
 	if err := r.Client.Get(ctx, client.ObjectKey{Name: mcSecretName, Namespace: obj.Namespace}, secret); apierrors.IsNotFound(err) {
 		log.Info("Can't find avi account secret")
-		return nil
+		return res, nil
 	} else if err != nil {
 		log.Error(err, "Failed to get avi user account secret")
-		return err
+		return res, err
 	}
 	if err := r.aviClient.User.Delete(string(secret.Data["uuid"])); err != nil {
 		log.Error(err, "Failed to delete avi user account in avi controller")
-		return err
+		return res, err
 	} else if err := r.Client.Delete(ctx, secret); err != nil {
 		log.Error(err, "Failed to delete avi secret in management cluster")
-		return err
+		return res, err
 	} else if remoteClient, err := r.createWorkloadClusterClient(ctx, cluster.Name, cluster.Namespace); err != nil {
 		log.Error(err, "Failed to get workload cluster client")
-		return err
+		return res, err
 	} else if err := remoteClient.Get(ctx, client.ObjectKey{Name: akoov1alpha1.AviSecretName, Namespace: akoov1alpha1.AviNamespace}, secret); apierrors.IsNotFound(err) {
 		log.Info("Can't find avi account secret, requeue request")
-		return nil
+		return res, nil
 	} else if err != nil {
 		log.Error(err, "Failed to get avi secret in workload cluster")
-		return err
+		return res, err
 	} else if err := remoteClient.Delete(ctx, secret); err != nil {
 		log.Error(err, "Failed to delete avi user account workload cluster")
-		return err
+		return res, err
 	}
-	return nil
+	return res, nil
 }
 
 // reconcileAviUserNormal ensure each workload cluster has an independent avi user

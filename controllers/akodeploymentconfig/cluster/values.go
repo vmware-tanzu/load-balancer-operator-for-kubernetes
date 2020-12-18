@@ -6,18 +6,13 @@ package cluster
 import (
 	rand "math/rand"
 	"strconv"
-	"strings"
 	"time"
 )
 
 type Values struct {
-	Name                string
-	NameOverride        string
-	Namespace           string
-	AppVersion          string
-	ChartName           string
-	PsppolicyApiVersion string
-	IsClusterService    bool
+	Name             string
+	Namespace        string
+	IsClusterService bool
 
 	ReplicaCount       int
 	Image              Image
@@ -31,16 +26,16 @@ type Values struct {
 	// PodSecurityContext    PodSecurityContext
 	Rbac                  Rbac
 	Avicredentials        Avicredentials
-	Service               Service
 	PersistentVolumeClaim string
 	MountPath             string
 	LogFile               string
-	//nameOverride          string
+	DisableIngressClass   bool
 }
 
 type Image struct {
 	Repository string
 	PullPolicy string // enum: INFO|DEBUG|WARN|ERROR
+	Version    string
 }
 
 type AKOSettings struct {
@@ -115,7 +110,8 @@ type Requests struct {
 
 // Creates the pod security policy if set to true
 type Rbac struct {
-	PspEnable bool
+	PspEnabled          bool
+	PspPolicyApiVersion string
 }
 
 type Avicredentials struct {
@@ -123,19 +119,7 @@ type Avicredentials struct {
 	Password string
 }
 
-type Service struct {
-	Type string
-	Port int
-}
-
-func (v Values) GetName(nameOverride string) string {
-	if nameOverride != "" {
-		if len(nameOverride) > 63 {
-			nameOverride = nameOverride[0:62]
-		}
-		return strings.TrimSuffix(nameOverride, "-")
-	} else {
-		return "ako-" + strconv.FormatInt(rand.New(rand.NewSource(time.Now().UnixNano())).Int63n(10000000000), 10)
-		//Be aware that during upgrades, templates are re-executed. When a template run generates data that differs from the last run, that will trigger an update of that resource.
-	}
+func (v Values) GetName() string {
+	return "ako-" + strconv.FormatInt(rand.New(rand.NewSource(time.Now().UnixNano())).Int63n(10000000000), 10)
+	//Be aware that during upgrades, templates are re-executed. When a template run generates data that differs from the last run, that will trigger an update of that resource.
 }

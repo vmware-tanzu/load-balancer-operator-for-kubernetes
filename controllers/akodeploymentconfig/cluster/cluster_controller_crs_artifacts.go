@@ -4,54 +4,79 @@
 package cluster
 
 var (
-	akoDeploymentYaml = `
+	akoDeploymentYamlTemplate = `
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: avi-system
+  name: {{ .Values.Namespace }}
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: ako-sa
-  namespace: avi-system
+  namespace: {{ .Values.Namespace }}
  
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: avi-k8s-config
-  namespace: avi-system
+  namespace: {{ .Values.Namespace }}
 data:
   controllerIP: "{{ .Values.ControllerSettings.ControllerIP }}"
-  controllerVersion: "{{ .Values.ControllerSettings.ControllerVersion }}"
-  cniPlugin: "{{ .Values.AKOSettings.CniPlugin }}"
-  shardVSSize: "{{ .Values.L7Settings.ShardVSSize }}"
-  passthroughShardSize: "{{ .Values.L7Settings.PassthroughShardSize }}"
-  fullSyncFrequency: "{{ .Values.AKOSettings.FullSyncFrequency }}"
+  serviceEngineGroupName: "{{ .Values.ControllerSettings.ServiceEngineGroupName }}"
   cloudName: "{{ .Values.ControllerSettings.CloudName }}"
   clusterName: "{{ .Values.AKOSettings.ClusterName }}"
-  defaultDomain: "{{ .Values.L4Settings.DefaultDomain }}"
-  disableStaticRouteSync: "{{ .Values.AKOSettings.DisableStaticRouteSync }}"
-  defaultIngController: "{{ .Values.L7Settings.DefaultIngController }}"
+  apiServerPort: "{{ .Values.AKOSettings.ApiServerPort }}"
   subnetIP: "{{ .Values.NetworkSettings.SubnetIP }}"
   subnetPrefix: "{{ .Values.NetworkSettings.SubnetPrefix }}"
   networkName: "{{ .Values.NetworkSettings.NetworkName }}"
-  l7ShardingScheme: "{{ .Values.L7Settings.L7ShardingScheme }}"
-  logLevel: "{{ .Values.AKOSettings.LogLevel }}"
-  deleteConfig: "{{ .Values.AKOSettings.DeleteConfig }}"
-  {{ if .Values.AKOSettings.SyncNamespace  }}
-  syncNamespace: {{ .Values.AKOSettings.SyncNamespace }}
-  {{ end }}
+  disableStaticRouteSync: "{{ .Values.AKOSettings.DisableStaticRouteSync }}"
   serviceType:  "{{ .Values.L7Settings.ServiceType }}"
-  {{ if eq .Values.L7Settings.ServiceType "NodePort" }}
-  nodeKey: "{{ .Values.NodePortSelector.Key }}"
-  nodeValue: "{{ .Values.NodePortSelector.Value }}"
-  {{ end }}
-  serviceEngineGroupName: "{{ .Values.ControllerSettings.ServiceEngineGroupName }}"
+  defaultIngController: "{{ .Values.L7Settings.DefaultIngController }}"
+  deleteConfig: "{{ .Values.AKOSettings.DeleteConfig }}"
+  {{ if .Values.NetworkSettings.NodeNetworkListJson }}
   nodeNetworkList: |-
     {{ .Values.NetworkSettings.NodeNetworkListJson }}
-  apiServerPort: "{{ .Values.AKOSettings.ApiServerPort }}"
+  {{ end }}
+  {{/* The following fields in .Values.ControllerSettings are omitted:
+          1. controllerVersion: because we don't consider backward compatibility in Calgary so
+	     there is no explicit intention to set it;
+             controllerVersion: "{{ .Values.ControllerSettings.ControllerVersion }}"
+  */}}
+  {{/* The following fields in .Values.AKOSettings are omitted:
+          1. cniPlugin
+	     cniPlugin: "{{ .Values.AKOSettings.CniPlugin }}"
+	  2. fullSyncFrequency
+	     fullSyncFrequency: "{{ .Values.AKOSettings.FullSyncFrequency }}"
+       The following fields are used:
+          1. disableStaticRouteSync
+	  2. deleteConfig
+  */}}
+  {{/* The following fields in .Values.L4Settingsare omitted:
+          1. defaultDomain
+	     defaultDomain: "{{ .Values.L4Settings.DefaultDomain }}"
+  */}}
+  {{/* The following fields in .Values.L7Settings are omitted:
+          1. l7ShardingScheme;
+	     l7ShardingScheme: "{{ .Values.L7Settings.L7ShardingScheme }}"
+	  2. nodeKey;
+	  3. nodeValue;
+	     {{ if eq .Values.L7Settings.ServiceType "NodePort" }}
+             nodeKey: "{{ .Values.NodePortSelector.Key }}"
+	     nodeValue: "{{ .Values.NodePortSelector.Value }}"
+             {{ end }}
+	  4. PassthroughShardSize;
+	     passthroughShardSize: "{{ .Values.L7Settings.PassthroughShardSize }}"
+	  5. ShardVSSize;
+	     shardVSSize: "{{ .Values.L7Settings.ShardVSSize }}"
+       The following fiels are used:
+	  1. serviceType
+	  2. defaultIngController
+  */}}
+  {{ if .Values.AKOSettings.SyncNamespace }}
+  syncNamespace: {{ .Values.AKOSettings.SyncNamespace }}
+  {{ end }}
 
 ---
 kind: ClusterRole
@@ -80,7 +105,7 @@ rules:
   - apiGroups: ["ako.vmware.com"]
     resources: ["hostrules", "hostrules/status", "httprules", "httprules/status"]
     verbs: ["get","watch","list","patch", "update"]
-{{- if .Values.Rbac.PspEnable }}
+{{- if .Values.Rbac.PspEnabled }}
   - apiGroups:
     - policy
     - extensions
@@ -97,8 +122,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: ako-crb
-  labels:
-    chart: {{ .Values.ChartName }}-{{ .Values.AppVersion }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -106,17 +129,17 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: ako-sa
-  namespace: avi-system
+  namespace: {{ .Values.Namespace }}
 
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: ako
-  namespace: avi-system
+  namespace: {{ .Values.Namespace }}
   labels:
     app.kubernetes.io/name: {{ .Values.Name }}
-    app.kubernetes.io/version: "{{ .Values.AppVersion }}"
+    app.kubernetes.io/version: "{{ .Values.Image.Version }}"
 spec:
   replicas: {{ .Values.ReplicaCount }}
   serviceName: ako
@@ -137,14 +160,14 @@ spec:
           claimName: {{ .Values.PersistentVolumeClaim }}
       {{ end }}
       containers:
-        - name: {{ .Values.ChartName }}
+        - name: {{ .Values.Name }}
           securityContext: null
           {{ if .Values.PersistentVolumeClaim }}
           volumeMounts:
           - mountPath: {{ .Values.MountPath }}
             name: ako-pv-storage
           {{ end }}
-          image: "{{ .Values.Image.Repository }}:{{ .Values.AppVersion }}"
+          image: "{{ .Values.Image.Repository }}:{{ .Values.Image.Version }}"
           imagePullPolicy: {{ .Values.Image.PullPolicy }}
           env:
           - name: CTRL_USERNAME
@@ -297,19 +320,13 @@ spec:
             periodSeconds: 10
 
 ---
-{{- if .Values.Rbac.PspEnable }}
-apiVersion: {{ .Values.PsppolicyApiVersion }} 
+{{- if .Values.Rbac.PspEnabled }}
+apiVersion: {{ .Values.Rbac.PspPolicyApiVersion }} 
 kind: PodSecurityPolicy
 metadata:
   name: {{ .Values.Name }}
   labels:
-    {{- if .Values.IsClusterService }}
-    k8s-app: {{ .Values.ChartName }}
-    kubernetes.io/cluster-service: "true"
-    kubernetes.io/name: "AKO"
-    {{- else }}
     app.kubernetes.io/name: {{ .Values.Name }}
-    {{- end }}
 spec:
   privileged: false
   # Required to prevent escalations to root.
@@ -342,5 +359,22 @@ spec:
         max: 65535
   readOnlyRootFilesystem: false
 {{- end }}
+---
+{{ if .Values.DisableIngressClass }}
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: avi-lb
+  {{ if .Values.L7Settings.defaultIngController }}
+  annotations:
+    ingressclass.kubernetes.io/is-default-class: "true"
+  {{ end }}
+spec:
+  controller: ako.vmware.com/avi-lb
+  parameters:
+    apiGroup: ako.vmware.com
+    kind: IngressParameters
+    name: external-lb
+{{ end }}
 `
 )

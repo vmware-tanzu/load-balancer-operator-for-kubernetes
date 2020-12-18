@@ -1,7 +1,7 @@
 IMAGE_REGISTRY ?= harbor-pks.vmware.com/tkgextensions
 CACHE_IMAGE_REGISTRY ?= harbor-repo.vmware.com/dockerhub-proxy-cache
 # Image URL to use all building/pushing image targets
-IMG ?= $(IMAGE_REGISTRY)/tkg-networking/tanzu-ako-operator:dev
+IMG ?= $(IMAGE_REGISTRY)/tkg-networking/tanzu-ako-operator:$(shell git log -1 --format=%h)
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
 
@@ -68,7 +68,7 @@ docker-push:
 .PHONY: integration-test
 integration-test: $(GINKGO) $(ETCD)
 	$(GINKGO) -v controllers/akodeploymentconfig/user -- -enable-integration-tests -enable-unit-tests=false -root-dir="../../.."
-	$(GINKGO) -v controllers/cluster -- -enable-integration-tests -enable-unit-tests=false
+	$(GINKGO) -v controllers/akodeploymentconfig -- -enable-integration-tests -enable-unit-tests=false
 
 .PHONY: e2e-test
 e2e-test: $(KUSTOMIZE) $(KIND) $(KUBECTL) $(JQ) $(YTT)
@@ -87,12 +87,12 @@ $(YTT): $(TOOLS_DIR)/go.mod # Build ytt from tools folder.
 # Deploy AKO Operator
 .PHONY: deploy-ako-operator
 deploy-ako-operator: $(YTT)
-	$(YTT) -f manifests | kubectl apply -f
+	$(YTT) -f config/ytt | kubectl apply -f
 
 # Delete AKO Operator
 .PHONY: delete-ako-operator
 delete-ako-operator: $(YTT)
-	$(YTT) -f manifests | kubectl delete -f
+	$(YTT) -f config/ytt | kubectl delete -f
 
 ## --------------------------------------
 ## Manifests and Specs
