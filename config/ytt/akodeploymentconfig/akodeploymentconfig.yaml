@@ -1,0 +1,49 @@
+#@ load("@ytt:data", "data")
+#@ load("@ytt:base64", "base64")
+---
+apiVersion: network.tanzu.vmware.com/v1alpha1
+kind: AKODeploymentConfig
+metadata:
+    name: install-ako-for-all
+spec:
+    cloudName: #@ data.values.cloudName
+    serviceEngine: #@ data.values.serviceEngine
+    controller: #@ data.values.controller
+    adminCredentialRef:
+        name: avi-controller-credentials
+        namespace: #@ data.values.namespace
+    certificateAuthorityRef:
+        name: avi-controller-ca
+        namespace: #@ data.values.namespace
+    dataNetwork:
+        name: #@ data.values.dataNetworkName
+        cidr: #@ data.values.dataNetworkCIDR
+        ipPools:
+            - start: #@ data.values.dataNetworkIPPoolStart
+              end: #@ data.values.dataNetworkIPPoolEnd
+              type: V4
+    extraConfigs:
+        image:
+            repository: #@ data.values.image
+            pullPolicy: IfNotPresent
+            version: #@ data.values.imageTag
+        disableIngressClass: #@ data.values.disableIngressClass
+---
+apiVersion: v1
+kind: Secret
+metadata:
+    name: avi-controller-credentials
+    namespace: #@ data.values.namespace
+type: Opaque
+data:
+    username: #@ base64.encode(data.values.aviControllerUsername)
+    password: #@ base64.encode(data.values.aviControllerPassword)
+---
+apiVersion: v1
+kind: Secret
+metadata:
+    name: avi-controller-ca
+    namespace: #@ data.values.namespace
+type: Opaque
+data:
+    certificateAuthorityData: #@ base64.encode(data.values.aviConrollerCertificateAuthority)
