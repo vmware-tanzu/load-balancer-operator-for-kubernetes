@@ -56,20 +56,22 @@ type AKODeploymentConfigReconciler struct {
 
 // +kubebuilder:rbac:groups=network.tanzu.vmware.com,resources=akodeploymentconfigs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=network.tanzu.vmware.com,resources=akodeploymentconfigs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;create;list;watch;update;delete
 
 func (r *AKODeploymentConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, reterr error) {
 	ctx := context.Background()
 	log := r.Log.WithValues("AKODeploymentConfig", req.NamespacedName)
 	res := ctrl.Result{}
+	var err error
 
 	// Get the resource for this request.
 	obj := &akoov1alpha1.AKODeploymentConfig{}
-	if err := r.Client.Get(ctx, req.NamespacedName, obj); err != nil {
+	if err = r.Client.Get(ctx, req.NamespacedName, obj); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("AKODeploymentConfig not found, will not reconcile")
-			return reconcile.Result{}, nil
+			return res, nil
 		}
-		return reconcile.Result{}, err
+		return res, err
 	}
 
 	// Always Patch when exiting this function so changes to the resource are updated on the API server.
@@ -98,7 +100,8 @@ func (r *AKODeploymentConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Resu
 	}
 
 	// Handle non-deleted resources.
-	if res, err := r.reconcileNormal(ctx, log, obj); err != nil {
+	res, err = r.reconcileNormal(ctx, log, obj)
+	if err != nil {
 		log.Error(err, "failed to reconcile AKODeploymentConfig")
 		return res, err
 	}
@@ -134,7 +137,7 @@ func (r *AKODeploymentConfigReconciler) reconcileDelete(
 		return res, nil
 	}
 
-	log.Info("AkoDeploymentConfig is deleted. Start cleaning up")
+	log.Info("AkoDeploymentConfig is being deleted. Start cleaning up")
 
 	defer func() {
 		if reterr == nil {

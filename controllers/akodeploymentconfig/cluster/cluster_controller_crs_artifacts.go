@@ -185,31 +185,6 @@ spec:
               configMapKeyRef:
                 name: avi-k8s-config
                 key: controllerIP
-          - name: CTRL_VERSION
-            valueFrom:
-              configMapKeyRef:
-                name: avi-k8s-config
-                key: controllerVersion
-          - name: CNI_PLUGIN
-            valueFrom:
-              configMapKeyRef:
-                name: avi-k8s-config
-                key: cniPlugin
-          - name: SHARD_VS_SIZE
-            valueFrom:
-              configMapKeyRef:
-                name: avi-k8s-config
-                key: shardVSSize
-          - name: PASSTHROUGH_SHARD_SIZE
-            valueFrom:
-              configMapKeyRef:
-                name: avi-k8s-config
-                key: passthroughShardSize
-          - name: FULL_SYNC_INTERVAL
-            valueFrom:
-              configMapKeyRef:
-                name: avi-k8s-config
-                key: fullSyncFrequency
           - name: CLOUD_NAME
             valueFrom:
               configMapKeyRef:
@@ -220,11 +195,6 @@ spec:
               configMapKeyRef:
                 name: avi-k8s-config
                 key: clusterName
-          - name: DEFAULT_DOMAIN
-            valueFrom:
-              configMapKeyRef:
-                name: avi-k8s-config
-                key: defaultDomain
           - name: DISABLE_STATIC_ROUTE_SYNC
             valueFrom:
               configMapKeyRef:
@@ -262,28 +232,11 @@ spec:
               configMapKeyRef:
                 name: avi-k8s-config
                 key: serviceEngineGroupName
-          - name: NODE_NETWORK_LIST
-            valueFrom:
-              configMapKeyRef:
-                name: avi-k8s-config
-                key: nodeNetworkList
           - name: SERVICE_TYPE
             valueFrom:
               configMapKeyRef:
                 name: avi-k8s-config
                 key: serviceType
-          {{ if eq .Values.L7Settings.ServiceType "NodePort" }}
-          - name: NODE_KEY
-            valueFrom:
-              configMapKeyRef:
-                name: avi-k8s-config
-                key: nodeKey
-          - name: NODE_VALUE
-            valueFrom:
-              configMapKeyRef:
-                name: avi-k8s-config
-                key: nodeValue
-          {{ end }}
           {{ if .Values.PersistentVolumeClaim }}
           - name: USE_PVC
             value: "true"
@@ -296,11 +249,6 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.name
-          - name: L7_SHARD_SCHEME
-            valueFrom:
-              configMapKeyRef:
-                name: avi-k8s-config
-                key: l7ShardingScheme
           ports:
             - name: http
               containerPort: 80
@@ -360,12 +308,12 @@ spec:
   readOnlyRootFilesystem: false
 {{- end }}
 ---
-{{ if .Values.DisableIngressClass }}
+{{ if not .Values.DisableIngressClass }}
 apiVersion: networking.k8s.io/v1
 kind: IngressClass
 metadata:
   name: avi-lb
-  {{ if .Values.L7Settings.defaultIngController }}
+  {{ if .Values.L7Settings.DefaultIngController }}
   annotations:
     ingressclass.kubernetes.io/is-default-class: "true"
   {{ end }}

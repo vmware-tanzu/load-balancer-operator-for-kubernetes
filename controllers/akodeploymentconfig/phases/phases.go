@@ -60,7 +60,8 @@ func ReconcileClustersPhases(
 	client client.Client,
 	log logr.Logger,
 	obj *akoov1alpha1.AKODeploymentConfig,
-	phases []ReconcileClusterPhase,
+	normalPhases []ReconcileClusterPhase,
+	deletePhases []ReconcileClusterPhase,
 ) (ctrl.Result, error) {
 	res := ctrl.Result{}
 
@@ -69,6 +70,10 @@ func ReconcileClustersPhases(
 	if err != nil {
 		log.Error(err, "Fail to list clusters deployed by current AKODeploymentConfig")
 		return res, err
+	}
+
+	if len(clusters.Items) == 0 {
+		log.Info("No cluster matches the selector, skip")
 	}
 
 	var allErrs []error
@@ -86,6 +91,10 @@ func ReconcileClustersPhases(
 				cluster.GroupVersionKind(), cluster.Namespace+"/"+cluster.Name)
 		}
 
+		phases := normalPhases
+		if !cluster.GetDeletionTimestamp().IsZero() {
+			phases = deletePhases
+		}
 		for _, phase := range phases {
 			// Call the inner reconciliation methods regardless of
 			// the error status

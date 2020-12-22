@@ -5,10 +5,10 @@ package cluster
 
 import (
 	"context"
+	"time"
 
 	"github.com/go-logr/logr"
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
-	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/phases"
 	corev1 "k8s.io/api/core/v1"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -21,6 +21,10 @@ import (
 	"sigs.k8s.io/cluster-api/util/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	requeueAfterForAKODeletion = time.Second * 1
 )
 
 // NewReconciler initializes a ClusterReconciler
@@ -66,6 +70,9 @@ func (r *ClusterReconciler) ReconcileDelete(
 		if finished {
 			log.Info("Removing finalizer", "finalizer", akoov1alpha1.ClusterFinalizer)
 			ctrlutil.RemoveFinalizer(cluster, akoov1alpha1.ClusterFinalizer)
+		} else {
+			log.Info("AKO deletion is in progress, requeue", "after", requeueAfterForAKODeletion.String())
+			return ctrl.Result{Requeue: true, RequeueAfter: requeueAfterForAKODeletion}, nil
 		}
 	}
 
@@ -93,6 +100,8 @@ func (r *ClusterReconciler) cleanup(
 		return false, err
 	}
 
+	var cleanupFinished bool
+
 	// We then retrieve the AKO ConfigMap from the workload cluster and
 	// update the `deleteConfig` field to trigger AKO's cleanup
 	akoConfigMap := &corev1.ConfigMap{}
@@ -100,61 +109,42 @@ func (r *ClusterReconciler) cleanup(
 		Name:      "avi-k8s-config",
 		Namespace: "avi-system",
 	}
-	if err := remoteClient.Get(ctx, akoConfigMapKey, akoConfigMap); err != nil {
-		if apierrors.IsNotFound(err) {
-			log.Info("Cannot find AKO ConfigMap, requeue the request", "configMap", "avi-system/test")
+	err = remoteClient.Get(ctx, akoConfigMapKey, akoConfigMap)
+	if err == nil {
+		cleanupSetting := akoConfigMap.Data["deleteConfig"]
+		log.Info("Found AKO Configmap", "deleteConfig", cleanupSetting)
+
+		// true is the only accepted string in AKO
+		if cleanupSetting != "true" {
+			log.Info("Updating deleteConfig in AKO's ConfigMap")
+			akoConfigMap.Data["deleteConfig"] = "true"
+
+			if err := remoteClient.Update(ctx, akoConfigMap); err != nil {
+				log.Info("Failed to update AKO ConfigMap, requeue the request")
+				return false, err
+			}
 		}
-		return false, err
-	}
-	cleanupSetting := akoConfigMap.Data["deleteConfig"]
-	log.Info("Found AKO Configmap", "deleteConfig", cleanupSetting)
-
-	// true is the only accepted string in AKO
-	if cleanupSetting != "true" {
-		log.Info("Updating deleteConfig in AKO's ConfigMap")
-		akoConfigMap.Data["deleteConfig"] = "true"
-
-		if err := remoteClient.Update(ctx, akoConfigMap); err != nil {
-			log.Info("Failed to update AKO ConfigMap, requeue the request")
+	} else {
+		if apierrors.IsNotFound(err) {
+			log.Info("Cannot find AKO ConfigMap, consider the cleanup finished", "configMap", "avi-system/test")
+			cleanupFinished = true
+		} else {
 			return false, err
 		}
 	}
 
-	if finished, err := ako.CleanupFinished(ctx, remoteClient, log); err != nil {
-		log.Error(err, "Failed to retrieve AKO cleanup status")
-		return false, err
-	} else if finished {
+	if !cleanupFinished {
+		cleanupFinished, err = ako.CleanupFinished(ctx, remoteClient, log)
+		if err != nil {
+			log.Error(err, "Failed to retrieve AKO cleanup status")
+			return false, err
+		}
+	}
+	if cleanupFinished {
 		log.Info("AKO finished cleanup, updating Cluster condition")
 		conditions.MarkTrue(obj, akoov1alpha1.AviResourceCleanupSucceededCondition)
 		return true, nil
 	}
 
 	return false, nil
-}
-
-func (r *ClusterReconciler) ReconcileNormal(
-	ctx context.Context,
-	log logr.Logger,
-	cluster *clusterv1.Cluster,
-	obj *akoov1alpha1.AKODeploymentConfig,
-) (ctrl.Result, error) {
-	log.Info("Start reconciling")
-
-	res := ctrl.Result{}
-	if _, exist := cluster.Labels[akoov1alpha1.AviClusterLabel]; !exist {
-		log.Info("cluster doesn't have AVI enabled, skip reconciling")
-		return res, nil
-	}
-
-	if !controllerruntime.ContainsFinalizer(cluster, akoov1alpha1.ClusterFinalizer) {
-		log.Info("Add finalizer", "finalizer", akoov1alpha1.ClusterFinalizer)
-		// The finalizer must be present before proceeding in order to ensure that any IPs allocated
-		// are released when the interface is destroyed. Return immediately after here to let the
-		// patcher helper update the object, and then proceed on the next reconciliation.
-		ctrlutil.AddFinalizer(cluster, akoov1alpha1.ClusterFinalizer)
-	}
-
-	return phases.ReconcileClustersPhases(ctx, r.Client, log, obj, []phases.ReconcileClusterPhase{
-		r.reconcileCRS,
-	})
 }

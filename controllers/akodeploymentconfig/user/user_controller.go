@@ -59,6 +59,7 @@ func (r *AkoUserReconciler) ReconcileAviUser(
 
 // ReconcileAviUserDelete clean up all avi user account related resources when workload cluster delete or
 // choose to disable avi
+// Note: only resources in the management cluster will be cleaned up
 func (r *AkoUserReconciler) ReconcileAviUserDelete(
 	ctx context.Context,
 	log logr.Logger,
@@ -67,33 +68,32 @@ func (r *AkoUserReconciler) ReconcileAviUserDelete(
 ) (ctrl.Result, error) {
 	res := ctrl.Result{}
 
-	mcSecretName := r.getAviSecretName(cluster.Name, cluster.Namespace)
+	mcSecretName := r.mcAVISecretName(cluster.Name)
+
 	secret := &corev1.Secret{}
-	if err := r.Client.Get(ctx, client.ObjectKey{Name: mcSecretName, Namespace: obj.Namespace}, secret); apierrors.IsNotFound(err) {
-		log.Info("Can't find avi account secret")
-		return res, nil
-	} else if err != nil {
-		log.Error(err, "Failed to get avi user account secret")
+	if err := r.Client.Get(ctx, client.ObjectKey{
+		Name:      mcSecretName,
+		Namespace: obj.Namespace,
+	}, secret); err != nil {
+		if !apierrors.IsNotFound(err) {
+			log.Error(err, "Failed to get AKO secret in the management cluster, requeue")
+			return res, err
+		} else {
+			log.Info("AKO secret in the management cluster is already gone")
+			return res, nil
+		}
+	}
+
+	if err := r.aviClient.User.DeleteByName(string(secret.Data["username"])); err != nil {
+		log.Error(err, "Failed to delete avi user account in avi controller, requeue")
 		return res, err
 	}
-	if err := r.aviClient.User.Delete(string(secret.Data["uuid"])); err != nil {
-		log.Error(err, "Failed to delete avi user account in avi controller")
-		return res, err
-	} else if err := r.Client.Delete(ctx, secret); err != nil {
-		log.Error(err, "Failed to delete avi secret in management cluster")
-		return res, err
-	} else if remoteClient, err := r.createWorkloadClusterClient(ctx, cluster.Name, cluster.Namespace); err != nil {
-		log.Error(err, "Failed to get workload cluster client")
-		return res, err
-	} else if err := remoteClient.Get(ctx, client.ObjectKey{Name: akoov1alpha1.AviSecretName, Namespace: akoov1alpha1.AviNamespace}, secret); apierrors.IsNotFound(err) {
-		log.Info("Can't find avi account secret, requeue request")
-		return res, nil
-	} else if err != nil {
-		log.Error(err, "Failed to get avi secret in workload cluster")
-		return res, err
-	} else if err := remoteClient.Delete(ctx, secret); err != nil {
-		log.Error(err, "Failed to delete avi user account workload cluster")
-		return res, err
+
+	if err := r.Client.Delete(ctx, secret); err != nil {
+		if !apierrors.IsGone(err) {
+			log.Error(err, "Failed to delete avi secret in the management cluster, requeue")
+			return res, err
+		}
 	}
 	return res, nil
 }
@@ -105,73 +105,142 @@ func (r *AkoUserReconciler) reconcileAviUserNormal(
 	obj *akoov1alpha1.AKODeploymentConfig,
 	cluster *clusterv1.Cluster,
 ) (ctrl.Result, error) {
-	// ensure each cluster has avi account
 	res := ctrl.Result{}
-	secret := &corev1.Secret{}
-	if err := r.Client.Get(ctx, client.ObjectKey{
-		Name:      r.getAviSecretName(cluster.Name, cluster.Namespace),
-		Namespace: obj.Namespace,
-	}, secret); err == nil {
-		log.Info("Avi user already created in management cluster")
-		// check secret in workload cluster
-		if err := r.getWorkloadClusterAviSecret(ctx, cluster); apierrors.IsNotFound(err) {
-			log.Info("No Avi Secret in workload cluster, create one")
-			if err := r.createWorkloadClusterAviSecret(ctx,
-				obj,
-				cluster,
-				string(secret.Data["username"]),
-				string(secret.Data["password"]),
-				secret.Data[akoov1alpha1.AviCertificateKey]); err != nil {
-				log.Error(err, "Failed to create secret in workload cluster")
-				return res, err
-			}
-		} else if err != nil {
-			log.Error(err, "failed to get secret in workload cluster")
-			return res, nil
-		}
-		log.Info("Avi user already created in workload cluster")
-		return res, nil
-	} else if !apierrors.IsNotFound(err) {
-		log.Error(err, "Failed to get cluster avi user secret")
-		return res, err
-	}
-	// need to generate an avi user for current cluster
-	aviUsername := cluster.Name + "-" + cluster.Namespace + "-ako-user"
-	aviPassword := utils.GenereatePassword(10, true, true, true, true)
-	if aviUser, err := r.createAviUser(aviUsername, aviPassword); err != nil {
-		log.Error(err, "Failed to create cluster avi user")
-		return res, err
-	} else if aviControllerCASecret, err := r.getAVIControllerCA(ctx, obj); err != nil {
+
+	// ensures the AVI Controller Certificate Authority exists
+	aviControllerCASecret, err := r.getAVIControllerCA(ctx, obj)
+	if err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("Avi controller ca not found, requeue the request")
 		} else {
 			log.Error(err, "Failed to get avi controller ca")
 		}
 		return res, err
-	} else {
-		managementClusterSecret := r.createAviUserSecret(r.getAviSecretName(cluster.Name, cluster.Namespace),
-			cluster.Namespace,
-			aviUsername,
-			aviPassword,
-			*aviUser.UUID,
-			aviControllerCASecret.Data[akoov1alpha1.AviCertificateKey],
-			obj)
-		if err := r.Client.Create(ctx, managementClusterSecret); err != nil {
-			log.Error(err, "Failed to create secret in management cluster")
-			return res, err
-		}
+	}
 
-		if err := r.createWorkloadClusterAviSecret(ctx,
-			obj,
-			cluster,
-			aviUsername,
-			aviPassword,
-			aviControllerCASecret.Data[akoov1alpha1.AviCertificateKey]); err != nil {
-			log.Error(err, "Failed to create secret in workload cluster")
+	aviCA := string(aviControllerCASecret.Data[akoov1alpha1.AviCertificateKey][:])
+
+	// Ensures the management cluster Secret exists
+	mcSecret := &corev1.Secret{}
+
+	// Secret in the management cluster acts as the source of truth so we
+	// avoid generating the password multiple times
+	if err := r.Client.Get(ctx, client.ObjectKey{
+		Name:      r.mcAVISecretName(cluster.Name),
+		Namespace: cluster.Namespace,
+	}, mcSecret); err != nil {
+		if apierrors.IsNotFound(err) {
+
+			aviUsername := cluster.Name + "-" + cluster.Namespace + "-ako-user"
+			// This can only happen once no matter how many times we
+			// enter the reconciliation
+			aviPassword := utils.GenereatePassword(10, true, true, true, true)
+
+			managementClusterSecret := r.createAviUserSecret(
+				r.mcAVISecretName(cluster.Name),
+				cluster.Namespace,
+				aviUsername,
+				aviPassword,
+				aviCA,
+				obj,
+				false,
+			)
+			log.Info("No AVI Secret found for cluster in the management cluster, start the creation")
+			if err := r.Client.Create(ctx, managementClusterSecret); err != nil {
+				log.Error(err, "Failed to create AVI secret for Cluster in the management cluster, requeue")
+				return res, err
+			}
+		} else {
+			log.Error(err, "Failed to get cluster avi user secret, requeue")
 			return res, err
 		}
 	}
+
+	// Use the value from the management cluster
+	aviUsername := string(mcSecret.Data["username"][:])
+	aviPassword := string(mcSecret.Data["password"][:])
+
+	// ensures the AVI User exists and matches the mc secret
+	if _, err = r.createOrUpdateAviUser(aviUsername, aviPassword); err != nil {
+		log.Error(err, "Failed to create/update cluster avi user")
+		return res, err
+	} else {
+		log.Info("Successfully created/updated AVI User in AVI Controller")
+	}
+
+	if res, err = r.createOrUpdateWorkloadClusterSecret(ctx, log, cluster, obj, aviUsername, aviPassword, aviCA); err != nil {
+		return res, err
+	}
+
 	return res, nil
+}
+
+// createOrUpdateWorkloadClusterSecret ensure the AKO Secret exist in the target
+// workload cluster
+func (r *AkoUserReconciler) createOrUpdateWorkloadClusterSecret(
+	ctx context.Context,
+	log logr.Logger,
+	cluster *clusterv1.Cluster,
+	obj *akoov1alpha1.AKODeploymentConfig,
+	aviUsername string,
+	aviPassword string,
+	aviCA string,
+) (ctrl.Result, error) {
+	var found bool
+	var res ctrl.Result
+
+	remoteClient, err := r.createWorkloadClusterClient(ctx, cluster.Name, cluster.Namespace)
+	if err != nil {
+		log.Error(err, "Failed to create client for cluster, requeue")
+		return res, err
+	}
+
+	// ensures the workload cluster Secret exists and matches the mc secret
+	wcSecret := &corev1.Secret{}
+	if err := remoteClient.Get(ctx, client.ObjectKey{
+		Name:      akoov1alpha1.AviSecretName,
+		Namespace: akoov1alpha1.AviNamespace,
+	}, wcSecret); err != nil {
+		// ignore notfound error
+		if !apierrors.IsNotFound(err) {
+			log.Error(err, "Failed to get AKO Secret in the workload cluster, requeue")
+			return res, err
+		}
+	} else {
+		found = true
+	}
+
+	if !found {
+		wcSecret = r.createAviUserSecret(
+			akoov1alpha1.AviSecretName,
+			akoov1alpha1.AviNamespace,
+			aviUsername,
+			aviPassword,
+			aviCA,
+			obj,
+			true,
+		)
+	} else {
+		// Update secret Data
+		wcSecret.Data["username"] = []byte(aviUsername)
+		wcSecret.Data["password"] = []byte(aviPassword)
+		wcSecret.Data[akoov1alpha1.AviCertificateKey] = []byte(aviCA)
+	}
+
+	if !found {
+		log.Info("No AKO Secret found in th workload cluster, start the creation")
+		if err := remoteClient.Create(ctx, wcSecret); err != nil {
+			log.Error(err, "Failed to create AKO Secret in the workload cluster, requeue")
+			return res, err
+		}
+	} else {
+		log.Info("Updating AKO Secret in the workload cluster")
+		if err := remoteClient.Update(ctx, wcSecret); err != nil {
+			log.Error(err, "Failed to update AKO Secret in the workload cluster, requeue")
+			return res, err
+		}
+	}
+	return ctrl.Result{}, nil
 }
 
 // listAkoDeplymentConfigDeployedClusters list all clusters enabled current akodeploymentconfig
@@ -201,73 +270,96 @@ func (r *AkoUserReconciler) getAVIControllerCA(ctx context.Context, obj *akoov1a
 	return aviControllerCA, err
 }
 
-// createAviUser create an avi user in avi controller
-func (r *AkoUserReconciler) createAviUser(aviUsername, aviPassword string) (*models.User, error) {
-	// (xudongl) for avi essential version, there should be only one tenant, which is admin
-	// (xudongl) TODO Role of AKO is still TBD
-	if tenant, err := r.aviClient.Tenant.Get("admin"); err != nil {
-		return nil, err
-	} else if role, err := r.aviClient.Role.GetByName("Tenant-Admin"); err != nil {
-		return nil, err
-	} else if aviUser, err := r.aviClient.User.Create(&models.User{
-		Name:             &aviUsername,
-		Password:         &aviPassword,
-		DefaultTenantRef: tenant.URL,
-		Access: []*models.UserRole{
-			{
-				AllTenants: pointer.BoolPtr(false),
-				RoleRef:    role.URL,
-				TenantRef:  tenant.URL,
-			}}}); err != nil {
-		return nil, err
+// createOrUpdateAviUser create an avi user in avi controller
+func (r *AkoUserReconciler) createOrUpdateAviUser(aviUsername, aviPassword string) (*models.User, error) {
+	var found bool
+	aviUser, err := r.aviClient.User.GetByName(aviUsername)
+	if err != nil {
+		// Ignore the user doesn't exist error as we'll create it later
+		if !aviclient.IsAviUserNonExistentError(err) {
+			return nil, err
+		}
 	} else {
-		return aviUser, nil
+		found = true
 	}
+
+	if !found {
+		// (xudongl) for avi essential version, there should be only one tenant, which is admin
+		// (xudongl) TODO Role of AKO is still TBD
+		tenant, err := r.aviClient.Tenant.Get("admin")
+		if err != nil {
+			return nil, err
+		}
+
+		role, err := r.aviClient.Role.GetByName("Tenant-Admin")
+		if err != nil {
+			return nil, err
+		}
+
+		aviUser = &models.User{
+			Name:             &aviUsername,
+			Password:         &aviPassword,
+			DefaultTenantRef: tenant.URL,
+			Access: []*models.UserRole{
+				{
+					AllTenants: pointer.BoolPtr(false),
+					RoleRef:    role.URL,
+					TenantRef:  tenant.URL,
+				},
+			},
+		}
+	} else {
+		// Update the password. This is needed when the AVI user was
+		// created before the mc Secret. And this operation will sync
+		// the User's password to be the same as mc Secret's
+		aviUser.Password = &aviPassword
+	}
+
+	if !found {
+		aviUser, err = r.aviClient.User.Create(aviUser)
+	} else {
+		aviUser, err = r.aviClient.User.Update(aviUser)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return aviUser, nil
 }
 
-// getAviSecretName get avi user secret name in management cluster
-func (r *AkoUserReconciler) getAviSecretName(clusterName, clusterNamespace string) string {
-	return clusterName + "-" + clusterNamespace + "-" + akoov1alpha1.AviSecretName
+// mcAVISecretName get avi user secret name in management cluster. There is no need to
+// encode the cluster namespace as the secret is deployed in the same namespace as
+// the cluster
+func (r *AkoUserReconciler) mcAVISecretName(clusterName string) string {
+	return clusterName + "-" + "avi-credentials"
 }
 
-// createAviUserSecret create a secret to store workload cluster credentials
-func (r *AkoUserReconciler) createAviUserSecret(name, namespace, username, password, uuid string, aviCA []byte, obj *akoov1alpha1.AKODeploymentConfig) *corev1.Secret {
-	workloadClusterAviSecret := &corev1.Secret{
+// createAviUserSecret create a secret to store avi user credentials
+func (r *AkoUserReconciler) createAviUserSecret(name, namespace, username, password string, aviCA string, obj *akoov1alpha1.AKODeploymentConfig, isWorkloadCluster bool) *corev1.Secret {
+	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					UID:                obj.UID,
-					Name:               obj.Name,
-					Controller:         pointer.BoolPtr(true),
-					BlockOwnerDeletion: pointer.BoolPtr(true),
-					Kind:               akoov1alpha1.AkoDeploymentConfigKind,
-					APIVersion:         akoov1alpha1.AkoDeploymentConfigVersion,
-				},
-			},
 		},
 		Type: akoov1alpha1.AviClusterSecretType,
 		Data: make(map[string][]byte),
 	}
-	workloadClusterAviSecret.Data["username"] = []byte(username)
-	workloadClusterAviSecret.Data["password"] = []byte(password)
-	workloadClusterAviSecret.Data["uuid"] = []byte(uuid)
-	workloadClusterAviSecret.Data[akoov1alpha1.AviCertificateKey] = aviCA
-	return workloadClusterAviSecret
-}
+	if !isWorkloadCluster {
+		secret.ObjectMeta.OwnerReferences = []metav1.OwnerReference{
+			{
+				UID:                obj.UID,
+				Name:               obj.Name,
+				Controller:         pointer.BoolPtr(true),
+				BlockOwnerDeletion: pointer.BoolPtr(true),
+				Kind:               akoov1alpha1.AkoDeploymentConfigKind,
+				APIVersion:         akoov1alpha1.AkoDeploymentConfigVersion,
+			},
+		}
 
-// getWorkloadClusterAviSecret get workload cluster avi user secret
-func (r *AkoUserReconciler) getWorkloadClusterAviSecret(ctx context.Context, cluster *clusterv1.Cluster) error {
-	if remoteClient, err := r.createWorkloadClusterClient(ctx, cluster.Name, cluster.Namespace); err != nil {
-		return nil
-	} else if err := remoteClient.Get(ctx, client.ObjectKey{
-		Name:      akoov1alpha1.AviSecretName,
-		Namespace: akoov1alpha1.AviNamespace,
-	}, &corev1.Secret{}); err != nil {
-		return err
 	}
-	return nil
+	secret.Data["username"] = []byte(username)
+	secret.Data["password"] = []byte(password)
+	secret.Data[akoov1alpha1.AviCertificateKey] = []byte(aviCA)
+	return secret
 }
 
 // createWorkloadClusterClient create workload cluster corresponding client
@@ -277,47 +369,4 @@ func (r *AkoUserReconciler) createWorkloadClusterClient(ctx context.Context, clu
 		Namespace: clusterNamespace,
 	}, r.Scheme)
 	return remoteClient, err
-}
-
-// createWorkloadClusterAviSecretSpec create a secret to store workload cluster credentials
-func (r *AkoUserReconciler) createWorkloadClusterAviSecretSpec(name, username, password string, aviCA []byte, obj *akoov1alpha1.AKODeploymentConfig) *corev1.Secret {
-	workloadClusterAviSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: akoov1alpha1.AviNamespace,
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					UID:                obj.UID,
-					Name:               obj.Name,
-					Controller:         pointer.BoolPtr(true),
-					BlockOwnerDeletion: pointer.BoolPtr(true),
-					Kind:               akoov1alpha1.AkoDeploymentConfigKind,
-					APIVersion:         akoov1alpha1.AkoDeploymentConfigVersion,
-				},
-			},
-		},
-		Type: akoov1alpha1.AviClusterSecretType,
-		Data: make(map[string][]byte),
-	}
-	workloadClusterAviSecret.Data["username"] = []byte(username)
-	workloadClusterAviSecret.Data["password"] = []byte(password)
-	workloadClusterAviSecret.Data[akoov1alpha1.AviCertificateKey] = aviCA
-	return workloadClusterAviSecret
-}
-
-// createWorkloadClusterAviSecret create avi secret in workload cluster
-func (r *AkoUserReconciler) createWorkloadClusterAviSecret(ctx context.Context,
-	obj *akoov1alpha1.AKODeploymentConfig,
-	cluster *clusterv1.Cluster,
-	aviUserName,
-	aviPassword string,
-	aviCA []byte,
-) error {
-	workloadClusterSecret := r.createWorkloadClusterAviSecretSpec(akoov1alpha1.AviSecretName, aviUserName, aviPassword, aviCA, obj)
-	if remoteClient, err := r.createWorkloadClusterClient(ctx, cluster.Name, cluster.Namespace); err != nil {
-		return err
-	} else if err := remoteClient.Create(ctx, workloadClusterSecret); err != nil {
-		return err
-	}
-	return nil
 }

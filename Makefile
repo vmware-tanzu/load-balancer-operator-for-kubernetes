@@ -1,5 +1,5 @@
 IMAGE_REGISTRY ?= harbor-pks.vmware.com/tkgextensions
-IMAGE_TAG ?= dev
+IMAGE_TAG ?= $(shell git log -1 --format=%h)
 CACHE_IMAGE_REGISTRY ?= harbor-repo.vmware.com/dockerhub-proxy-cache
 # Image URL to use all building/pushing image targets
 IMG ?= $(IMAGE_REGISTRY)/tkg-networking/tanzu-ako-operator:$(IMAGE_TAG)

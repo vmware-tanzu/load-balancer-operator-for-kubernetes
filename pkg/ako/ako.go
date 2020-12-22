@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-logr/logr"
 	appv1 "k8s.io/api/apps/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -26,6 +27,10 @@ func CleanupFinished(ctx context.Context, remoteClient client.Client, log logr.L
 		Name:      akoStatefulSetName,
 		Namespace: "avi-system",
 	}, ss); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Info("AKO Statefulset is gone, consider it as a signal as deletion has finished")
+			return true, nil
+		}
 		log.Error(err, "Failed to get AKO StatefulSet")
 		return false, err
 	}

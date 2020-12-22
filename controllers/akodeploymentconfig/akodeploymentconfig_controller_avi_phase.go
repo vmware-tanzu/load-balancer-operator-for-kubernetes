@@ -99,9 +99,14 @@ func (r *AKODeploymentConfigReconciler) reconcileAVI(
 		r.reconcileNetworkSubnets,
 		r.reconcileCloudUsableNetwork,
 		func(ctx context.Context, log logr.Logger, obj *akoov1alpha1.AKODeploymentConfig) (ctrl.Result, error) {
-			return phases.ReconcileClustersPhases(ctx, r.Client, log, obj, []phases.ReconcileClusterPhase{
-				r.userReconciler.ReconcileAviUser,
-			})
+			return phases.ReconcileClustersPhases(ctx, r.Client, log, obj,
+				[]phases.ReconcileClusterPhase{
+					r.userReconciler.ReconcileAviUser,
+				},
+				[]phases.ReconcileClusterPhase{
+					r.userReconciler.ReconcileAviUserDelete,
+				},
+			)
 		},
 	})
 }
@@ -119,11 +124,18 @@ func (r *AKODeploymentConfigReconciler) reconcileAVIDelete(
 		return res, err
 	}
 
-	return phases.ReconcileClustersPhases(ctx, r.Client, log, obj, []phases.ReconcileClusterPhase{
-		// TODO(fangyuanl): handle the data network configuration
-		// deletion
-		r.userReconciler.ReconcileAviUserDelete,
-	})
+	return phases.ReconcileClustersPhases(ctx, r.Client, log, obj,
+		// When AKODeploymentConfig is being deleted, reconcile avi user
+		// deletion no matter cluster is being deleted or not
+		[]phases.ReconcileClusterPhase{
+			r.userReconciler.ReconcileAviUserDelete,
+		},
+		[]phases.ReconcileClusterPhase{
+			// TODO(fangyuanl): handle the data network configuration
+			// deletion
+			r.userReconciler.ReconcileAviUserDelete,
+		},
+	)
 }
 
 // reconcileNetworkSubnets ensures the Datanetwork configuration is in sync with

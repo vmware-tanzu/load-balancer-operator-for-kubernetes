@@ -58,11 +58,67 @@ kubectl config use-context kind-tkg-lcp
 # Install AKODeploymentConfig CR
 make install
 
+```
+
+Run AKO Operator as a binary
+
+```bash
+# Set the default kubeconfig to point to the kind
+# tkg-lcp cluster
+kubectl config use-context kind-tkg-lcp
+Switched to context "kind-tkg-lcp".
+
 # Build the AKO Operator binary
 go build -o bin/manager main.go
 
 # Run AKO Operator in the local management cluster
 ./bin/manager
+```
+
+Run AKO Operator in the kind management cluster as a Deployment
+
+```bash
+# Build docker image for the AKO Operator
+make docker-build
+
+# (optional) You may need to login to the registry firstly using your company
+# credetials
+docker login harbor-pks.vmware.com
+
+# Push the docker image to the VMware internal registry
+make docker-push
+
+# Deploy the AKO Operator in the management cluster
+make deploy
+```
+
+### AKODeploymentConfig
+
+Deploy a AKODeploymentConfig to make AKO Operator installing AKO for you in the
+workload cluster.
+
+There is one sample in config/samples/network_v1alpha1_akodeploymentconfig.yaml.
+Update it with the values in your dev environment.
+
+Then create it in the management cluster
+
+```bash
+kubectl apply -f config/samples/network_v1alpha1_akodeploymentconfig.yaml
+```
+
+#### Update Containerd Config.toml
+
+If AKO dev registry is used, you need to update the containerd config.toml in
+the workload cluster so it's able to pull AKO docker images from this insecure
+registry.
+
+```bash
+# Find out the workload cluster node image sha
+docker ps -a | awk '/workload-cls-worker/{print $1}'
+71c3c505ea3d
+
+# Update containerd config.toml
+./hack/update-containerd.sh 71c3c505ea3d
 ```
 
 ### Run controller tests

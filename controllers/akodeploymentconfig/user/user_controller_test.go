@@ -24,8 +24,7 @@ func AkoUserReconcilerTest() {
 		akoDeploymentConfig *akoov1alpha1.AKODeploymentConfig
 		aviUsername         string
 		aviPwd              string
-		aviUUID             string
-		aviCA               []byte
+		aviCA               string
 		managmentSecretName string
 		workloadSecretName  string
 	)
@@ -64,8 +63,7 @@ func AkoUserReconcilerTest() {
 
 		aviUsername = "fake-username"
 		aviPwd = "fake-pwd"
-		aviUUID = "fake-uuid"
-		aviCA = []byte("fake-ca")
+		aviCA = "fake-ca"
 
 		managmentSecretName = "fake-management-secret"
 		workloadSecretName = "fake-workload-secret"
@@ -80,19 +78,19 @@ func AkoUserReconcilerTest() {
 
 	Context("Should be able to create secret spec", func() {
 		It("Should be able to get correct secret secret name", func() {
-			secretName := userReconciler.getAviSecretName("test-cluster", "default")
-			Expect(secretName).To(Equal("test-cluster-default-avi-secret"))
+			secretName := userReconciler.mcAVISecretName("test-cluster")
+			Expect(secretName).To(Equal("test-cluster-avi-credentials"))
 		})
 
 		It("Should be able to create correct secret in management cluster", func() {
-			secret := userReconciler.createAviUserSecret(managmentSecretName, "default", aviUsername, aviPwd, aviUUID, aviCA, akoDeploymentConfig)
+			secret := userReconciler.createAviUserSecret(managmentSecretName, "default", aviUsername, aviPwd, aviCA, akoDeploymentConfig, false)
 			Expect(secret.Name).To(Equal(managmentSecretName))
 			Expect(secret.Namespace).To(Equal("default"))
-			Expect(len(secret.Data)).To(Equal(4))
+			Expect(len(secret.Data)).To(Equal(3))
 		})
 
 		It("Should be able to create correct secret spec in workload cluster", func() {
-			secret := userReconciler.createWorkloadClusterAviSecretSpec(workloadSecretName, aviUsername, aviPwd, aviCA, akoDeploymentConfig)
+			secret := userReconciler.createAviUserSecret(workloadSecretName, akoov1alpha1.AviNamespace, aviUsername, aviPwd, aviCA, akoDeploymentConfig, true)
 			Expect(secret.Name).To(Equal(workloadSecretName))
 			Expect(secret.Namespace).To(Equal(akoov1alpha1.AviNamespace))
 			Expect(len(secret.Data)).To(Equal(3))

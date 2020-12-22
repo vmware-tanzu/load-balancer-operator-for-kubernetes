@@ -9,6 +9,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/avinetworks/sdk/go/clients"
@@ -84,4 +85,24 @@ func GetUUIDFromRef(ref string) string {
 		return ""
 	}
 	return parts[len(parts)-1]
+}
+
+// IsAviUserAlreadyExistsError returns if an error is User Already Exists error
+// by matching error message
+func IsAviUserAlreadyExistsError(err error) bool {
+	if err == nil {
+		return false
+	}
+	matched, err := regexp.Match(`User with this Username already exist`, []byte(err.Error()))
+	return err == nil && matched
+}
+
+// IsAviUserAlreadyExistsError returns if an error is User doesn't exist error
+// by matching error message
+func IsAviUserNonExistentError(err error) bool {
+	if err == nil {
+		return false
+	}
+	matched, err := regexp.Match(`No object of type user with name .*is found`, []byte(err.Error()))
+	return err == nil && matched
 }
