@@ -87,6 +87,12 @@ rules:
   - apiGroups: [""]
     resources: ["*"]
     verbs: ['get', 'watch', 'list']
+  - apiGroups: ["apps"]
+    resources: ["statefulsets"]
+    verbs: ["get","watch","list"]
+  - apiGroups: ["apps"]
+    resources: ["statefulsets/status"]
+    verbs: ["get","watch","list","patch", "update"]
   - apiGroups: ["extensions", "networking.k8s.io"]
     resources: ["ingresses", "ingresses/status"]
     verbs: ["get","watch","list","patch", "update"]
@@ -104,6 +110,9 @@ rules:
     verbs: ["get", "watch", "list", "patch", "update"]
   - apiGroups: ["ako.vmware.com"]
     resources: ["hostrules", "hostrules/status", "httprules", "httprules/status"]
+    verbs: ["get","watch","list","patch", "update"]
+  - apiGroups: ["networking.x-k8s.io"]
+    resources: ["gateways", "gateways/status", "gatewayclasses", "gatewayclasses/status"]
     verbs: ["get","watch","list","patch", "update"]
 {{- if .Values.Rbac.PspEnabled }}
   - apiGroups:

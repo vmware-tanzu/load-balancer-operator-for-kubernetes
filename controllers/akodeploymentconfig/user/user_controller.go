@@ -291,7 +291,8 @@ func (r *AkoUserReconciler) createOrUpdateAviUser(aviUsername, aviPassword strin
 			return nil, err
 		}
 
-		role, err := r.aviClient.Role.GetByName("Tenant-Admin")
+		// TODO(fangyuanl): use System-Admin for now
+		role, err := r.aviClient.Role.GetByName("System-Admin")
 		if err != nil {
 			return nil, err
 		}

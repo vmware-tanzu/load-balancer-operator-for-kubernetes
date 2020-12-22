@@ -5,7 +5,7 @@ serviceEngine: "Default-Group"
 controller: 10.161.150.145
 namespace: "tanzu-system-networking"
 image: 10.79.172.11:5000/avi-buildops/ako
-imageTag: 2.1.1-5170
+imageTag: 2.1.1-5100
 disableIngressClass: true
 dataNetworkName: "VM Network"
 dataNetworkCIDR: 10.161.136.0/24
