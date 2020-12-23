@@ -227,7 +227,7 @@ func setDefaultValues(values *Values) {
 		ApiServerPort:          8080,
 		DeleteConfig:           false,
 		DisableStaticRouteSync: true,
-		// FullSyncFrequency: don't set, use default value in AKO
+		FullSyncFrequency:      "1800",
 		// CniPlugin: don't set, use default value in AKO
 		// SyncNamespace: don't set, use default value in AKO
 		// ClusterName: populate in runtime

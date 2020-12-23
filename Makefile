@@ -95,22 +95,22 @@ $(YTT): $(TOOLS_DIR)/go.mod # Build ytt from tools folder.
 # Deploy AKO Operator
 .PHONY: deploy-ako-operator
 deploy-ako-operator: $(YTT)
-	$(YTT) -f config/ytt/ako-operator.yaml -f config/ytt/akodeploymentconfig-crd.yaml -f config/ytt/values.yaml | kubectl apply -f
+	$(YTT) -f config/ytt/ako-operator.yaml -f config/ytt/akodeploymentconfig-crd.yaml -f config/ytt/values.yaml | kubectl apply -f -
 
 # Delete AKO Operator
 .PHONY: delete-ako-operator
 delete-ako-operator: $(YTT)
-	$(YTT) -f config/ytt/ako-operator.yaml -f config/ytt/akodeploymentconfig-crd.yaml -f config/ytt/values.yaml | kubectl delete -f
+	$(YTT) -f config/ytt/ako-operator.yaml -f config/ytt/akodeploymentconfig-crd.yaml -f config/ytt/values.yaml | kubectl delete -f -
 
 # Deploy An AKODeploymentConfig
 .PHONY: deploy-akodeploymentconfig
 deploy-akodeploymentconfig: $(YTT)
-	$(YTT) -f config/ytt/akodeploymentconfig | kubectl apply -f
+	$(YTT) -f config/ytt/akodeploymentconfig | kubectl apply -f -
 
 # Delete An AKODeploymentConfig
 .PHONY: delete-akodeploymentconfig
 delete-akodeploymentconfig: $(YTT)
-	$(YTT) -f config/ytt/akodeploymentconfig | kubectl delete -f
+	$(YTT) -f config/ytt/akodeploymentconfig | kubectl delete -f -
 
 ## --------------------------------------
 ## Manifests and Specs
@@ -118,20 +118,21 @@ delete-akodeploymentconfig: $(YTT)
 
 # Install CRDs into a cluster
 install: manifests
-	kustomize build config/crd | kubectl apply -f -
+	$(KUSTOMIZE) build config/crd | kubectl apply -f -
 
 # Uninstall CRDs from a cluster
 uninstall: manifests
-	kustomize build config/crd | kubectl delete -f -
+	$(KUSTOMIZE) build config/crd | kubectl delete -f -
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests
 	cd config/manager && kustomize edit set image controller=${IMG}
-	kustomize build config/default | kubectl apply -f -
+	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
 # Generate manifests e.g. CRD, RBAC etc.
-manifests: $(CONTROLLER_GEN)
+manifests: $(CONTROLLER_GEN) $(KUSTOMIZE)
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	$(KUSTOMIZE) build config/crd > config/ytt/akodeploymentconfig-crd.yaml
 
 # Generate manifests from ytt for AKO Operator Deployment
 .PHONY: ytt-manifests

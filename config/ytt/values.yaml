@@ -1,6 +1,6 @@
 #@data/values
 ---
-namespace: "tanzu-system-networking"
+namespace: "tkg-system-networking"
 imageRegistry: harbor-pks.vmware.com/tkgextensions
-imageName: tkg-networking/tanzu-ako-operator 
-imageTag: dev
+imageName: tkg-networking/tanzu-ako-operator
+imageTag: 503d0a1

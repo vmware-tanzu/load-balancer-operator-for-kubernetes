@@ -85,7 +85,12 @@ func (r *AKODeploymentConfigReconciler) applyClusterLabel(
 	if cluster.Labels == nil {
 		cluster.Labels = make(map[string]string)
 	}
-	log.Info("Adding label to cluster", "label", akoov1alpha1.AviClusterLabel)
+	if _, exists := cluster.Labels[akoov1alpha1.AviClusterLabel]; !exists {
+		log.Info("Adding label to cluster", "label", akoov1alpha1.AviClusterLabel)
+	} else {
+		log.Info("Label already applied to cluster", "label", akoov1alpha1.AviClusterLabel)
+
+	}
 	// Always set avi label on managed cluster
 	cluster.Labels[akoov1alpha1.AviClusterLabel] = ""
 	return ctrl.Result{}, nil
