@@ -129,6 +129,11 @@ deploy: manifests
 	cd config/manager && kustomize edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
+# Uninstalls controller in the configured Kubernetes cluster in ~/.kube/config
+remove: manifests
+	cd config/manager && kustomize edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/default | kubectl delete -f -
+
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: $(CONTROLLER_GEN) $(KUSTOMIZE)
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases

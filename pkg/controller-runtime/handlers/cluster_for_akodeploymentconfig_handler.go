@@ -36,12 +36,8 @@ func (r *akoDeploymentConfigForCluster) Map(o handler.MapObject) []reconcile.Req
 		return nil
 	}
 
-	// cluster doesn't have avi enabled, no need to convert request
-	if _, exist := cluster.Labels[akoov1alpha1.AviClusterLabel]; !exist {
-		r.log.Info("Cluster doesn't have AVI enabled, skip")
-		return nil
-	}
-	r.log.V(3).Info("Getting all akodeploymentconfig")
+	logger := r.log.WithValues("cluster", cluster.Namespace+"/"+cluster.Name)
+	logger.V(3).Info("Getting all akodeploymentconfig")
 
 	var akoDeploymentConfigs akoov1alpha1.AKODeploymentConfigList
 	if err := r.Client.List(ctx, &akoDeploymentConfigs, []client.ListOption{}...); err != nil {
@@ -51,9 +47,10 @@ func (r *akoDeploymentConfigForCluster) Map(o handler.MapObject) []reconcile.Req
 	requests := []ctrl.Request{}
 	for _, akoDeploymentConfig := range akoDeploymentConfigs.Items {
 		if selector, err := metav1.LabelSelectorAsSelector(&akoDeploymentConfig.Spec.ClusterSelector); err != nil {
-			r.log.Error(err, "Failed to convert label sector to selector")
+			logger.Error(err, "Failed to convert label sector to selector")
 			continue
 		} else if selector.Matches(labels.Set(cluster.GetLabels())) {
+			logger.V(3).Info("Found matching AKODeploymentConfig", akoDeploymentConfig.Namespace+"/"+akoDeploymentConfig.Name)
 			requests = append(requests, ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: akoDeploymentConfig.Namespace,
@@ -62,7 +59,7 @@ func (r *akoDeploymentConfigForCluster) Map(o handler.MapObject) []reconcile.Req
 			})
 		}
 	}
-	r.log.V(3).Info("Generating requests", "requests", requests)
+	logger.V(3).Info("Generating requests", "requests", requests)
 
 	// Return reconcile requests for the AKODeploymentConfig resources.
 	return requests
