@@ -10,6 +10,7 @@ import (
 const (
 	ClusterFinalizer = "ako-operator.network.tkg.tanzu.vmware.com"
 
+	AkoUserRoleName              = "ako-essential-role"
 	AkoDeploymentConfigFinalizer = "akodeploymentconfig.ako-operator.network.tkg.tanzu.vmware.com"
 	AkoDeploymentConfigKind      = "AKODeploymentConfig"
 	AkoDeploymentConfigVersion   = "network.tanzu.vmware.com/v1alpha1"

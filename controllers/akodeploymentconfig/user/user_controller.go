@@ -5,7 +5,6 @@ package user
 
 import (
 	"context"
-
 	"github.com/avinetworks/sdk/go/models"
 	"github.com/go-logr/logr"
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
@@ -285,14 +284,12 @@ func (r *AkoUserReconciler) createOrUpdateAviUser(aviUsername, aviPassword strin
 
 	if !found {
 		// (xudongl) for avi essential version, there should be only one tenant, which is admin
-		// (xudongl) TODO Role of AKO is still TBD
 		tenant, err := r.aviClient.Tenant.Get("admin")
 		if err != nil {
 			return nil, err
 		}
 
-		// TODO(fangyuanl): use System-Admin for now
-		role, err := r.aviClient.Role.GetByName("System-Admin")
+		role, err := r.getOrCreateAkoUserRole(tenant.URL)
 		if err != nil {
 			return nil, err
 		}
@@ -325,6 +322,22 @@ func (r *AkoUserReconciler) createOrUpdateAviUser(aviUsername, aviPassword strin
 		return nil, err
 	}
 	return aviUser, nil
+}
+
+// getOrCreateAkoUserRole get ako user's role, create one if not exist
+func (r *AkoUserReconciler) getOrCreateAkoUserRole(roleTenantRef *string) (*models.Role, error) {
+	role, err := r.aviClient.Role.GetByName(akoov1alpha1.AkoUserRoleName)
+	//not found ako user role, create one
+	if aviclient.IsAviRoleNonExistentError(err)  {
+		role = &models.Role{
+			Name:       pointer.StringPtr(akoov1alpha1.AkoUserRoleName),
+			Privileges: AkoRolePermission,
+			TenantRef:  roleTenantRef,
+		}
+		return r.aviClient.Role.Create(role)
+	}
+	// else return role or error
+	return role, err
 }
 
 // mcAVISecretName get avi user secret name in management cluster. There is no need to

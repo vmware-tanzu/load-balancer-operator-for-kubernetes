@@ -106,3 +106,13 @@ func IsAviUserNonExistentError(err error) bool {
 	matched, err := regexp.Match(`No object of type user with name .*is found`, []byte(err.Error()))
 	return err == nil && matched
 }
+
+// IsAviRoleNonExistentError returns if an error is User role doesn't exist error
+// by matching error message
+func IsAviRoleNonExistentError(err error) bool {
+	if err == nil {
+		return false
+	}
+	matched, err := regexp.Match(`No object of type role with name .*is found`, []byte(err.Error()))
+	return err == nil && matched
+}
