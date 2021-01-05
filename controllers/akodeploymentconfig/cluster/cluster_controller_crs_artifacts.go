@@ -189,6 +189,11 @@ spec:
               secretKeyRef:
                 name: avi-secret
                 key: password
+          - name: FULL_SYNC_INTERVAL
+            valueFrom:
+              configMapKeyRef:
+                name: avi-k8s-config
+                key: fullSyncFrequency
           - name: CTRL_IPADDRESS
             valueFrom:
               configMapKeyRef:
