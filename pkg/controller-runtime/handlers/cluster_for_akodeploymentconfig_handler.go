@@ -20,6 +20,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+const (
+	tkgSystemNamespace = "tkg-system"
+)
+
 type akoDeploymentConfigForCluster struct {
 	client.Client
 	log logr.Logger
@@ -37,8 +41,13 @@ func (r *akoDeploymentConfigForCluster) Map(o handler.MapObject) []reconcile.Req
 	}
 
 	logger := r.log.WithValues("cluster", cluster.Namespace+"/"+cluster.Name)
-	logger.V(3).Info("Getting all akodeploymentconfig")
 
+	if cluster.Namespace == tkgSystemNamespace {
+		logger.Info("Skipping clusters in system namespace", "namespace", tkgSystemNamespace)
+		return []reconcile.Request{}
+	}
+
+	logger.V(3).Info("Getting all akodeploymentconfig")
 	var akoDeploymentConfigs akoov1alpha1.AKODeploymentConfigList
 	if err := r.Client.List(ctx, &akoDeploymentConfigs, []client.ListOption{}...); err != nil {
 		return []reconcile.Request{}

@@ -23,17 +23,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-var (
-	ctx     context.Context
-	fclient client.Client
-	logger  logr.Logger
-)
-
 var _ = Describe("AKODeploymentConfig Cluster Handler", func() {
 	var (
 		akoDeploymentConfighandler handler.Mapper
 		requests                   []reconcile.Request
 		input                      handler.MapObject
+		ctx                        context.Context
+		fclient                    client.Client
+		logger                     logr.Logger
 	)
 	BeforeEach(func() {
 		ctx = context.Background()
@@ -89,6 +86,22 @@ var _ = Describe("AKODeploymentConfig Cluster Handler", func() {
 		})
 		It("should create one request", func() {
 			Expect(len(requests)).To(Equal(1))
+		})
+		When("the cluster is from the system namespace", func() {
+			BeforeEach(func() {
+				cluster := &clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: tkgSystemNamespace,
+					},
+				}
+				input = handler.MapObject{
+					Object: cluster,
+				}
+			})
+			It("should not create any request", func() {
+				Expect(len(requests)).To(Equal(0))
+			})
 		})
 	})
 

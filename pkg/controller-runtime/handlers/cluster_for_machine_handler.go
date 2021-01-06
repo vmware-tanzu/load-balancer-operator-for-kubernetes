@@ -33,6 +33,13 @@ func (r *machinesForCluster) Map(o handler.MapObject) []reconcile.Request {
 		return nil
 	}
 
+	logger := r.log.WithValues("cluster", cluster.Namespace+"/"+cluster.Name)
+
+	if cluster.Namespace == tkgSystemNamespace {
+		logger.Info("Skipping clusters in system namespace", "namespace", tkgSystemNamespace)
+		return []reconcile.Request{}
+	}
+
 	listOptions := []client.ListOption{
 		client.InNamespace(cluster.Namespace),
 		client.MatchingLabels(map[string]string{clusterv1.ClusterLabelName: cluster.Name}),
