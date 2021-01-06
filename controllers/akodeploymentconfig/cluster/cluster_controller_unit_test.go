@@ -40,7 +40,7 @@ func unitTestAKODeploymentYaml() {
 				value.AKOSettings.ClusterName:                   cluster.Name,
 				value.ControllerSettings.CloudName:              akoDeploymentConfig.Spec.CloudName,
 				value.ControllerSettings.ControllerIP:           akoDeploymentConfig.Spec.Controller,
-				value.ControllerSettings.ServiceEngineGroupName: akoDeploymentConfig.Spec.ServiceEngine,
+				value.ControllerSettings.ServiceEngineGroupName: akoDeploymentConfig.Spec.ServiceEngineGroup,
 				value.NetworkSettings.NetworkName:               akoDeploymentConfig.Spec.DataNetwork.Name,
 				value.NetworkSettings.SubnetIP:                  "10.0.0.0",
 				value.NetworkSettings.SubnetPrefix:              "24",
@@ -68,9 +68,9 @@ func unitTestAKODeploymentYaml() {
 			BeforeEach(func() {
 				akoDeploymentConfig = &akoov1alpha1.AKODeploymentConfig{
 					Spec: akoov1alpha1.AKODeploymentConfigSpec{
-						CloudName:     "test-cloud",
-						Controller:    "10.23.122.1",
-						ServiceEngine: "Default-SEG",
+						CloudName:          "test-cloud",
+						Controller:         "10.23.122.1",
+						ServiceEngineGroup: "Default-SEG",
 						DataNetwork: akoov1alpha1.DataNetwork{
 							Name: "test-akdc",
 							CIDR: "10.0.0.0/24",

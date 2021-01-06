@@ -2,7 +2,7 @@ apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.3.0
+    controller-gen.kubebuilder.io/version: v0.2.9
   creationTimestamp: null
   name: akodeploymentconfigs.network.tanzu.vmware.com
 spec:
@@ -213,9 +213,9 @@ spec:
                       type: string
                   type: object
               type: object
-            serviceEngine:
-              description: ServiceEngine is the Service Engine name that's to be used
-                by the set of AKO Deployments
+            serviceEngineGroup:
+              description: ServiceEngineGroup is the group name of Service Engine
+                that's to be used by the set of AKO Deployments
               type: string
             tenant:
               description: The AVI tenant for the current AKODeploymentConfig This
@@ -260,7 +260,7 @@ spec:
           - cloudName
           - controller
           - dataNetwork
-          - serviceEngine
+          - serviceEngineGroup
           type: object
         status:
           description: AKODeploymentConfigStatus defines the observed state of AKODeploymentConfig

@@ -26,9 +26,9 @@ type AKODeploymentConfigSpec struct {
 	//                              the corresponding scheme
 	Controller string `json:"controller"`
 
-	// ServiceEngine is the Service Engine name that's to be used by the set
+	// ServiceEngineGroup is the group name of Service Engine that's to be used by the set
 	// of AKO Deployments
-	ServiceEngine string `json:"serviceEngine"`
+	ServiceEngineGroup string `json:"serviceEngineGroup"`
 
 	// Label selector for Clusters. The Clusters that are
 	// selected by this will be the ones affected by this

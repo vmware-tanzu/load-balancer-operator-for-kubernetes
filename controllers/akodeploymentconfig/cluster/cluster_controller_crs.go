@@ -295,7 +295,7 @@ func PopluateValues(obj *akoov1alpha1.AKODeploymentConfig, cluster *clusterv1.Cl
 
 	values.ControllerSettings.CloudName = obj.Spec.CloudName
 	values.ControllerSettings.ControllerIP = obj.Spec.Controller
-	values.ControllerSettings.ServiceEngineGroupName = obj.Spec.ServiceEngine
+	values.ControllerSettings.ServiceEngineGroupName = obj.Spec.ServiceEngineGroup
 
 	network := obj.Spec.DataNetwork
 	values.NetworkSettings.NetworkName = network.Name
