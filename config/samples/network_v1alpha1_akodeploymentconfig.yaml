@@ -4,7 +4,7 @@ metadata:
     name: akodeploymentconfig-all
 spec:
     cloudName: Default-Cloud
-    serviceEngine: Default-Group
+    serviceEngineGroup: Default-Group
     controller: 10.161.150.145
     adminCredentialRef:
         name: avi-controller-credentials

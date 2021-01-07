@@ -95,22 +95,12 @@ $(YTT): $(TOOLS_DIR)/go.mod # Build ytt from tools folder.
 # Deploy AKO Operator
 .PHONY: deploy-ako-operator
 deploy-ako-operator: $(YTT)
-	$(YTT) -f config/ytt/ako-operator.yaml -f config/ytt/akodeploymentconfig-crd.yaml -f config/ytt/values.yaml | kubectl apply -f -
+	$(YTT) -v imageTag=$(BUILD_VERSION) -f config/ytt/ako-operator.yaml -f config/ytt/static.yaml -f config/ytt/values.yaml | kubectl apply -f -
 
 # Delete AKO Operator
 .PHONY: delete-ako-operator
 delete-ako-operator: $(YTT)
-	$(YTT) -f config/ytt/ako-operator.yaml -f config/ytt/akodeploymentconfig-crd.yaml -f config/ytt/values.yaml | kubectl delete -f -
-
-# Deploy An AKODeploymentConfig
-.PHONY: deploy-akodeploymentconfig
-deploy-akodeploymentconfig: $(YTT)
-	$(YTT) -f config/ytt/akodeploymentconfig | kubectl apply -f -
-
-# Delete An AKODeploymentConfig
-.PHONY: delete-akodeploymentconfig
-delete-akodeploymentconfig: $(YTT)
-	$(YTT) -f config/ytt/akodeploymentconfig | kubectl delete -f -
+	$(YTT) -v imageTag=$(BUILD_VERSION) -f config/ytt/ako-operator.yaml -f config/ytt/static.yaml -f config/ytt/values.yaml | kubectl delete -f -
 
 ## --------------------------------------
 ## Manifests and Specs
@@ -137,12 +127,12 @@ remove: manifests
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: $(CONTROLLER_GEN) $(KUSTOMIZE)
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
-	$(KUSTOMIZE) build config/crd > config/ytt/akodeploymentconfig-crd.yaml
+	$(KUSTOMIZE) build config/kustomize-to-ytt > config/ytt/static.yaml
 
 # Generate manifests from ytt for AKO Operator Deployment
 .PHONY: ytt-manifests
 ytt-manifests: $(YTT)
-	@$(YTT) -f config/ytt/ako-operator.yaml -f config/ytt/akodeploymentconfig-crd.yaml -f config/ytt/values.yaml
+	@$(YTT) -v imageTag=$(BUILD_VERSION) -f config/ytt/ako-operator.yaml -f config/ytt/static.yaml -f config/ytt/values.yaml
 
 ## --------------------------------------
 ## Linting and fixing linter errors
@@ -220,7 +210,7 @@ gobuild-docker-images: export VERSION=$(TKG_VERSION)
 gobuild-docker-images:
 	hack/gobuild/build.sh
 
-# Publish the cloud provider docker image to gobuild publish directory
+# Publish the ako operator docker image to gobuild publish directory
 # PUBLISH_DIR environment variable will be set by GoBuild
 .PHONY: gobuild-publish
 gobuild-publish: export PUBLISH_DIR=$(PUBLISH)

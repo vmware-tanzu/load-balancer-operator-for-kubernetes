@@ -3,4 +3,4 @@
 namespace: "tkg-system-networking"
 imageRegistry: harbor-pks.vmware.com/tkgextensions
 imageName: tkg-networking/tanzu-ako-operator
-imageTag: 503d0a1
+imageTag: dc1aec0
