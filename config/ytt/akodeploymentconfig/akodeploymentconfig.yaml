@@ -6,44 +6,44 @@ kind: AKODeploymentConfig
 metadata:
     name: install-ako-for-all
 spec:
-    cloudName: #@ data.values.cloudName
-    serviceEngineGroup: #@ data.values.serviceEngine
-    controller: #@ data.values.controller
+    cloudName: #@ data.values.AVI_CLOUD_NAME
+    serviceEngineGroup: #@ data.values.AVI_SERVICE_ENGINE
+    controller: #@ data.values.AVI_CONTROLLER
     adminCredentialRef:
         name: avi-controller-credentials
-        namespace: #@ data.values.namespace
+        namespace: #@ data.values.AVI_NAMESPACE
     certificateAuthorityRef:
         name: avi-controller-ca
-        namespace: #@ data.values.namespace
+        namespace: #@ data.values.AVI_NAMESPACE
     dataNetwork:
-        name: #@ data.values.dataNetworkName
-        cidr: #@ data.values.dataNetworkCIDR
+        name: #@ data.values.AVI_DATA_NETWORK
+        cidr: #@ data.values.AVI_DATA_NETWORK_CIDR
         ipPools:
-            - start: #@ data.values.dataNetworkIPPoolStart
-              end: #@ data.values.dataNetworkIPPoolEnd
+            - start: #@ data.values.AVI_DATA_NETWORK_IP_POOL_START
+              end: #@ data.values.AVI_DATA_NETWORK_IP_POOL_END
               type: V4
     extraConfigs:
         image:
-            repository: #@ data.values.image
+            repository: #@ data.values.AVI_AKO_IMAGE
             pullPolicy: IfNotPresent
-            version: #@ data.values.imageTag
-        disableIngressClass: #@ data.values.disableIngressClass
+            version: #@ data.values.AVI_AKO_IMAGE_TAG
+        disableIngressClass: #@ data.values.AVI_DISABLE_INGRESS_CLASS
 ---
 apiVersion: v1
 kind: Secret
 metadata:
     name: avi-controller-credentials
-    namespace: #@ data.values.namespace
+    namespace: #@ data.values.AVI_NAMESPACE
 type: Opaque
 data:
-    username: #@ base64.encode(data.values.aviControllerUsername)
-    password: #@ base64.encode(data.values.aviControllerPassword)
+    username: #@ base64.encode(data.values.AVI_USERNAME)
+    password: #@ base64.encode(data.values.AVI_PASSWORD)
 ---
 apiVersion: v1
 kind: Secret
 metadata:
     name: avi-controller-ca
-    namespace: #@ data.values.namespace
+    namespace: #@ data.values.AVI_NAMESPACE
 type: Opaque
 data:
-    certificateAuthorityData: #@ base64.encode(data.values.aviConrollerCertificateAuthority)
+    certificateAuthorityData: #@ base64.encode(data.values.AVI_CA_DATA)

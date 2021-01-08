@@ -1,19 +1,19 @@
 #@data/values
 ---
-cloudName: "Default-Cloud"
-serviceEngine: "Default-Group"
-controller: 10.161.150.145
-namespace: "tanzu-system-networking"
-image: harbor-pks.vmware.com/tkgextensions/tkg-networking/ako
-imageTag: master-dad9e53
-disableIngressClass: true
-dataNetworkName: "VM Network"
-dataNetworkCIDR: 10.161.136.0/24
-dataNetworkIPPoolStart: 10.161.136.31
-dataNetworkIPPoolEnd: 10.161.136.42
-aviControllerUsername: "admin"
-aviControllerPassword: "admin!23"
-aviConrollerCertificateAuthority: |
+AVI_CLOUD_NAME: "Default-Cloud"
+AVI_SERVICE_ENGINE: "Default-Group"
+AVI_CONTROLLER: 10.161.150.145
+AVI_NAMESPACE: "tanzu-system-networking"
+AVI_AKO_IMAGE: harbor-pks.vmware.com/tkgextensions/tkg-networking/ako
+AVI_AKO_IMAGE_TAG: master-dad9e53
+AVI_DISABLE_INGRESS_CLASS: true
+AVI_DATA_NETWORK: "VM Network"
+AVI_DATA_NETWORK_CIDR: 10.161.136.0/24
+AVI_DATA_NETWORK_IP_POOL_START: 10.161.136.31
+AVI_DATA_NETWORK_IP_POOL_END: 10.161.136.42
+AVI_USERNAME: "admin"
+AVI_PASSWORD: "admin!23"
+AVI_CA_DATA: |
   -----BEGIN CERTIFICATE-----
   MIIF+DCCA+CgAwIBAgIBATANBgkqhkiG9w0BAQsFADBgMQswCQYDVQQGEwJVUzET
   MBEGA1UECAwKQ2FsaWZvcm5pYTEUMBIGA1UEBwwLU2FudGEgQ2xhcmExEzARBgNV
