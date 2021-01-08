@@ -92,7 +92,7 @@ var _ = Describe("AKODeploymentConfig Cluster Handler", func() {
 				cluster := &clusterv1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
-						Namespace: tkgSystemNamespace,
+						Namespace: akoov1alpha1.TKGSystemNamespace,
 					},
 				}
 				input = handler.MapObject{

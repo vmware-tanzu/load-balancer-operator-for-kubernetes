@@ -6,6 +6,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -35,8 +36,8 @@ func (r *machinesForCluster) Map(o handler.MapObject) []reconcile.Request {
 
 	logger := r.log.WithValues("cluster", cluster.Namespace+"/"+cluster.Name)
 
-	if cluster.Namespace == tkgSystemNamespace {
-		logger.Info("Skipping clusters in system namespace", "namespace", tkgSystemNamespace)
+	if cluster.Namespace == v1alpha1.TKGSystemNamespace {
+		logger.Info("Skipping clusters in system namespace", "namespace", v1alpha1.TKGSystemNamespace)
 		return []reconcile.Request{}
 	}
 

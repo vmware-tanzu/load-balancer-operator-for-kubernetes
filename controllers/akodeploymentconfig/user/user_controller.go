@@ -47,6 +47,9 @@ func (r *AkoUserReconciler) ReconcileAviUser(
 	cluster *clusterv1.Cluster,
 	obj *akoov1alpha1.AKODeploymentConfig,
 ) (ctrl.Result, error) {
+	if cluster.Namespace == akoov1alpha1.TKGSystemNamespace {
+		return ctrl.Result{}, nil
+	}
 	log.V(1).Info("Start reconciling workload cluster avi credentials")
 	if !cluster.GetDeletionTimestamp().IsZero() {
 		log.Info("reconcile deleting workload cluster avi user resource")

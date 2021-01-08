@@ -5,6 +5,7 @@ package handlers
 
 import (
 	"context"
+	"gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -49,7 +50,7 @@ var _ = Describe("Machine Cluster Handler", func() {
 			cluster := &clusterv1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test",
-					Namespace: tkgSystemNamespace,
+					Namespace: v1alpha1.TKGSystemNamespace,
 				},
 			}
 			input = handler.MapObject{

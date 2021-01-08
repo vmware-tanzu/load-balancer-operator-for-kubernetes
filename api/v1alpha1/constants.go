@@ -8,6 +8,7 @@ import (
 )
 
 const (
+	TKGSystemNamespace  = "tkg-system"
 	TKGClusterNameLabel = "tkg.tanzu.vmware.com/cluster-name"
 
 	AkoUserRoleName              = "ako-essential-role"
