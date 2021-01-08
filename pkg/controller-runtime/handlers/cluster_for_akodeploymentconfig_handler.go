@@ -38,8 +38,8 @@ func (r *akoDeploymentConfigForCluster) Map(o handler.MapObject) []reconcile.Req
 
 	logger := r.log.WithValues("cluster", cluster.Namespace+"/"+cluster.Name)
 
-	if cluster.Namespace == akoov1alpha1.TKGSystemNamespace {
-		logger.Info("Skipping clusters in system namespace", "namespace", akoov1alpha1.TKGSystemNamespace)
+	if SkipCluster(cluster) {
+		logger.Info("Skipping cluster in handler")
 		return []reconcile.Request{}
 	}
 

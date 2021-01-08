@@ -15,6 +15,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeClient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -31,6 +32,7 @@ var _ = Describe("AKODeploymentConfig Cluster Handler", func() {
 		ctx                        context.Context
 		fclient                    client.Client
 		logger                     logr.Logger
+		cluster                    *clusterv1.Cluster
 	)
 	BeforeEach(func() {
 		ctx = context.Background()
@@ -39,6 +41,13 @@ var _ = Describe("AKODeploymentConfig Cluster Handler", func() {
 		fclient = fakeClient.NewFakeClientWithScheme(scheme)
 		logger = log.Log
 		log.SetLogger(zap.New())
+		cluster = &clusterv1.Cluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test",
+				Namespace: "default",
+			},
+		}
+		conditions.MarkTrue(cluster, clusterv1.ReadyCondition)
 	})
 
 	JustBeforeEach(func() {
@@ -47,12 +56,6 @@ var _ = Describe("AKODeploymentConfig Cluster Handler", func() {
 	})
 	When("no AKODeploymentConfig exists", func() {
 		BeforeEach(func() {
-			cluster := &clusterv1.Cluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "default",
-				},
-			}
 			input = handler.MapObject{
 				Object: cluster,
 			}
@@ -74,12 +77,6 @@ var _ = Describe("AKODeploymentConfig Cluster Handler", func() {
 			}
 
 			Expect(fclient.Create(ctx, akodeploymentconfigForAll)).NotTo(HaveOccurred())
-			cluster := &clusterv1.Cluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "default",
-				},
-			}
 			input = handler.MapObject{
 				Object: cluster,
 			}
@@ -89,12 +86,18 @@ var _ = Describe("AKODeploymentConfig Cluster Handler", func() {
 		})
 		When("the cluster is from the system namespace", func() {
 			BeforeEach(func() {
-				cluster := &clusterv1.Cluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test",
-						Namespace: akoov1alpha1.TKGSystemNamespace,
-					},
+				cluster.Namespace = akoov1alpha1.TKGSystemNamespace
+				input = handler.MapObject{
+					Object: cluster,
 				}
+			})
+			It("should not create any request", func() {
+				Expect(len(requests)).To(Equal(0))
+			})
+		})
+		When("the cluster is not ready", func() {
+			BeforeEach(func() {
+				conditions.MarkFalse(cluster, clusterv1.ReadyCondition, "test-reason", clusterv1.ConditionSeverityInfo, "test-msg")
 				input = handler.MapObject{
 					Object: cluster,
 				}
@@ -134,12 +137,6 @@ var _ = Describe("AKODeploymentConfig Cluster Handler", func() {
 
 			Expect(fclient.Create(ctx, akodeploymentconfig1)).NotTo(HaveOccurred())
 			Expect(fclient.Create(ctx, akodeploymentconfig2)).NotTo(HaveOccurred())
-			cluster := &clusterv1.Cluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "default",
-				},
-			}
 			input = handler.MapObject{
 				Object: cluster,
 			}
@@ -179,15 +176,9 @@ var _ = Describe("AKODeploymentConfig Cluster Handler", func() {
 			Expect(fclient.Create(ctx, akodeploymentconfig1)).NotTo(HaveOccurred())
 			Expect(fclient.Create(ctx, akodeploymentconfig2)).NotTo(HaveOccurred())
 
-			cluster := &clusterv1.Cluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "default",
-					Labels: map[string]string{
-						"test1": "hey",
-						"test2": "wow",
-					},
-				},
+			cluster.Labels = map[string]string{
+				"test1": "hey",
+				"test2": "wow",
 			}
 			input = handler.MapObject{
 				Object: cluster,
