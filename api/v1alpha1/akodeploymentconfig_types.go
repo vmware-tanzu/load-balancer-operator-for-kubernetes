@@ -161,7 +161,7 @@ type AVITenant struct {
 type DataNetwork struct {
 	Name    string   `json:"name"`
 	CIDR    string   `json:"cidr"`
-	IPPools []IPPool `json:"ipPools"`
+	IPPools []IPPool `json:"ipPools,omitempty"`
 }
 
 // IPPool defines a contiguous range of IP Addresses

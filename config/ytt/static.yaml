@@ -6,9 +6,9 @@ metadata:
   creationTimestamp: null
   labels:
     app: tanzu-ako-operator
-  name: akodeploymentconfigs.network.tanzu.vmware.com
+  name: akodeploymentconfigs.networking.tkg.tanzu.vmware.com
 spec:
-  group: network.tanzu.vmware.com
+  group: networking.tkg.tanzu.vmware.com
   names:
     kind: AKODeploymentConfig
     listKind: AKODeploymentConfigList
@@ -124,7 +124,6 @@ spec:
                     type: string
                 required:
                 - cidr
-                - ipPools
                 - name
                 type: object
               extraConfigs:
@@ -354,7 +353,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - network.tanzu.vmware.com
+  - networking.tkg.tanzu.vmware.com
   resources:
   - akodeploymentconfigs
   verbs:
@@ -366,7 +365,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - network.tanzu.vmware.com
+  - networking.tkg.tanzu.vmware.com
   resources:
   - akodeploymentconfigs/status
   verbs:
@@ -457,7 +456,6 @@ kind: Service
 metadata:
   labels:
     app: tanzu-ako-operator
-    control-plane: controller-manager
   name: ako-operator-controller-manager-metrics-service
   namespace: tkg-system-networking
 spec:
@@ -467,4 +465,3 @@ spec:
     targetPort: https
   selector:
     app: tanzu-ako-operator
-    control-plane: controller-manager

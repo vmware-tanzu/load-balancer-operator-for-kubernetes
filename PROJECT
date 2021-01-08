@@ -1,7 +1,7 @@
-domain: tanzu.vmware.com
+domain: tkg.tanzu.vmware.com
 repo: gitlab.eng.vmware.com/core-build/ako-operator
 resources:
-- group: network
+- group: networking
   kind: AKODeploymentConfig
   version: v1alpha1
 version: "2"

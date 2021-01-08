@@ -328,7 +328,7 @@ func (r *AkoUserReconciler) createOrUpdateAviUser(aviUsername, aviPassword strin
 func (r *AkoUserReconciler) getOrCreateAkoUserRole(roleTenantRef *string) (*models.Role, error) {
 	role, err := r.aviClient.Role.GetByName(akoov1alpha1.AkoUserRoleName)
 	//not found ako user role, create one
-	if aviclient.IsAviRoleNonExistentError(err)  {
+	if aviclient.IsAviRoleNonExistentError(err) {
 		role = &models.Role{
 			Name:       pointer.StringPtr(akoov1alpha1.AkoUserRoleName),
 			Privileges: AkoRolePermission,

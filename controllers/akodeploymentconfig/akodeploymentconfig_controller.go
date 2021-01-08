@@ -54,8 +54,8 @@ type AKODeploymentConfigReconciler struct {
 
 // AKODeploymentConfigReconciler reconciles a AKODeploymentConfig object
 
-// +kubebuilder:rbac:groups=network.tanzu.vmware.com,resources=akodeploymentconfigs,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=network.tanzu.vmware.com,resources=akodeploymentconfigs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=networking.tkg.tanzu.vmware.com,resources=akodeploymentconfigs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=networking.tkg.tanzu.vmware.com,resources=akodeploymentconfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;create;list;watch;update;delete
 
 func (r *AKODeploymentConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, reterr error) {

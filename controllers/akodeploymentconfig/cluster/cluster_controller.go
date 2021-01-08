@@ -106,8 +106,8 @@ func (r *ClusterReconciler) cleanup(
 	// update the `deleteConfig` field to trigger AKO's cleanup
 	akoConfigMap := &corev1.ConfigMap{}
 	akoConfigMapKey := client.ObjectKey{
-		Name:      "avi-k8s-config",
-		Namespace: "avi-system",
+		Name:      akoov1alpha1.AkoConfigMapName,
+		Namespace: akoov1alpha1.AviNamespace,
 	}
 	err = remoteClient.Get(ctx, akoConfigMapKey, akoConfigMap)
 	if err == nil {
@@ -126,7 +126,7 @@ func (r *ClusterReconciler) cleanup(
 		}
 	} else {
 		if apierrors.IsNotFound(err) {
-			log.Info("Cannot find AKO ConfigMap, consider the cleanup finished", "configMap", "avi-system/test")
+			log.Info("Cannot find AKO ConfigMap, consider the cleanup finished", "configMap", akoConfigMapKey.Namespace+"/"+akoConfigMapKey.Name)
 			cleanupFinished = true
 		} else {
 			return false, err

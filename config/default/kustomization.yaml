@@ -9,8 +9,9 @@ namespace: tkg-system-networking
 namePrefix: ako-operator-
 
 # Labels to add to all resources and selectors.
-#commonLabels:
-#  someName: someValue
+commonLabels:
+  control-plane: controller-manager
+
 
 bases:
   - ../crd

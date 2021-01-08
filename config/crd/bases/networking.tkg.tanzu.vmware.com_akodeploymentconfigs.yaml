@@ -6,9 +6,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.0
   creationTimestamp: null
-  name: akodeploymentconfigs.network.tanzu.vmware.com
+  name: akodeploymentconfigs.networking.tkg.tanzu.vmware.com
 spec:
-  group: network.tanzu.vmware.com
+  group: networking.tkg.tanzu.vmware.com
   names:
     kind: AKODeploymentConfig
     listKind: AKODeploymentConfigList
@@ -124,7 +124,6 @@ spec:
                     type: string
                 required:
                 - cidr
-                - ipPools
                 - name
                 type: object
               extraConfigs:

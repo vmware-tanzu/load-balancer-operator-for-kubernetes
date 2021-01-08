@@ -8,14 +8,16 @@ import (
 )
 
 const (
-	ClusterFinalizer = "ako-operator.network.tkg.tanzu.vmware.com"
+	TKGClusterNameLabel = "tkg.tanzu.vmware.com/cluster-name"
 
 	AkoUserRoleName              = "ako-essential-role"
-	AkoDeploymentConfigFinalizer = "akodeploymentconfig.ako-operator.network.tkg.tanzu.vmware.com"
+	ClusterFinalizer             = "ako-operator.networking.tkg.tanzu.vmware.com"
+	AkoDeploymentConfigFinalizer = "ako-operator.networking.tkg.tanzu.vmware.com"
 	AkoDeploymentConfigKind      = "AKODeploymentConfig"
-	AkoDeploymentConfigVersion   = "network.tanzu.vmware.com/v1alpha1"
+	AkoDeploymentConfigVersion   = "networking.tanzu.vmware.com/v1alpha1"
+	AkoConfigMapName             = "avi-k8s-config"
 
-	AviClusterLabel                                              = "cluster-service.network.tkg.tanzu.vmware.com/avi"
+	AviClusterLabel                                              = "networking.tkg.tanzu.vmware.com/avi"
 	AviClusterSecretType                                         = "avi.cluster.x-k8s.io/secret"
 	AviSecretName                                                = "avi-secret"
 	AviNamespace                                                 = "avi-system"

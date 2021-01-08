@@ -13,20 +13,6 @@ kind: Namespace
 metadata:
   name: #@ data.values.namespace
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  labels: #@ labels()
-  name: ako-operator-controller-manager-metrics-service
-  namespace: #@ data.values.namespace
-spec:
-  ports:
-    - name: https
-      port: 8443
-      targetPort: https
-  selector:
-    #@ labels()
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:

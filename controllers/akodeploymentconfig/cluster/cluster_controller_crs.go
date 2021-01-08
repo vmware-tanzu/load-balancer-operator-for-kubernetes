@@ -45,7 +45,7 @@ func (r *ClusterReconciler) ReconcileCRS(
 	var errs []error
 	s := &corev1.Secret{}
 	if err := r.Get(ctx, client.ObjectKey{
-		Name:      akoDeploymentSecretName(obj),
+		Name:      akoDeploymentSecretName(cluster),
 		Namespace: cluster.Namespace,
 	}, s); err != nil {
 		errs = append(errs, err)
@@ -85,7 +85,7 @@ func (r *ClusterReconciler) ReconcileCRS(
 
 	crs := &clustereaddonv1alpha3.ClusterResourceSet{}
 	if err := r.Get(ctx, client.ObjectKey{
-		Name:      akoDeploymentCRSName(obj),
+		Name:      akoDeploymentCRSName(cluster),
 		Namespace: cluster.Namespace,
 	}, crs); err != nil {
 		errs = append(errs, err)
@@ -134,7 +134,7 @@ func (r *ClusterReconciler) ReconcileCRSDelete(
 
 	crs := &clustereaddonv1alpha3.ClusterResourceSet{}
 	if err := r.Get(ctx, client.ObjectKey{
-		Name:      akoDeploymentCRSName(obj),
+		Name:      akoDeploymentCRSName(cluster),
 		Namespace: cluster.Namespace,
 	}, crs); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -155,8 +155,8 @@ func (r *ClusterReconciler) ReconcileCRSDelete(
 	return ctrl.Result{}, nil
 }
 
-func akoDeploymentSecretName(obj *akoov1alpha1.AKODeploymentConfig) string {
-	return "ako-deployment-" + obj.Name
+func akoDeploymentSecretName(cluster *clusterv1.Cluster) string {
+	return cluster.Name + "-ako"
 }
 
 var akoDeploymentCRSName = akoDeploymentSecretName
@@ -168,15 +168,17 @@ func akoDeploymentCRS(base *clustereaddonv1alpha3.ClusterResourceSet, obj *akoov
 	} else {
 		res = &clustereaddonv1alpha3.ClusterResourceSet{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      akoDeploymentCRSName(obj),
+				Name:      akoDeploymentCRSName(cluster),
 				Namespace: cluster.Namespace,
 			},
 		}
 	}
-	res.Spec.ClusterSelector = obj.Spec.ClusterSelector
+	// Note: we need to copy this selector here to avoid changing the
+	// original object
+	res.Spec.ClusterSelector = *obj.Spec.ClusterSelector.DeepCopy()
 	res.Spec.Resources = []clustereaddonv1alpha3.ResourceRef{
 		{
-			Name: akoDeploymentSecretName(obj),
+			Name: akoDeploymentSecretName(cluster),
 			Kind: "Secret",
 		},
 	}
@@ -193,6 +195,9 @@ func akoDeploymentCRS(base *clustereaddonv1alpha3.ClusterResourceSet, obj *akoov
 			akoov1alpha1.AviClusterLabel: "",
 		}
 	}
+	// Create CRS per cluster so we'll need to match its name to avoid race
+	// condition
+	res.Spec.ClusterSelector.MatchLabels[akoov1alpha1.TKGClusterNameLabel] = cluster.Name
 	return res
 }
 
@@ -203,7 +208,7 @@ func akoDeploymentSecret(base *corev1.Secret, obj *akoov1alpha1.AKODeploymentCon
 	} else {
 		res = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      akoDeploymentSecretName(obj),
+				Name:      akoDeploymentSecretName(cluster),
 				Namespace: namespace,
 			},
 		}
@@ -279,7 +284,7 @@ func setDefaultValues(values *Values) {
 		}
 		values.NetworkSettings.NodeNetworkListJson = string(nodeNetworkListJson)
 	}
-	values.Namespace = "avi-system"
+	values.Namespace = akoov1alpha1.AviNamespace
 }
 
 func PopluateValues(obj *akoov1alpha1.AKODeploymentConfig, cluster *clusterv1.Cluster) (Values, error) {

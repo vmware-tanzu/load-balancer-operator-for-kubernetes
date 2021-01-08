@@ -57,7 +57,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - network.tanzu.vmware.com
+  - networking.tkg.tanzu.vmware.com
   resources:
   - akodeploymentconfigs
   verbs:
@@ -69,7 +69,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - network.tanzu.vmware.com
+  - networking.tkg.tanzu.vmware.com
   resources:
   - akodeploymentconfigs/status
   verbs:
