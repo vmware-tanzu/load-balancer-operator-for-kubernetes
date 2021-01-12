@@ -9,15 +9,16 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
+	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 	appv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
-	akoStatefulSetName          = "ako"
-	akoConditionType            = "akoStatus"
-	akoObjectDeletionDoneStatus = "objDeletionDone"
+	akoStatefulSetName = "ako"
+	akoConditionType   = appv1.StatefulSetConditionType("ako.vmware.com/ObjectDeletionInProgress")
 )
 
 func CleanupFinished(ctx context.Context, remoteClient client.Client, log logr.Logger) (bool, error) {
@@ -25,7 +26,7 @@ func CleanupFinished(ctx context.Context, remoteClient client.Client, log logr.L
 	ss := &appv1.StatefulSet{}
 	if err := remoteClient.Get(ctx, client.ObjectKey{
 		Name:      akoStatefulSetName,
-		Namespace: "avi-system",
+		Namespace: akoov1alpha1.AviNamespace,
 	}, ss); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("AKO Statefulset is gone, consider it as a signal as deletion has finished")
@@ -35,12 +36,12 @@ func CleanupFinished(ctx context.Context, remoteClient client.Client, log logr.L
 		return false, err
 	}
 
-	return msgFoundInStatus(ss.Status.Conditions, akoObjectDeletionDoneStatus), nil
+	return conditionHasStatus(ss.Status.Conditions, akoConditionType, corev1.ConditionFalse), nil
 }
 
-func msgFoundInStatus(conditions []appv1.StatefulSetCondition, msg string) bool {
+func conditionHasStatus(conditions []appv1.StatefulSetCondition, ctype appv1.StatefulSetConditionType, status corev1.ConditionStatus) bool {
 	for _, c := range conditions {
-		if c.Type == akoConditionType && c.Message == msg {
+		if c.Type == ctype && c.Status == status {
 			return true
 		}
 	}

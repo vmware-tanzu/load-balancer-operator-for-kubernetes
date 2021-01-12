@@ -130,7 +130,7 @@ func (r *ClusterReconciler) ReconcileCRSDelete(
 	cluster *clusterv1.Cluster,
 	obj *akoov1alpha1.AKODeploymentConfig,
 ) (res ctrl.Result, reterr error) {
-	log.Info("Starts reconciling ClusterResourceSet")
+	log.Info("Starts reconciling ClusterResourceSet deletion")
 
 	crs := &clustereaddonv1alpha3.ClusterResourceSet{}
 	if err := r.Get(ctx, client.ObjectKey{

@@ -44,6 +44,7 @@ func (r *AKODeploymentConfigReconciler) reconcileClusters(
 			r.clusterReconciler.ReconcileCRS,
 		},
 		[]phases.ReconcileClusterPhase{
+			r.clusterReconciler.ReconcileCRSDelete,
 			r.clusterReconciler.ReconcileDelete,
 		},
 	)
