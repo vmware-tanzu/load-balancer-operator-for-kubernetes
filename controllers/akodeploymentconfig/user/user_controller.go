@@ -17,6 +17,7 @@ import (
 	"k8s.io/utils/pointer"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/controllers/remote"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -28,6 +29,7 @@ type AkoUserReconciler struct {
 	Log       logr.Logger
 	Scheme    *runtime.Scheme
 }
+
 
 // NewReconciler returns AKOUserReconciler object.
 func NewProvider(client client.Client,
@@ -68,6 +70,30 @@ func (r *AkoUserReconciler) ReconcileAviUserDelete(
 	cluster *clusterv1.Cluster,
 	obj *akoov1alpha1.AKODeploymentConfig,
 ) (ctrl.Result, error) {
+	// Check if there is a cleanup condition in the Cluster status , if not, update it
+	if !conditions.Has(cluster, akoov1alpha1.AviUserCleanupSucceededCondition) {
+		conditions.MarkFalse(cluster, akoov1alpha1.AviUserCleanupSucceededCondition, akoov1alpha1.AviResourceCleanupReason, clusterv1.ConditionSeverityInfo, "Cleaning up the AVI load balancing user credentials before deletion")
+		log.Info("Trigger the Avi user cleanup in the target Cluster and set Cluster condition", "condition", akoov1alpha1.AviUserCleanupSucceededCondition)
+	}
+
+	if conditions.IsTrue(cluster, akoov1alpha1.AviResourceCleanupSucceededCondition) {
+		log.Info("Cluster avi resources deleted, start deleting avi user credentials")
+		return r.reconcileAviUserDelete(ctx, log, cluster, obj)
+	}
+
+	log.Info("Wait cluster avi resources get deleted, requeue", "finalizer", akoov1alpha1.ClusterFinalizer)
+	return ctrl.Result{}, nil
+}
+
+// reconcileAviUserDelete clean up all avi user account related resources when workload cluster delete or
+// choose to disable avi
+// Note: only resources in the management cluster will be cleaned up
+func (r *AkoUserReconciler) reconcileAviUserDelete(
+	ctx context.Context,
+	log logr.Logger,
+	cluster *clusterv1.Cluster,
+	obj *akoov1alpha1.AKODeploymentConfig,
+) (ctrl.Result, error) {
 	res := ctrl.Result{}
 
 	mcSecretName, mcSecretNamespace := r.mcAVISecretNameNameSpace(cluster.Name, cluster.Namespace, obj.Spec.WorkloadCredentialRef)
@@ -82,7 +108,6 @@ func (r *AkoUserReconciler) ReconcileAviUserDelete(
 			return res, err
 		} else {
 			log.Info("AKO secret in the management cluster is already gone")
-			return res, nil
 		}
 	}
 
@@ -97,6 +122,9 @@ func (r *AkoUserReconciler) ReconcileAviUserDelete(
 			return res, err
 		}
 	}
+
+	log.Info("AVI User credentials finished cleanup, updating Cluster condition")
+	conditions.MarkTrue(cluster, akoov1alpha1.AviUserCleanupSucceededCondition)
 	return res, nil
 }
 

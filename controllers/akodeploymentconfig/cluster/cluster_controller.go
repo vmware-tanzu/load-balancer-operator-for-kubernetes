@@ -65,6 +65,8 @@ func (r *ClusterReconciler) ReconcileDelete(
 			log.Error(err, "Error cleaning up")
 			return res, err
 		}
+		// remove finalizer only after avi resources deleted && avi user deleted
+		finished = finished && conditions.IsTrue(cluster, akoov1alpha1.AviUserCleanupSucceededCondition)
 
 		// The resources are deleted so remove the finalizer.
 		if finished {
@@ -86,7 +88,7 @@ func (r *ClusterReconciler) cleanup(
 ) (bool, error) {
 	// Firstly we check if there is a cleanup condition in the Cluster
 	// status , if not, we update it
-	if conditions.Get(obj, akoov1alpha1.AviResourceCleanupSucceededCondition) == nil {
+	if !conditions.Has(obj, akoov1alpha1.AviResourceCleanupSucceededCondition) {
 		conditions.MarkFalse(obj, akoov1alpha1.AviResourceCleanupSucceededCondition, akoov1alpha1.AviResourceCleanupReason, clusterv1.ConditionSeverityInfo, "Cleaning up the AVI load balancing resources before deletion")
 		log.Info("Trigger the AKO cleanup in the target Cluster and set Cluster condition", "condition", akoov1alpha1.AviResourceCleanupSucceededCondition)
 	}
