@@ -241,8 +241,8 @@ func setDefaultValues(values *Values) {
 	values.L7Settings = L7Settings{
 		DefaultIngController: false,
 		ServiceType:          "NodePort",
+		ShardVSSize:          "SMALL",
 		// L7ShardingScheme: don't set, use default value in AKO
-		// ShardVSSize: don't set, use default value in AKO
 		// PassthroughShardSize: don't set, use default value in AKO
 	}
 	values.L4Settings = L4Settings{
@@ -316,7 +316,14 @@ func PopluateValues(obj *akoov1alpha1.AKODeploymentConfig, cluster *clusterv1.Cl
 	values.MountPath = obj.Spec.ExtraConfigs.Log.MountPath
 	values.LogFile = obj.Spec.ExtraConfigs.Log.LogFile
 
-	values.DisableIngressClass = obj.Spec.ExtraConfigs.DisableIngressClass
+	values.L7Settings.DisableIngressClass = obj.Spec.ExtraConfigs.IngressConfigs.DisableIngressClass
+	values.L7Settings.DefaultIngController = obj.Spec.ExtraConfigs.IngressConfigs.DefaultIngressController
+	if obj.Spec.ExtraConfigs.IngressConfigs.ShardVSSize != "" {
+		values.L7Settings.ShardVSSize = obj.Spec.ExtraConfigs.IngressConfigs.ShardVSSize
+	}
+	if obj.Spec.ExtraConfigs.IngressConfigs.ServiceType != "" {
+		values.L7Settings.ServiceType = obj.Spec.ExtraConfigs.IngressConfigs.ServiceType
+	}
 
 	values.Name = "ako-" + cluster.Name
 

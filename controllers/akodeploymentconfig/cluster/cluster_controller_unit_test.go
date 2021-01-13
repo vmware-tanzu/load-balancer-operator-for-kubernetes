@@ -50,14 +50,17 @@ func unitTestAKODeploymentYaml() {
 				value.Name:                                      "ako-test-cluster",
 				value.Rbac.PspPolicyApiVersion:                  akoDeploymentConfig.Spec.ExtraConfigs.Rbac.PspPolicyAPIVersion,
 				value.Rbac.PspPolicyApiVersion:                  "test/1.2",
+				value.L7Settings.ShardVSSize:                    akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.ShardVSSize,
+				value.L7Settings.ServiceType:                    akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.ServiceType,
 			}
 			for k, v := range expectedPairs {
 				Expect(k).To(Equal(v))
 			}
 
 			expectedBoolPairs := map[bool]bool{
-				value.DisableIngressClass: akoDeploymentConfig.Spec.ExtraConfigs.DisableIngressClass,
-				value.Rbac.PspEnabled:     akoDeploymentConfig.Spec.ExtraConfigs.Rbac.PspEnabled,
+				value.L7Settings.DisableIngressClass:  akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.DisableIngressClass,
+				value.L7Settings.DefaultIngController: akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.DefaultIngressController,
+				value.Rbac.PspEnabled:                 akoDeploymentConfig.Spec.ExtraConfigs.Rbac.PspEnabled,
 			}
 			for k, v := range expectedBoolPairs {
 				Expect(k).To(Equal(v))
@@ -90,7 +93,12 @@ func unitTestAKODeploymentYaml() {
 								MountPath:             "/var/log",
 								LogFile:               "test-avi.log",
 							},
-							DisableIngressClass: true,
+							IngressConfigs: akoov1alpha1.AKOIngressConfig{
+								DisableIngressClass:      true,
+								DefaultIngressController: true,
+								ShardVSSize:              "MEDIUM",
+								ServiceType:              "NodePort",
+							},
 						},
 					},
 				}

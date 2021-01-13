@@ -129,9 +129,6 @@ spec:
               extraConfigs:
                 description: ExtraConfigs contains extra configurations for AKO Deployment
                 properties:
-                  disableIngressClass:
-                    description: DisableIngressClass will prevent AKO Operator to install AKO IngressClass into workload clusters for old version of K8s
-                    type: boolean
                   image:
                     description: Image specifies the configuration for AKO docker image
                     properties:
@@ -146,6 +143,29 @@ spec:
                         type: string
                       version:
                         description: Version is the AKO Docker image version
+                        type: string
+                    type: object
+                  ingress:
+                    description: IngressConfigs specifies ingress configuration for ako
+                    properties:
+                      defaultIngressController:
+                        description: DefaultIngressController bool describes ako is the default ingress controller to use
+                        type: boolean
+                      disableIngressClass:
+                        description: DisableIngressClass will prevent AKO Operator to install AKO IngressClass into workload clusters for old version of K8s
+                        type: boolean
+                      serviceType:
+                        description: ServiceType string describes ingress methods for a service Valid value should be NodePort or ClusterIP
+                        enum:
+                        - NodePort
+                        - ClusterIP
+                        type: string
+                      shardVSSize:
+                        description: ShardVSSize string describes ingress shared virtual service size Valid value should be SMALL, MEDIUM or LARGE
+                        enum:
+                        - SMALL
+                        - MEDIUM
+                        - LARGE
                         type: string
                     type: object
                   log:

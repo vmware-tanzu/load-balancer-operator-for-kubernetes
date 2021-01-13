@@ -29,7 +29,6 @@ type Values struct {
 	PersistentVolumeClaim string
 	MountPath             string
 	LogFile               string
-	DisableIngressClass   bool
 }
 
 type Image struct {
@@ -65,6 +64,7 @@ type NodeNetwork struct {
 
 // This section outlines all the knobs  used to control Layer 7 loadbalancing settings in AKO.
 type L7Settings struct {
+	DisableIngressClass  bool
 	DefaultIngController bool
 	L7ShardingScheme     string
 	ServiceType          string // enum NodePort|ClusterIP

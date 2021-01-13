@@ -35,6 +35,7 @@ data:
   fullSyncFrequency: "{{ .Values.AKOSettings.FullSyncFrequency }}"
   serviceType:  "{{ .Values.L7Settings.ServiceType }}"
   defaultIngController: "{{ .Values.L7Settings.DefaultIngController }}"
+  shardVSSize: "{{ .Values.L7Settings.ShardVSSize }}"
   deleteConfig: "{{ .Values.AKOSettings.DeleteConfig }}"
   {{ if .Values.NetworkSettings.NodeNetworkListJson }}
   nodeNetworkList: |-
@@ -68,11 +69,10 @@ data:
              {{ end }}
 	  4. PassthroughShardSize;
 	     passthroughShardSize: "{{ .Values.L7Settings.PassthroughShardSize }}"
-	  5. ShardVSSize;
-	     shardVSSize: "{{ .Values.L7Settings.ShardVSSize }}"
        The following fiels are used:
-	  1. serviceType
-	  2. defaultIngController
+          1. serviceType
+          2. defaultIngController
+      	  3. shardVSSize
   */}}
   {{ if .Values.AKOSettings.SyncNamespace }}
   syncNamespace: {{ .Values.AKOSettings.SyncNamespace }}

@@ -102,11 +102,36 @@ type ExtraConfigs struct {
 	// +optional
 	Rbac AKORbacConfig `json:"rbac,omitempty"`
 
+	// IngressConfigs specifies ingress configuration for ako
+	// +optional
+	IngressConfigs AKOIngressConfig `json:"ingress,omitempty"`
+}
+
+// AKOIngressConfig contains ingress configurations for AKO Deployment
+type AKOIngressConfig struct {
 	// DisableIngressClass will prevent AKO Operator to install AKO
 	// IngressClass into workload clusters for old version of K8s
 	//
 	// +optional
 	DisableIngressClass bool `json:"disableIngressClass,omitempty"`
+
+	// DefaultIngressController bool describes ako is the default
+	// ingress controller to use
+	//
+	// +optional
+	DefaultIngressController bool `json:"defaultIngressController,omitempty"`
+
+	// ShardVSSize string describes ingress shared virtual service size
+	// Valid value should be SMALL, MEDIUM or LARGE, default value is SMALL
+	// +kubebuilder:validation:Enum=SMALL;MEDIUM;LARGE
+	// +optional
+	ShardVSSize string `json:"shardVSSize,omitempty"`
+
+	// ServiceType string describes ingress methods for a service
+	// Valid value should be NodePort or ClusterIP
+	// +kubebuilder:validation:Enum=NodePort;ClusterIP
+	// +optional
+	ServiceType string `json:"serviceType,omitempty"`
 }
 
 type AKOImageConfig struct {

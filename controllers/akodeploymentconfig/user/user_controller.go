@@ -30,7 +30,6 @@ type AkoUserReconciler struct {
 	Scheme    *runtime.Scheme
 }
 
-
 // NewReconciler returns AKOUserReconciler object.
 func NewProvider(client client.Client,
 	aviClient *aviclient.Client,
