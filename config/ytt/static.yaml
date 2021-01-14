@@ -161,7 +161,7 @@ spec:
                         - ClusterIP
                         type: string
                       shardVSSize:
-                        description: ShardVSSize string describes ingress shared virtual service size Valid value should be SMALL, MEDIUM or LARGE
+                        description: ShardVSSize string describes ingress shared virtual service size Valid value should be SMALL, MEDIUM or LARGE, default value is SMALL
                         enum:
                         - SMALL
                         - MEDIUM

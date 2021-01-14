@@ -95,7 +95,13 @@ func (r *AkoUserReconciler) reconcileAviUserDelete(
 ) (ctrl.Result, error) {
 	res := ctrl.Result{}
 
-	mcSecretName, mcSecretNamespace := r.mcAVISecretNameNameSpace(cluster.Name, cluster.Namespace, obj.Spec.WorkloadCredentialRef)
+	if obj.Spec.WorkloadCredentialRef != (akoov1alpha1.SecretReference{}) {
+		log.Info("AVI user credentials managed by customers, no need to delete, skip")
+		conditions.MarkTrue(cluster, akoov1alpha1.AviUserCleanupSucceededCondition)
+		return res, nil
+	}
+
+	mcSecretName, mcSecretNamespace := r.mcAVISecretNameNameSpace(cluster.Name, cluster.Namespace)
 
 	secret := &corev1.Secret{}
 	if err := r.Client.Get(ctx, client.ObjectKey{
@@ -150,51 +156,66 @@ func (r *AkoUserReconciler) reconcileAviUserNormal(
 	aviCA := string(aviControllerCASecret.Data[akoov1alpha1.AviCertificateKey][:])
 	// Ensures the management cluster Secret exists
 	mcSecret := &corev1.Secret{}
-	mcSecretName, mcSecretNamespace := r.mcAVISecretNameNameSpace(cluster.Name, cluster.Namespace, obj.Spec.WorkloadCredentialRef)
-	// Secret in the management cluster acts as the source of truth so we
-	// avoid generating the password multiple times
-	if err := r.Client.Get(ctx, client.ObjectKey{
-		Name:      mcSecretName,
-		Namespace: mcSecretNamespace,
-	}, mcSecret); err != nil {
-		if apierrors.IsNotFound(err) {
-
-			aviUsername := cluster.Name + "-" + cluster.Namespace + "-ako-user"
-			// This can only happen once no matter how many times we
-			// enter the reconciliation
-			aviPassword := utils.GenereatePassword(10, true, true, true, true)
-
-			managementClusterSecret := r.createAviUserSecret(
-				mcSecretName,
-				mcSecretNamespace,
-				aviUsername,
-				aviPassword,
-				aviCA,
-				obj,
-				false,
-			)
-			log.Info("No AVI Secret found for cluster in the management cluster, start the creation")
-			if err := r.Client.Create(ctx, managementClusterSecret); err != nil {
-				log.Error(err, "Failed to create AVI secret for Cluster in the management cluster, requeue")
-				return res, err
-			}
-		} else {
+	if obj.Spec.WorkloadCredentialRef != (akoov1alpha1.SecretReference{}) {
+		log.Info("AVI user credentials managed by customers")
+		if err := r.Client.Get(ctx, client.ObjectKey{
+			Name:      obj.Spec.WorkloadCredentialRef.Name,
+			Namespace: obj.Spec.WorkloadCredentialRef.Namespace,
+		}, mcSecret); err != nil {
 			log.Error(err, "Failed to get cluster avi user secret, requeue")
 			return res, err
 		}
-	}
+	} else {
+		log.Info("AVI user credentials managed by tkg system")
+		mcSecretName, mcSecretNamespace := r.mcAVISecretNameNameSpace(cluster.Name, cluster.Namespace)
+		// Secret in the management cluster acts as the source of truth so we
+		// avoid generating the password multiple times
+		if err := r.Client.Get(ctx, client.ObjectKey{
+			Name:      mcSecretName,
+			Namespace: mcSecretNamespace,
+		}, mcSecret); err != nil {
+			if apierrors.IsNotFound(err) {
 
+				aviUsername := cluster.Name + "-" + cluster.Namespace + "-ako-user"
+				// This can only happen once no matter how many times we
+				// enter the reconciliation
+				aviPassword := utils.GenereatePassword(10, true, true, true, true)
+
+				managementClusterSecret := r.createAviUserSecret(
+					mcSecretName,
+					mcSecretNamespace,
+					aviUsername,
+					aviPassword,
+					aviCA,
+					obj,
+					false,
+				)
+				log.Info("No AVI Secret found for cluster in the management cluster, start the creation")
+				if err := r.Client.Create(ctx, managementClusterSecret); err != nil {
+					log.Error(err, "Failed to create AVI secret for Cluster in the management cluster, requeue")
+					return res, err
+				}
+			} else {
+				log.Error(err, "Failed to get cluster avi user secret, requeue")
+				return res, err
+			}
+		}
+
+		// Use the value from the management cluster
+		aviUsername := string(mcSecret.Data["username"][:])
+		aviPassword := string(mcSecret.Data["password"][:])
+
+		// ensures the AVI User exists and matches the mc secret
+		if _, err = r.createOrUpdateAviUser(aviUsername, aviPassword, obj.Spec.Tenant.Name); err != nil {
+			log.Error(err, "Failed to create/update cluster avi user")
+			return res, err
+		} else {
+			log.Info("Successfully created/updated AVI User in AVI Controller")
+		}
+	}
 	// Use the value from the management cluster
 	aviUsername := string(mcSecret.Data["username"][:])
 	aviPassword := string(mcSecret.Data["password"][:])
-
-	// ensures the AVI User exists and matches the mc secret
-	if _, err = r.createOrUpdateAviUser(aviUsername, aviPassword, obj.Spec.Tenant.Name); err != nil {
-		log.Error(err, "Failed to create/update cluster avi user")
-		return res, err
-	} else {
-		log.Info("Successfully created/updated AVI User in AVI Controller")
-	}
 
 	if res, err = r.createOrUpdateWorkloadClusterSecret(ctx, log, cluster, obj, aviUsername, aviPassword, aviCA); err != nil {
 		return res, err
@@ -358,17 +379,9 @@ func (r *AkoUserReconciler) getOrCreateAkoUserRole(roleTenantRef *string) (*mode
 // mcAVISecretNameNameSpace get avi user secret name/namespace in management cluster. There is no need to
 // encode the cluster namespace as the secret is deployed in the same namespace as
 // the cluster
-func (r *AkoUserReconciler) mcAVISecretNameNameSpace(clusterName, clusterNamespace string, secretRef akoov1alpha1.SecretReference) (name, namespace string) {
-	if secretRef.Name != "" {
-		name = secretRef.Name
-	} else {
-		name = clusterName + "-" + "avi-credentials"
-	}
-	if secretRef.Namespace != "" {
-		namespace = secretRef.Namespace
-	} else {
-		namespace = clusterNamespace
-	}
+func (r *AkoUserReconciler) mcAVISecretNameNameSpace(clusterName, clusterNamespace string) (name, namespace string) {
+	name = clusterName + "-" + "avi-credentials"
+	namespace = clusterNamespace
 	return name, namespace
 }
 

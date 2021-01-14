@@ -78,20 +78,9 @@ func AkoUserReconcilerTest() {
 
 	Context("Should be able to create secret spec", func() {
 		It("Should be able to get correct secret secret name and namespace", func() {
-			secretName, secretNamespace := userReconciler.mcAVISecretNameNameSpace("test-cluster", "default", akoDeploymentConfig.Spec.WorkloadCredentialRef)
+			secretName, secretNamespace := userReconciler.mcAVISecretNameNameSpace("test-cluster", "default")
 			Expect(secretName).To(Equal("test-cluster-avi-credentials"))
 			Expect(secretNamespace).To(Equal("default"))
-		})
-
-		It("Should be able to get correct secret secret name and namespace", func() {
-			akoDeploymentConfig.Spec.WorkloadCredentialRef = akoov1alpha1.SecretReference{
-				Name:      "test",
-				Namespace: "test",
-			}
-			secretName, secretNamespace := userReconciler.mcAVISecretNameNameSpace("test-cluster", "default", akoDeploymentConfig.Spec.WorkloadCredentialRef)
-			Expect(secretName).To(Equal("test"))
-			Expect(secretNamespace).To(Equal("test"))
-			akoDeploymentConfig.Spec.WorkloadCredentialRef = akoov1alpha1.SecretReference{}
 		})
 
 		It("Should be able to create correct secret in management cluster", func() {
