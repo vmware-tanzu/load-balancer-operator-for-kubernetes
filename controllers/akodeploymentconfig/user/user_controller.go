@@ -95,7 +95,7 @@ func (r *AkoUserReconciler) reconcileAviUserDelete(
 ) (ctrl.Result, error) {
 	res := ctrl.Result{}
 
-	if obj.Spec.WorkloadCredentialRef != (akoov1alpha1.SecretReference{}) {
+	if obj.Spec.WorkloadCredentialRef != nil {
 		log.Info("AVI user credentials managed by customers, no need to delete, skip")
 		conditions.MarkTrue(cluster, akoov1alpha1.AviUserCleanupSucceededCondition)
 		return res, nil
@@ -156,7 +156,7 @@ func (r *AkoUserReconciler) reconcileAviUserNormal(
 	aviCA := string(aviControllerCASecret.Data[akoov1alpha1.AviCertificateKey][:])
 	// Ensures the management cluster Secret exists
 	mcSecret := &corev1.Secret{}
-	if obj.Spec.WorkloadCredentialRef != (akoov1alpha1.SecretReference{}) {
+	if obj.Spec.WorkloadCredentialRef != nil {
 		log.Info("AVI user credentials managed by customers")
 		if err := r.Client.Get(ctx, client.ObjectKey{
 			Name:      obj.Spec.WorkloadCredentialRef.Name,

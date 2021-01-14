@@ -54,10 +54,11 @@ func AkoUserReconcilerTest() {
 					CIDR:    "1.1.1.1/20",
 					IPPools: []akoov1alpha1.IPPool{},
 				},
-				CertificateAuthorityRef: akoov1alpha1.SecretReference{
+				CertificateAuthorityRef: &akoov1alpha1.SecretRef{
 					Name:      "test-ca-secret",
 					Namespace: "default",
 				},
+				AdminCredentialRef: &akoov1alpha1.SecretRef{},
 			},
 		}
 

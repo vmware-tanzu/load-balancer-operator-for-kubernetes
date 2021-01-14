@@ -224,6 +224,7 @@ spec:
                 - namespace
                 type: object
             required:
+            - adminCredentialRef
             - certificateAuthorityRef
             - cloudName
             - controller

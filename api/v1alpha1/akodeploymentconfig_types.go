@@ -61,7 +61,6 @@ type AKODeploymentConfigSpec struct {
 	//
 	// This credential needs to be bound with admin tenant and will be used
 	// by AKO Operator to automate configurations and operations.
-	// +optional
 	AdminCredentialRef SecretReference `json:"adminCredentialRef"`
 
 	// CertificateAuthorityRef points to a Secret resource that includes the
@@ -200,9 +199,12 @@ type IPPool struct {
 	Type string `json:"type"`
 }
 
-// SecretReference references a Kind Secret object in the same kubernetes
+// SecretReference pointer to SecretRef
+type SecretReference *SecretRef
+
+// SecretRef references a Kind Secret object in the same kubernetes
 // cluster
-type SecretReference struct {
+type SecretRef struct {
 	// Name is the name of resource being referenced.
 	Name string `json:"name"`
 	// Namespace of the resource being referenced.

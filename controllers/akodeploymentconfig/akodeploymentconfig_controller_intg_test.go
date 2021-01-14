@@ -95,6 +95,8 @@ func intgTestMachineDeletionHook() {
 						},
 					},
 				},
+				AdminCredentialRef:      &akoov1alpha1.SecretRef{},
+				CertificateAuthorityRef: &akoov1alpha1.SecretRef{},
 			},
 		}
 		testLabels = map[string]string{
