@@ -322,7 +322,7 @@ spec:
   readOnlyRootFilesystem: false
 {{- end }}
 ---
-{{ if not .Values.DisableIngressClass }}
+{{ if not .Values.L7Settings.DisableIngressClass }}
 apiVersion: networking.k8s.io/v1
 kind: IngressClass
 metadata:
