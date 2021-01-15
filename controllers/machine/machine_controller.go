@@ -141,7 +141,7 @@ func (r *MachineReconciler) reconcileNormal(
 		if obj.Annotations == nil {
 			obj.Annotations = make(map[string]string)
 		}
-		obj.Annotations[preTerminateAnnotation()] = "ako-operator"
+		obj.Annotations[akoov1alpha1.PreTerminateAnnotation] = "ako-operator"
 	}
 
 	return ctrl.Result{}, nil
@@ -166,13 +166,9 @@ func (r *MachineReconciler) reconcileMachineDeletionHook(
 
 	if annotations.HasWithPrefix(clusterv1.PreTerminateDeleteHookAnnotationPrefix, obj.ObjectMeta.Annotations) {
 		// Removes the pre-terminate hook as the cleanup has finished
-		delete(obj.Annotations, preTerminateAnnotation())
+		delete(obj.Annotations, akoov1alpha1.PreTerminateAnnotation)
 		log.Info("Removing pre-terminate hook")
 	}
 
 	return res, nil
-}
-
-func preTerminateAnnotation() string {
-	return clusterv1.PreTerminateDeleteHookAnnotationPrefix + "/avi-cleanup"
 }

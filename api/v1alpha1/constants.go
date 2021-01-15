@@ -26,4 +26,5 @@ const (
 	AviResourceCleanupReason                                     = "AviResourceCleanup"
 	AviResourceCleanupSucceededCondition clusterv1.ConditionType = "AviResourceCleanupSucceeded"
 	AviUserCleanupSucceededCondition     clusterv1.ConditionType = "AviUserCleanupSucceeded"
+	PreTerminateAnnotation                                       = clusterv1.PreTerminateDeleteHookAnnotationPrefix + "/avi-cleanup"
 )
