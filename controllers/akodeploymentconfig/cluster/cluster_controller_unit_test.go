@@ -106,6 +106,18 @@ func unitTestAKODeploymentYaml() {
 			It("should get correct values in the yaml", func() {
 				ensureValueIsExpected(rendered, akoDeploymentConfig, capicluster)
 			})
+
+			It("should populate correct values in crs yaml", func() {
+				_, err := cluster.AKODeploymentYaml(akoDeploymentConfig, capicluster)
+				Expect(err).ShouldNot(HaveOccurred())
+			})
+
+			It("should throw error if template not match", func() {
+				akoDeploymentConfig.Spec.DataNetwork.CIDR = "test"
+				_, err := cluster.AKODeploymentYaml(akoDeploymentConfig, capicluster)
+				Expect(err).Should(HaveOccurred())
+				akoDeploymentConfig.Spec.DataNetwork.CIDR = "10.0.0.0/24"
+			})
 		})
 	})
 }
