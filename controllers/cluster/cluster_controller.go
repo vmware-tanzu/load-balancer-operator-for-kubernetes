@@ -6,6 +6,8 @@ package cluster
 import (
 	"context"
 
+	clustereaddonv1alpha3 "sigs.k8s.io/cluster-api/exp/addons/api/v1alpha3"
+
 	"github.com/go-logr/logr"
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -85,6 +87,44 @@ func (r *ClusterReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, reterr e
 		return res, err
 	}
 
+	// Removing crs and its associated resources for a AKO
+	if _, err := r.deleteCRS(ctx, log, cluster); err != nil {
+		log.Error(err, "Failed to remove crs", cluster.Name)
+		return res, err
+	}
+
+	return res, nil
+}
+
+// deleteCRS delete cluster related crs
+func (r *ClusterReconciler) deleteCRS(
+	ctx context.Context,
+	log logr.Logger,
+	cluster *clusterv1.Cluster,
+) (ctrl.Result, error) {
+	log.Info("Starts reconciling ClusterResourceSet deletion")
+
+	res := ctrl.Result{}
+	crs := &clustereaddonv1alpha3.ClusterResourceSet{}
+	if err := r.Get(ctx, client.ObjectKey{
+		Name:      akoDeploymentCRSName(cluster),
+		Namespace: cluster.Namespace,
+	}, crs); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.V(3).Info("ClusterResourceSet is already deleted")
+			return res, nil
+		}
+		log.Error(err, "Failed to get ClusterResourceSet, requeue")
+		return res, err
+	}
+
+	// CAPI CRS controller will remove ClusterResourceBinding and CRS's
+	// associated resources on our behalf, so deleting CRS is enough
+	if err := r.Delete(ctx, crs); err != nil {
+		log.Error(err, "Failed to delete ClusterResourceSet, requeue")
+		return res, err
+	}
+
 	return res, nil
 }
 
@@ -115,4 +155,8 @@ func (r *ClusterReconciler) deleteHook(
 	}
 
 	return res, nil
+}
+
+func akoDeploymentCRSName(cluster *clusterv1.Cluster) string {
+	return cluster.Name + "-ako"
 }
