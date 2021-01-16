@@ -1,0 +1,74 @@
+
+apiVersion: networking.tkg.tanzu.vmware.com/v1alpha1
+kind: AKODeploymentConfig
+metadata:
+  name: ako-deployment-config
+spec:
+  clusterSelector:
+    matchLabels:
+      cluster-enable-avi: ""
+  cloudName: "Default-Cloud"
+  serviceEngineGroup: "Default-Group"
+  certificateAuthorityRef: 
+    name: controller-ca
+    namespace: default
+  controller: 10.206.111.190
+  adminCredentialRef:
+    name: controller-credentials
+    namespace: default
+  dataNetwork:
+    name: 'VM Network'
+    cidr: 10.206.96.0/20
+    ipPools:
+      - start: 10.206.96.93
+        end: 10.206.96.93
+        type: V4
+      - start: 10.206.96.242
+        end: 10.206.96.242
+        type: V4
+      - start: 10.206.101.135
+        end: 10.206.101.135
+        type: V4
+      - start: 10.206.109.179
+        end: 10.206.109.179
+        type: V4
+      - start: 10.206.104.60
+        end: 10.206.104.60
+        type: V4
+      - start: 10.206.104.2
+        end: 10.206.104.2
+        type: V4
+      - start: 10.206.97.180
+        end: 10.206.97.180
+        type: V4
+      - start: 10.206.96.251
+        end: 10.206.96.251
+        type: V4
+      - start: 10.206.99.218
+        end: 10.206.99.218
+        type: V4
+      - start: 10.206.108.41
+        end: 10.206.108.41
+        type: V4
+  extraConfigs:
+    image:
+      repository: harbor-pks.vmware.com/tkgextensions/tkg-networking/ako
+      pullPolicy: IfNotPresent
+      version: 1.3.2-75300bb1
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: controller-credentials
+type: Opaque
+data:
+  username: YWRtaW4=
+  password: QWRtaW4hMjM=
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: controller-ca
+type: Opaque
+data:
+  certificateAuthorityData: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUYrRENDQStDZ0F3SUJBZ0lCQVRBTkJna3Foa2lHOXcwQkFRc0ZBREJnTVFzd0NRWURWUVFHRXdKVlV6RVQKTUJFR0ExVUVDQXdLUTJGc2FXWnZjbTVwWVRFVU1CSUdBMVVFQnd3TFUyRnVkR0VnUTJ4aGNtRXhFekFSQmdOVgpCQW9NQ2tOdmJuUnliMnhzWlhJeEVUQVBCZ05WQkFNTUNHTmhMbXh2WTJGc01CNFhEVGN3TURFd01UQXdNREF3Ck1Gb1hEVE13TVRFd01USXdNekl6TUZvd1lERUxNQWtHQTFVRUJoTUNWVk14RXpBUkJnTlZCQWdNQ2tOaGJHbG0KYjNKdWFXRXhGREFTQmdOVkJBY01DMU5oYm5SaElFTnNZWEpoTVJNd0VRWURWUVFLREFwRGIyNTBjbTlzYkdWeQpNUkV3RHdZRFZRUUREQWhqWVM1c2IyTmhiRENDQWlJd0RRWUpLb1pJaHZjTkFRRUJCUUFEZ2dJUEFEQ0NBZ29DCmdnSUJBUGFZWXQyc3ZCNi84R0U2UVFjVDNjUDEvaHByaHdvWFRNUnQ2bkJDVkg2N1U4S2JpbWd1czZ3V256aTEKMU5IRHdwU1pjV29aOHZ0anJtMWJxY1hvRERvQnhRRzRORHpjc2VQOUtuTGlNQnFNbkxFREI5cE5LZXhMTnNPUQo1NE9qa1ZDaFhXd3JMTXAwS2MraDlkTkpJQmxUUkVrVDVCV1JCalNRL0FTREx1eWFxcng3OTBhWTBiU2J0TldxClBBZFE0YUpWUFhadHRjT2pJcWRHLzZOOTcxc3pUdWtibGxsbHdlUzBYanR1ZFFJVmtyWllrQjlWTXRnV2YwVloKY3N1UHdzNlZiS0trRHRNZ2VJWVpiTGhMVVBNbW9Bc1g2VnRONTFvMGU0OXJmQjNDSW14V3cvY2RITnYzMEd6VApHR01GYW11QmFyMUNZaHNWYkltMlorRTREdFl1OXVyeW5LdkNnWTVkSmxLRTV0OEVGd0hQQTJ2bE84a3NVbmdaCmJsQUNpS3BqZVUzUy9Sc1lFdHlZUXc0N3VPVFBiaCtXdkNUUkh6ZzJzemVSaEZNQUFGcjhiMmk2dkRXOWc1ZFIKUzBHWS9VWUtmOUJTdXFtS0RRc3g1OGVnaEZCSkk5Uzk4UnZhUjFqVGRVZ29ndmNoSkoyOHlPNklONzVLVFFYdAplZDlDeVpiT01DQ3B1dEdjeHRtV21DVUFMYnkzTERRaWdIcXpjamJjcEFnejRFTXFCak55ZGlDaEZzdEc5RlRJCk0wZkRTRm8vYkZLUG4zRGJNcHNPQ1VSTGhIckNxdHZRSDJ6NU14M1laYXdwc3dPMXZiWEM5TE95OEhhbW1ValcKay9tdXU3WkJOSkdIZWVpNU52Z2tuUmJlQnlDd3VEVDBldkpGY3d1MmRjS2tQMXdyQWdNQkFBR2pnYnd3Z2JrdwpIUVlEVlIwT0JCWUVGQk1WYkxvQ01RL2hacUlWallOQmlSRExZcTVUTUlHSkJnTlZIU01FZ1lFd2Y0QVVFeFZzCnVnSXhEK0Ztb2hXTmcwR0pFTXRpcmxPaFpLUmlNR0F4Q3pBSkJnTlZCQVlUQWxWVE1STXdFUVlEVlFRSURBcEQKWVd4cFptOXlibWxoTVJRd0VnWURWUVFIREF0VFlXNTBZU0JEYkdGeVlURVRNQkVHQTFVRUNnd0tRMjl1ZEhKdgpiR3hsY2pFUk1BOEdBMVVFQXd3SVkyRXViRzlqWVd5Q0FRRXdEQVlEVlIwVEJBVXdBd0VCL3pBTkJna3Foa2lHCjl3MEJBUXNGQUFPQ0FnRUFTY0JvcFJ4VmMyZ2xhdWFxQitwTEprOXFKVmxwc0RQQ0wvZnViK01hWjlWNmM4eHYKUkJWc2I1YjhSdjlqRUd1L0VSYzRlUXg1T09uZCtnbWJmN2xPdWxjc3FTTFIyOVZ2NUJLTkZBNW5MNXBVUW5xagpMMHhYQ1ExVWZLZjJtNWp5WGcxM0FvK2tKN3lMMzRjU3dldTlMb2ZldG9xdkhyQmN3NkFKUEVlakNwc1hxYkk4CkorMEhYaE9oNjhLZ0JGM1FxaHNXR2xEMDZQL3p6OWZhb1ZQRUFvUWx4MGFBUkR3bmdxWE1YaURtWE03Nm1aQjEKS1RySTg4S3hKZUd6bmlEQUtsaFBrTm5xVmNLV1lxaGJoWldLZUtLSEJqUTl3RVl2UzQvYjdNSFhnK3VnM0lmdgpxU1JvaWxTcloxaVByb0hUWlNRZFljTHpXd2FPbFBSaGFteDBBQS9PcVBLb29ZTUh0ZGx0TUxDSFRYb2orTW1QCm4vUnJTTHNFL2FSaGk2a0h0ZzZjV3R5aHJMcXRYTmIvdktsZjlTdDVuczRMdjBkVFh0QnpneFBCK1l6NFJlWWkKT2FuYWttSEJNb3l0VWVrM2dxWEUvNGFWZXBjNmNPcDlxbHZPMGpiRStRRVJDNFZGOWpTNk5ycGx0S1hiMVpOeApWWGZQS2FGVm80YWsxb1FSSytXNTBuanpaSHYreTZqd01XRjNMQ3VwZnJ2RnFlRXZxdERpSTVCamUrT0VqK1ZLClNPamtZbTlLUW9ENG5KWmhnQm43OXRLaFJRaVlUckNBSjl3cm9nUjRqc0hYZGtuaUM2N2Jxd05xQlIvQjg0a0YKODc2WUs1VVJjUTRlcWVsa0x3Z2MvbmcycWw2RE0vdi91b3dHblNqZ3pSeW1uSlRIOTJPMjhsUGZwejQ9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0=

@@ -8,7 +8,7 @@ CRD_OPTIONS ?= "crd:trivialVersions=true"
 
 # Gobuild
 PUBLISH?=publish
-BUILD_VERSION = $(shell git describe --always --match "v*" | sed 's/v//')
+BUILD_VERSION ?= $(shell git describe --always --match "v*" | sed 's/v//')
 
 # TKG Version
 TKG_VERSION ?= v1.2.0+vmware.2
@@ -78,8 +78,8 @@ integration-test: $(GINKGO) $(ETCD)
 	$(GINKGO) -v controllers/akodeploymentconfig/user -- -enable-integration-tests -enable-unit-tests=false -root-dir="../../.."
 	$(GINKGO) -v controllers/akodeploymentconfig -- -enable-integration-tests -enable-unit-tests=false
 
-.PHONY: e2e-test
-e2e-test: $(KUSTOMIZE) $(KIND) $(KUBECTL) $(JQ) $(YTT)
+.PHONY: kind-e2e-test
+kind-e2e-test: $(KUSTOMIZE) $(KIND) $(KUBECTL) $(JQ) $(YTT)
 	./hack/test_e2e.sh
 
 .PHONY: ytt

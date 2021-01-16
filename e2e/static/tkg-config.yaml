@@ -1,0 +1,73 @@
+# Obsolete. Please use '-k' or '--kubernetes-version' to override the default kubernetes version
+KUBERNETES_VERSION: "v1.19.3+vmware.1"
+VSPHERE_SERVER: "10.206.97.236"
+VSPHERE_DATACENTER: "dc0"
+VSPHERE_DATASTORE: "sharedVmfs-0"
+VSPHERE_NETWORK: "VM Network"
+VSPHERE_RESOURCE_POOL: "capv-113"
+VSPHERE_FOLDER: "capv-113"
+VSPHERE_DISK_GIB: 30
+VSPHERE_NUM_CPUS: 2
+VSPHERE_MEM_MIB: 2048
+VSPHERE_WORKER_DISK_GIB: "50"
+VSPHERE_WORKER_NUM_CPUS: "4"
+VSPHERE_WORKER_MEM_MIB: "8192"
+VSPHERE_CONTROL_PLANE_DISK_GIB: "50"
+VSPHERE_CONTROL_PLANE_MEM_MIB: "8192"
+VSPHERE_CONTROL_PLANE_NUM_CPUS: "4"
+VSPHERE_USERNAME: "administrator@vsphere.local"
+VSPHERE_PASSWORD: "<encoded:QWRtaW4hMjM=>"
+VSPHERE_SSH_AUTHORIZED_KEY: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCsbzCr6K3N7OBq7S3vwvu2vseJGiWRz+x2ycJLkkKuwV8QFhx6oARZHdIeIuDrvfEsa5H02/GUoBJYkEt0W8RFADjk16sNC8AOOAybXupWokT3/8LkKd9aO8OmpQ3ddXxygXCpjc5R0ZheiIxRTUvt3s61zIPYyTi6QIQ86fCvkEY1gdRSy7lDpp5OHlKxyjH+kBlAnzVGKdNuLkz7piBApUgJ9/gft0zCpE6BHkUzg6zUlPXkjh4OrTcdo/dVnEFdowenRkFqjKbJ98LO/SLLYdyvXd6/APtoQAxEeZxNHWyQJR0UFFWgdU/3AtExUPWqlEvPhlYImkx21vUu58cj
+    wangjiatong@wangjiatong-a02.vmware.com"
+VSPHERE_INSECURE: "true"
+SERVICE_CIDR: "100.64.0.0/13"
+CLUSTER_CIDR: "100.96.0.0/11"
+SERVICE_DOMAIN: "cluster.local"
+# Old TKG CLI will use haproxy vm
+VSPHERE_HAPROXY_TEMPLATE: ""
+# New TKG CLI will use --vsphere-control-plane-endpoint-ip in create-mc.sh
+cert-manager-timeout: 30m # TODO: To be removed once tkgcli supports this natively; see https://cluster-api.sigs.k8s.io/clusterctl/configuration.html#cert-manager-timeout-override
+overridesFolder: /home/capv/.tkg/overrides
+NODE_STARTUP_TIMEOUT: 20m
+BASTION_HOST_ENABLED: "true"
+providers:
+  - name: cluster-api
+    url: /Users/fangyuanl/.tkg/providers/cluster-api/v0.3.11/core-components.yaml
+    type: CoreProvider
+  - name: aws
+    url: /Users/fangyuanl/.tkg/providers/infrastructure-aws/v0.6.3/infrastructure-components.yaml
+    type: InfrastructureProvider
+  - name: vsphere
+    url: /Users/fangyuanl/.tkg/providers/infrastructure-vsphere/v0.7.1/infrastructure-components.yaml
+    type: InfrastructureProvider
+  - name: azure
+    url: /Users/fangyuanl/.tkg/providers/infrastructure-azure/v0.4.8/infrastructure-components.yaml
+    type: InfrastructureProvider
+  - name: tkg-service-vsphere
+    url: /Users/fangyuanl/.tkg/providers/infrastructure-tkg-service-vsphere/v1.0.0/unused.yaml
+    type: InfrastructureProvider
+  - name: kubeadm
+    url: /Users/fangyuanl/.tkg/providers/bootstrap-kubeadm/v0.3.11/bootstrap-components.yaml
+    type: BootstrapProvider
+  - name: kubeadm
+    url: /Users/fangyuanl/.tkg/providers/control-plane-kubeadm/v0.3.11/control-plane-components.yaml
+    type: ControlPlaneProvider
+  - name: docker
+    url: /Users/fangyuanl/.tkg/providers/infrastructure-docker/v0.3.10/infrastructure-components.yaml
+    type: InfrastructureProvider
+images:
+    all:
+        repository: registry.tkg.vmware.run/cluster-api
+    cert-manager:
+        repository: registry.tkg.vmware.run/cert-manager
+        tag: v0.16.1_vmware.1
+release:
+    version: v1.2.1
+tkg:
+    regions:
+      - name: tkg-cluster-mc-113
+        context: tkg-cluster-mc-113-admin@tkg-cluster-mc-113
+        file: /Users/fangyuanl/development/go/src/gitlab.eng.vmware.com/core-build/ako-operator/e2e/static/mc.kubeconfig
+        status: Success
+        isCurrentContext: false
+    current-region-context: tkg-cluster-mc-113-admin@tkg-cluster-mc-113
