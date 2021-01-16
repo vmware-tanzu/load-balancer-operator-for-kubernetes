@@ -94,7 +94,8 @@ func (r *MachineReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, reterr e
 	log = log.WithValues("Cluster", cluster.Namespace+"/"+cluster.Name)
 
 	if _, exist := cluster.Labels[akoov1alpha1.AviClusterLabel]; !exist {
-		log.Info("Cluster doesn't have AVI enabled, skip reconciling")
+		delete(obj.Annotations, akoov1alpha1.PreTerminateAnnotation)
+		log.Info("Cluster doesn't have AVI enabled, PreTerminateAnnotation deleted, skip reconciling")
 		return res, nil
 	}
 

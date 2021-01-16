@@ -9,13 +9,14 @@ import (
 	clustereaddonv1alpha3 "sigs.k8s.io/cluster-api/exp/addons/api/v1alpha3"
 
 	"github.com/go-logr/logr"
+	"github.com/pkg/errors"
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
-	"sigs.k8s.io/cluster-api/util/annotations"
+	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -60,6 +61,21 @@ func (r *ClusterReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, reterr e
 
 	log.Info("Cluster has AVI enabled, start Cluster reconciling")
 
+	// Always Patch when exiting this function so changes to the resource are updated on the API server.
+	patchHelper, err := patch.NewHelper(cluster, r.Client)
+	if err != nil {
+		return res, errors.Wrapf(err, "failed to init patch helper for %s %s",
+			cluster.GroupVersionKind(), req.NamespacedName)
+	}
+	defer func() {
+		if err := patchHelper.Patch(ctx, cluster); err != nil {
+			if reterr == nil {
+				reterr = err
+			}
+			log.Error(err, "patch failed")
+		}
+	}()
+
 	// Getting all akodeploymentconfigs
 	var akoDeploymentConfigs akoov1alpha1.AKODeploymentConfigList
 	if err := r.Client.List(ctx, &akoDeploymentConfigs); err != nil {
@@ -81,17 +97,14 @@ func (r *ClusterReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, reterr e
 	log.Info("Removing finalizer", "finalizer", akoov1alpha1.ClusterFinalizer)
 	ctrlutil.RemoveFinalizer(cluster, akoov1alpha1.ClusterFinalizer)
 
-	// Removing pre-terminate hook if current cluster can't be selected by any akoDeploymentConfig
-	if _, err := r.deleteHook(ctx, log, cluster); err != nil {
-		log.Error(err, "Failed to remove pre-terminate hook", cluster.Name)
-		return res, err
-	}
-
 	// Removing crs and its associated resources for a AKO
 	if _, err := r.deleteCRS(ctx, log, cluster); err != nil {
 		log.Error(err, "Failed to remove crs", cluster.Name)
 		return res, err
 	}
+
+	// Removing avi label after deleting all the resources
+	delete(cluster.Labels, akoov1alpha1.AviClusterLabel)
 
 	return res, nil
 }
@@ -123,35 +136,6 @@ func (r *ClusterReconciler) deleteCRS(
 	if err := r.Delete(ctx, crs); err != nil {
 		log.Error(err, "Failed to delete ClusterResourceSet, requeue")
 		return res, err
-	}
-
-	return res, nil
-}
-
-func (r *ClusterReconciler) deleteHook(
-	ctx context.Context,
-	log logr.Logger,
-	cluster *clusterv1.Cluster,
-) (ctrl.Result, error) {
-	log.Info("Start deleting pre-terminate hooks from all the machines of Cluster", cluster.Name)
-
-	res := ctrl.Result{}
-	listOptions := []client.ListOption{
-		client.MatchingLabels(map[string]string{clusterv1.ClusterLabelName: cluster.Name}),
-	}
-
-	// List machines of current cluster
-	var machines clusterv1.MachineList
-	if err := r.Client.List(ctx, &machines, listOptions...); err != nil {
-		return res, err
-	}
-
-	// Removing the pre-terminate hook from each machine
-	for _, machine := range machines.Items {
-		if annotations.HasWithPrefix(clusterv1.PreTerminateDeleteHookAnnotationPrefix, machine.ObjectMeta.Annotations) {
-			delete(machine.Annotations, akoov1alpha1.PreTerminateAnnotation)
-			log.Info("Removing pre-terminate hook")
-		}
 	}
 
 	return res, nil
