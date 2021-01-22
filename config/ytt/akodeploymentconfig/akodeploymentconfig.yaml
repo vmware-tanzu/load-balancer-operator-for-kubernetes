@@ -1,49 +1,106 @@
 #@ load("@ytt:data", "data")
 #@ load("@ytt:base64", "base64")
+#@
+#@ def has_tenant_section():
+#@   return data.values.AVI_TENANT_NAME != "" and data.values.AVI_TENANT_CONTEXT != ""
+#@ end
+#@
+#@ def has_log_section():
+#@   return data.values.AVI_LOG_PERSISTENT_VOLUME_CLAIM != "" or data.values.AVI_LOG_MOUNT_PATH != "" or data.values.AVI_LOG_FILE != ""
+#@ end
+#@
+#@ def has_rbac_section():
+#@   return data.values.AVI_RBAC_PSP_POLICY_API_VERSION != "" and data.values.AVI_RBAC_PSP_ENABLED
+#@ end
+#@
+#@ def has_ippools_section():
+#@   return data.values.AVI_DATA_NETWORK_IP_POOL_START != "" and data.values.AVI_DATA_NETWORK_IP_POOL_END != ""
+#@ end
 ---
 apiVersion: network.tanzu.vmware.com/v1alpha1
 kind: AKODeploymentConfig
 metadata:
-    name: install-ako-for-all
+  name: install-ako-for-all
 spec:
-    cloudName: #@ data.values.AVI_CLOUD_NAME
-    serviceEngineGroup: #@ data.values.AVI_SERVICE_ENGINE
-    controller: #@ data.values.AVI_CONTROLLER
-    adminCredentialRef:
-        name: avi-controller-credentials
-        namespace: #@ data.values.AVI_NAMESPACE
-    certificateAuthorityRef:
-        name: avi-controller-ca
-        namespace: #@ data.values.AVI_NAMESPACE
-    dataNetwork:
-        name: #@ data.values.AVI_DATA_NETWORK
-        cidr: #@ data.values.AVI_DATA_NETWORK_CIDR
-        ipPools:
-            - start: #@ data.values.AVI_DATA_NETWORK_IP_POOL_START
-              end: #@ data.values.AVI_DATA_NETWORK_IP_POOL_END
-              type: V4
-    extraConfigs:
-        image:
-            repository: #@ data.values.AVI_AKO_IMAGE
-            pullPolicy: IfNotPresent
-            version: #@ data.values.AVI_AKO_IMAGE_TAG
-        disableIngressClass: #@ data.values.AVI_DISABLE_INGRESS_CLASS
----
-apiVersion: v1
-kind: Secret
-metadata:
+  cloudName: #@ data.values.AVI_CLOUD_NAME
+  controller: #@ data.values.AVI_CONTROLLER
+  serviceEngineGroup: #@ data.values.AVI_SERVICE_ENGINE
+  #@ if data.values.AVI_LABELS != "":
+  clusterSelector:
+    matchLabels: #@ data.values.AVI_LABELS
+  #@ end
+  #@ if data.values.AVI_WORKLOAD_CREDENTIAL_NAME != "":
+  workloadCredentialRef:
+    name: #@ data.values.AVI_WORKLOAD_CREDENTIAL_NAME
+    namespace: #@ data.values.AVI_NAMESPACE
+  #@ end
+  adminCredentialRef:
     name: avi-controller-credentials
     namespace: #@ data.values.AVI_NAMESPACE
-type: Opaque
-data:
-    username: #@ base64.encode(data.values.AVI_USERNAME)
-    password: #@ base64.encode(data.values.AVI_PASSWORD)
+  certificateAuthorityRef:
+    name: avi-controller-ca
+    namespace: #@ data.values.AVI_NAMESPACE
+  dataNetwork:
+    name: #@ data.values.AVI_DATA_NETWORK
+    cidr: #@ data.values.AVI_DATA_NETWORK_CIDR
+    #@ if has_ippools_section():
+    ipPools:
+      - start: #@ data.values.AVI_DATA_NETWORK_IP_POOL_START
+        end: #@ data.values.AVI_DATA_NETWORK_IP_POOL_END
+        type: V4
+    #@ end
+  #@ if has_tenant_section():
+  tenant:
+    name: #@ data.values.AVI_TENANT_NAME
+    context: #@ data.values.AVI_TENANT_CONTEXT
+  #@ end
+  extraConfigs:
+    image:
+      repository: #@ data.values.AVI_AKO_IMAGE
+      pullPolicy: #@ data.values.AVI_AKO_IMAGE_PULL_POLICY
+      version: #@ data.values.AVI_AKO_IMAGE_TAG
+    #@ if has_log_section():
+    log:
+      #@ if data.values.AVI_LOG_PERSISTENT_VOLUME_CLAIM != "":
+      persistentVolumeClaim: #@ data.values.AVI_LOG_PERSISTENT_VOLUME_CLAIM
+      #@ end
+      #@ if data.values.AVI_LOG_MOUNT_PATH != "":
+      mountPath: #@ data.values.AVI_LOG_MOUNT_PATH
+      #@ end
+      #@ if data.values.AVI_LOG_FILE != "":
+      logFile: #@ data.values.AVI_LOG_FILE
+      #@ end
+    #@ end
+    #@ if has_rbac_section():
+    rbac:
+      pspPolicyAPIVersion: #@ data.values.AVI_RBAC_PSP_POLICY_API_VERSION
+      pspEnabled: #@ data.values.AVI_RBAC_PSP_ENABLED
+    #@ end
+    ingress:
+      disableIngressClass: #@ data.values.AVI_INGRESS_DISABLE_INGRESS_CLASS
+      defaultIngressController: #@ data.values.AVI_INGRESS_DEFAULT_INGRESS_CONTROLLER
+      #@ if data.values.AVI_INGRESS_SHARD_VS_SIZE != "":
+      shardVSSize: #@ data.values.AVI_INGRESS_SHARD_VS_SIZE
+      #@ end
+      #@ if data.values.AVI_INGRESS_SERVICE_TYPE != "":
+      serviceType: #@ data.values.AVI_INGRESS_SERVICE_TYPE
+      #@ end
 ---
 apiVersion: v1
 kind: Secret
 metadata:
-    name: avi-controller-ca
-    namespace: #@ data.values.AVI_NAMESPACE
+  name: avi-controller-credentials
+  namespace: #@ data.values.AVI_NAMESPACE
 type: Opaque
 data:
-    certificateAuthorityData: #@ base64.encode(data.values.AVI_CA_DATA)
+  username: #@ base64.encode(data.values.AVI_USERNAME)
+  password: #@ base64.encode(data.values.AVI_PASSWORD)
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: avi-controller-ca
+  namespace: #@ data.values.AVI_NAMESPACE
+type: Opaque
+data:
+  certificateAuthorityData: #@ base64.encode(data.values.AVI_CA_DATA)
