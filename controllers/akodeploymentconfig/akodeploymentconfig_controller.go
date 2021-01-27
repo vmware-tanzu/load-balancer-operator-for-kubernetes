@@ -140,7 +140,7 @@ func (r *AKODeploymentConfigReconciler) reconcileDelete(
 	log.Info("AkoDeploymentConfig is being deleted. Start cleaning up")
 
 	defer func() {
-		if reterr == nil {
+		if reterr == nil && !res.Requeue {
 			// remove finalizer when clean up finishes successfully
 			log.Info("Removing finalizer", "finalizer", akoov1alpha1.AkoDeploymentConfigFinalizer)
 			ctrlutil.RemoveFinalizer(obj, akoov1alpha1.AkoDeploymentConfigFinalizer)
