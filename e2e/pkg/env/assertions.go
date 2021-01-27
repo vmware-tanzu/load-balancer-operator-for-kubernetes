@@ -64,7 +64,8 @@ func (o *E2ETestCase) EnsureClusterLabelApplied(clusterName string, labelGetter 
 
 func EnsureAKO(testcase *E2ETestCase, clusterName string) {
 	wcRunner := NewKubectlRunner(
-		testcase.Clients.Kubectl.ConfigPath,
+		// by setting kubeConfigPath to empty, use $HOME/.kube/config by default
+		"",
 		fmt.Sprintf("%s-admin@%s", clusterName, clusterName),
 		testcase.Clients.Kubectl.Namespace)
 	EnsurePodRunningWithTimeout(wcRunner, "ako-0", 1, "avi-system", "90s")
@@ -76,7 +77,8 @@ func EnsureLoadBalancerService(testcase *E2ETestCase, clusterName string) {
 		paths = append(paths, p.Path)
 	}
 	wcRunner := NewKubectlRunner(
-		testcase.Clients.Kubectl.ConfigPath,
+		// by setting kubeConfigPath to empty, use $HOME/.kube/config by default
+		"",
 		fmt.Sprintf("%s-admin@%s", clusterName, clusterName),
 		testcase.Clients.Kubectl.Namespace)
 	EnsureYamlsApplied(wcRunner, paths)
