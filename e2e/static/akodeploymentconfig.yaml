@@ -12,43 +12,43 @@ spec:
   certificateAuthorityRef: 
     name: controller-ca
     namespace: default
-  controller: 10.206.111.190
+  controller: 10.78.110.127
   adminCredentialRef:
     name: controller-credentials
     namespace: default
   dataNetwork:
     name: 'VM Network'
-    cidr: 10.206.96.0/20
+    cidr: 10.78.96.0/20
     ipPools:
-      - start: 10.206.96.93
-        end: 10.206.96.93
+      - start: 10.78.100.93
+        end: 10.78.100.93
         type: V4
-      - start: 10.206.96.242
-        end: 10.206.96.242
+      - start: 10.78.109.218
+        end: 10.78.109.218
         type: V4
-      - start: 10.206.101.135
-        end: 10.206.101.135
+      - start: 10.78.97.104
+        end: 10.78.97.104
         type: V4
-      - start: 10.206.109.179
-        end: 10.206.109.179
+      - start: 10.78.99.102
+        end: 10.78.99.102
         type: V4
-      - start: 10.206.104.60
-        end: 10.206.104.60
+      - start: 10.78.107.19
+        end: 10.78.107.19
         type: V4
-      - start: 10.206.104.2
-        end: 10.206.104.2
+      - start: 10.78.97.43
+        end: 10.78.97.43
         type: V4
-      - start: 10.206.97.180
-        end: 10.206.97.180
+      - start: 10.78.98.195
+        end: 10.78.98.195
         type: V4
-      - start: 10.206.96.251
-        end: 10.206.96.251
+      - start: 10.78.111.4
+        end: 10.78.111.4
         type: V4
-      - start: 10.206.99.218
-        end: 10.206.99.218
+      - start: 10.78.102.105
+        end: 10.78.102.105
         type: V4
-      - start: 10.206.108.41
-        end: 10.206.108.41
+      - start: 10.78.111.86
+        end: 10.78.111.86
         type: V4
   extraConfigs:
     image:

@@ -33,3 +33,7 @@ vendor
 
 hack/tools/bin
 local
+
+# e2e test
+e2e/env.json
+e2e/static

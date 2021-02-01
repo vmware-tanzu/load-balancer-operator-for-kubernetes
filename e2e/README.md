@@ -45,7 +45,7 @@ tkg:
         isCurrentContext: false
     current-region-context: tkg-cluster-mc-113-admin@tkg-cluster-mc-113
 
-# 3. change the value of file field to the absolute path, i.e: ${AKO_OPERATOR_PATH}/e2e/static/tkg-config.yaml
+# 3. change the value of file field to the absolute path, i.e: ${AKO_OPERATOR_PATH}/e2e/static/mc.kubeconfig
 ```
 
 1. open ${AKO_OPERATOR_PATH}/e2e/env.json

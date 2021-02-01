@@ -27,7 +27,9 @@ func (o *E2ETestCase) EnsureYamlsApplied(yamlPaths []string) {
 }
 
 func (o *E2ETestCase) EnsureYamlsRemoved(yamlPaths []string) {
-	EnsureYamlsApplied(o.Clients.Kubectl, yamlPaths)
+	for _, path := range yamlPaths {
+		Eventually(o.Clients.Kubectl.RunWithoutNamespace("delete", "-f", path), "5s").Should(gexec.Exit())
+	}
 }
 
 func (o *E2ETestCase) EnsureClusterCreated(name string) {
@@ -68,7 +70,7 @@ func EnsureAKO(testcase *E2ETestCase, clusterName string) {
 		"",
 		fmt.Sprintf("%s-admin@%s", clusterName, clusterName),
 		testcase.Clients.Kubectl.Namespace)
-	EnsurePodRunningWithTimeout(wcRunner, "ako-0", 1, "avi-system", "90s")
+	EnsurePodRunningWithTimeout(wcRunner, "ako-0", 1, "avi-system", "180s")
 }
 
 func EnsureLoadBalancerService(testcase *E2ETestCase, clusterName string) {
@@ -83,4 +85,12 @@ func EnsureLoadBalancerService(testcase *E2ETestCase, clusterName string) {
 		testcase.Clients.Kubectl.Namespace)
 	EnsureYamlsApplied(wcRunner, paths)
 	EnsureLoadBalancerTypeServiceAccessible(wcRunner, 1)
+}
+
+func (o *E2ETestCase) EnsureCRSandAviUserDeleted(clusterName string) {
+	// Check crs
+	EnsureObjectGone(o.Clients.Kubectl, "secret", clusterName+"-ako")
+	EnsureObjectGone(o.Clients.Kubectl, "ClusterResourceSet", clusterName+"-ako")
+	// Check Avi user
+	EnsureObjectGone(o.Clients.Kubectl, "secret", clusterName+"-avi-credentials")	
 }

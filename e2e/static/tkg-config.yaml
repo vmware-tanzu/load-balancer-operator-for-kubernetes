@@ -1,14 +1,14 @@
 # Obsolete. Please use '-k' or '--kubernetes-version' to override the default kubernetes version
 KUBERNETES_VERSION: "v1.19.3+vmware.1"
-VSPHERE_SERVER: "10.206.97.236"
+VSPHERE_SERVER: "10.78.106.168"
 VSPHERE_DATACENTER: "dc0"
 VSPHERE_DATASTORE: "sharedVmfs-0"
 VSPHERE_NETWORK: "VM Network"
-VSPHERE_RESOURCE_POOL: "capv-113"
-VSPHERE_FOLDER: "capv-113"
-VSPHERE_DISK_GIB: 30
-VSPHERE_NUM_CPUS: 2
-VSPHERE_MEM_MIB: 2048
+VSPHERE_RESOURCE_POOL: "capv-133"
+VSPHERE_FOLDER: "capv-133"
+VSPHERE_DISK_GIB: 50
+VSPHERE_NUM_CPUS: 8
+VSPHERE_MEM_MIB: 8192
 VSPHERE_WORKER_DISK_GIB: "50"
 VSPHERE_WORKER_NUM_CPUS: "4"
 VSPHERE_WORKER_MEM_MIB: "8192"
@@ -32,42 +32,42 @@ NODE_STARTUP_TIMEOUT: 20m
 BASTION_HOST_ENABLED: "true"
 providers:
   - name: cluster-api
-    url: /Users/fangyuanl/.tkg/providers/cluster-api/v0.3.11/core-components.yaml
+    url: /Users/lxinqi@vmware.com/.tkg/providers/cluster-api/v0.3.10/core-components.yaml
     type: CoreProvider
   - name: aws
-    url: /Users/fangyuanl/.tkg/providers/infrastructure-aws/v0.6.3/infrastructure-components.yaml
+    url: /Users/lxinqi@vmware.com/.tkg/providers/infrastructure-aws/v0.5.5/infrastructure-components.yaml
     type: InfrastructureProvider
   - name: vsphere
-    url: /Users/fangyuanl/.tkg/providers/infrastructure-vsphere/v0.7.1/infrastructure-components.yaml
+    url: /Users/lxinqi@vmware.com/.tkg/providers/infrastructure-vsphere/v0.7.1/infrastructure-components.yaml
     type: InfrastructureProvider
   - name: azure
-    url: /Users/fangyuanl/.tkg/providers/infrastructure-azure/v0.4.8/infrastructure-components.yaml
+    url: /Users/lxinqi@vmware.com/.tkg/providers/infrastructure-azure/v0.4.8/infrastructure-components.yaml
     type: InfrastructureProvider
   - name: tkg-service-vsphere
-    url: /Users/fangyuanl/.tkg/providers/infrastructure-tkg-service-vsphere/v1.0.0/unused.yaml
+    url: /Users/lxinqi@vmware.com/.tkg/providers/infrastructure-tkg-service-vsphere/v1.0.0/unused.yaml
     type: InfrastructureProvider
   - name: kubeadm
-    url: /Users/fangyuanl/.tkg/providers/bootstrap-kubeadm/v0.3.11/bootstrap-components.yaml
+    url: /Users/lxinqi@vmware.com/.tkg/providers/bootstrap-kubeadm/v0.3.10/bootstrap-components.yaml
     type: BootstrapProvider
   - name: kubeadm
-    url: /Users/fangyuanl/.tkg/providers/control-plane-kubeadm/v0.3.11/control-plane-components.yaml
+    url: /Users/lxinqi@vmware.com/.tkg/providers/control-plane-kubeadm/v0.3.10/control-plane-components.yaml
     type: ControlPlaneProvider
   - name: docker
-    url: /Users/fangyuanl/.tkg/providers/infrastructure-docker/v0.3.10/infrastructure-components.yaml
+    url: /Users/lxinqi@vmware.com/.tkg/providers/infrastructure-docker/v0.3.10/infrastructure-components.yaml
     type: InfrastructureProvider
 images:
     all:
-        repository: registry.tkg.vmware.run/cluster-api
+        repository: gcr.io/kubernetes-development-244305/cluster-api
     cert-manager:
-        repository: registry.tkg.vmware.run/cert-manager
+        repository: gcr.io/kubernetes-development-244305/cert-manager
         tag: v0.16.1_vmware.1
 release:
-    version: v1.2.1
+    version: v1.2.0
 tkg:
     regions:
-      - name: tkg-cluster-mc-113
-        context: tkg-cluster-mc-113-admin@tkg-cluster-mc-113
-        file: /Users/fangyuanl/development/go/src/gitlab.eng.vmware.com/core-build/ako-operator/e2e/static/mc.kubeconfig
+      - name: tkg-cluster-mc-133
+        context: tkg-cluster-mc-133-admin@tkg-cluster-mc-133
+        file: /Users/lxinqi@vmware.com/Desktop/ako-operator/e2e/static/mc.kubeconfig
         status: Success
         isCurrentContext: false
-    current-region-context: tkg-cluster-mc-113-admin@tkg-cluster-mc-113
+    current-region-context: tkg-cluster-mc-133-admin@tkg-cluster-mc-133

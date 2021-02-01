@@ -264,3 +264,41 @@ func getLoadBalancerTypeServiceIPsFromJson(b []byte) ([]string, error) {
 	}
 	return res, nil
 }
+
+func EnsureObjectGone(runner *KubectlRunner, obj, objName string) {
+
+	Eventually(func() error {
+		s := runner.RunInNamespace(runner.Namespace, "get", obj, "-o", "json")
+		Eventually(s, "10s", "2s").Should(gexec.Exit(0))
+		r, err := ensureObjectNotFound(s.Out.Contents(), objName)
+		if err != nil {
+			return err
+		}
+		Expect(r).Should(BeFalse())
+		return nil
+	}, "30s", "5s").ShouldNot(HaveOccurred())
+}
+
+func ensureObjectNotFound(b []byte, objName string) (bool, error) {
+	j, err := simplejson.NewJson(b)
+	if err != nil {
+		return false, err
+	}
+	items, err := j.Get("items").Array()
+	if err != nil {
+		return false, err
+	}
+	if len(items) == 0 {
+		return false, nil
+	}
+	for _, item := range items {
+		if itemj, ok := item.(map[string]interface{}); ok {
+			if specj, ok := itemj["metadata"].(map[string]interface{}); ok {
+				if objName == specj["name"] {
+					return true, nil
+				}
+			}
+		}
+	}
+	return false, nil
+}
