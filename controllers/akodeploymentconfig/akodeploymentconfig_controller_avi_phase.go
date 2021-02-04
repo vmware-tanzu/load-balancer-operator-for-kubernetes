@@ -63,7 +63,7 @@ func (r *AKODeploymentConfigReconciler) initAVI(
 			ServerIP: obj.Spec.Controller,
 			Username: string(adminCredential.Data["username"][:]),
 			Password: string(adminCredential.Data["password"][:]),
-			// CA:         string(aviControllerCA.Data["certificateAuthorityData"][:]),
+			CA:       string(aviControllerCA.Data["certificateAuthorityData"][:]),
 		})
 		if err != nil {
 			log.Error(err, "Failed to initialize AVI Controller Client, requeue the request")
