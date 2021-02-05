@@ -588,12 +588,29 @@ func unitTestEnsureStaticRanges() {
 			})
 		})
 		When("there is no change", func() {
-			When("network has empty configuredSubnets and ipPools is empty", func() {
+			When("network has matching subnet and ipPools didn't specify", func() {
 				BeforeEach(func() {
 					network = &models.Network{
-						ConfiguredSubnets: []*models.Subnet{},
+						ConfiguredSubnets: []*models.Subnet{
+							&models.Subnet{
+								Prefix: &models.IPAddrPrefix{
+									IPAddr: akodeploymentconfig.GetAddr("192.168.100.0", addrType),
+									Mask:   &mask,
+								},
+								StaticRanges: []*models.IPAddrRange{
+									&models.IPAddrRange{
+										Begin: akodeploymentconfig.GetAddr("192.168.100.5", addrType),
+										End:   akodeploymentconfig.GetAddr("192.168.100.7", addrType),
+									},
+									&models.IPAddrRange{
+										Begin: akodeploymentconfig.GetAddr("192.168.100.1", addrType),
+										End:   akodeploymentconfig.GetAddr("192.168.100.3", addrType),
+									},
+								},
+							},
+						},
 					}
-					ipPools = []akoov1alpha1.IPPool{}
+					ipPools = nil
 					expectedModified = false
 				})
 				It("should not update anything", func() {

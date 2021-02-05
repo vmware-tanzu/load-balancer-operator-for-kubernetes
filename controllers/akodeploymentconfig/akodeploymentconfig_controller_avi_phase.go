@@ -269,7 +269,7 @@ func EnsureAviNetwork(network *models.Network, addrType string, cidr *net.IPNet,
 			network.ConfiguredSubnets[index] = subnet
 			log.V(3).Info("Found matching subnet, after merging", "subnet", network.ConfiguredSubnets[index])
 		}
-	} else if len(ipPools) != 0 {
+	} else {
 		// If there is no such subnet, create one
 		subnet := &models.Subnet{
 			Prefix: &models.IPAddrPrefix{
@@ -292,6 +292,10 @@ func EnsureAviNetwork(network *models.Network, addrType string, cidr *net.IPNet,
 // the hole.
 // Note: ippools are guaranteed to be non-overlapping by validation
 func EnsureStaticRanges(subnet *models.Subnet, ipPools []akoov1alpha1.IPPool, addrType string) bool {
+	// no ip pools specified in akodeploymentconfig, don't update subnet settings
+	if ipPools == nil {
+		return false
+	}
 	newStaticRanges := CreateStaticRangeFromIPPools(ipPools)
 	res := !IsStaticRangeEqual(newStaticRanges, subnet.StaticRanges)
 	if res {
