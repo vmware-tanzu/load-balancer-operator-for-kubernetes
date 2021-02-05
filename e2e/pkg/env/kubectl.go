@@ -4,13 +4,13 @@
 package env
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os/exec"
 	"strconv"
 	"strings"
-	"encoding/base64"
 
 	"github.com/bitly/go-simplejson"
 	homedir "github.com/mitchellh/go-homedir"
@@ -142,9 +142,8 @@ func GetLoadBalancerServices(runner *KubectlRunner, expectedNum int, namespace s
 		// return list of pod statuses, no guarantee on list length
 		res = r
 		return len(r)
-		// 10 minutes timeout because Service Engine might need to be
-		// created
-	}, "600s", "5s").Should(Equal(expectedNum))
+		// 5 minutes timeout wait for ip available
+	}, "300", "5s").Should(Equal(expectedNum))
 	return res
 }
 
@@ -161,7 +160,9 @@ func EnsureIPAccessible(ip string, port int) {
 		}
 		GinkgoT().Logf(string(body[:]))
 		return err
-	}, "180s", "5s").ShouldNot(HaveOccurred())
+		// 15 minutes timeout because Service Engine might need to be
+		// created
+	}, "900s", "5s").ShouldNot(HaveOccurred())
 }
 
 func GetPodsStatuses(runner *KubectlRunner, podNamePrefix string, expectedNum int, namespace string) []string {
@@ -316,7 +317,7 @@ func GetAviObject(runner *KubectlRunner, resourceType, resourceName, field, obj 
 	if obj == "controller" {
 		GinkgoT().Logf("avi controller ip for creating avi client: " + encodedvalue)
 		return encodedvalue
-	}		
+	}
 	value, err3 := base64.StdEncoding.DecodeString(encodedvalue)
 	Expect(err3).NotTo(HaveOccurred())
 	GinkgoT().Logf(obj + " for creating avi client: " + string(value))
