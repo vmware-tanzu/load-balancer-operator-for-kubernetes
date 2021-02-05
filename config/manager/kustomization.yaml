@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: harbor-pks.vmware.com/tkgextensions/tkg-networking/tanzu-ako-operator
-  newTag: 93e41c0
+  newTag: release-v1.3.0-97051dc9

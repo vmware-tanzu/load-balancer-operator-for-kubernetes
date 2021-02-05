@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"encoding/base64"
 
 	"github.com/bitly/go-simplejson"
 	homedir "github.com/mitchellh/go-homedir"
@@ -301,4 +302,23 @@ func ensureObjectNotFound(b []byte, objName string) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+func GetAviObject(runner *KubectlRunner, resourceType, resourceName, field, obj string) string {
+	s1 := runner.RunWithoutNamespace("get", resourceType, resourceName, "-o", "json")
+	Eventually(s1, "10s", "1s").Should(gexec.Exit(0))
+
+	j, err1 := simplejson.NewJson(s1.Out.Contents())
+	Expect(err1).NotTo(HaveOccurred())
+	encodedvalue, err2 := j.Get(field).Get(obj).String()
+	Expect(err2).NotTo(HaveOccurred())
+
+	if obj == "controller" {
+		GinkgoT().Logf("avi controller ip for creating avi client: " + encodedvalue)
+		return encodedvalue
+	}		
+	value, err3 := base64.StdEncoding.DecodeString(encodedvalue)
+	Expect(err3).NotTo(HaveOccurred())
+	GinkgoT().Logf(obj + " for creating avi client: " + string(value))
+	return string(value)
 }

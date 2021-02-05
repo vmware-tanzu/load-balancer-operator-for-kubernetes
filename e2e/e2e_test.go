@@ -5,7 +5,7 @@ package e2e
 
 import (
 	"fmt"
-	
+ 
 	. "github.com/onsi/ginkgo"
 
 	testenv "gitlab.eng.vmware.com/core-build/ako-operator/e2e/pkg/env"
@@ -66,6 +66,8 @@ var _ = Describe("AKODeploymentConfig with selector", func() {
 			testcase.EnsureClusterDeleted(clusterName)
 			By("ensuring CRS and Avi User in Management Cluster is gone")
 			testcase.EnsureCRSandAviUserDeleted(clusterName)
+			By("ensuring Avi Resources is gone")
+			testcase.EnsureAviResourcesDeleted(clusterName)
 		})
 
 		When("it's later applied with the specified label", func() {

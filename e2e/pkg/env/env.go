@@ -8,6 +8,8 @@ import (
 	"errors"
 	"math/rand"
 	"time"
+
+	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/aviclient"
 )
 
 var testEnv TestEnvSpec
@@ -68,6 +70,7 @@ type Clients struct {
 	Kubectl *KubectlRunner
 	TKGCli  *TKGRunner
 	VIP     *VIPRunner
+	Avi     *aviclient.Client
 }
 
 // Init initializes the namespace
@@ -95,6 +98,7 @@ func LoadTestCase(name string) (bool, *E2ETestCase) {
 			Kubectl: NewKubectlRunner(testEnv.Env.ManagementClusterKubeconfig.Path, testEnv.Env.ManagementClusterKubeconfig.Context, namespace),
 			TKGCli:  NewTKGRunner(testEnv.Env.TKGConfig, namespace),
 			VIP:     NewVIPRunner(testEnv.Env.Worker),
+			Avi:     nil,
 		},
 	}
 	for _, test := range testEnv.Tests {

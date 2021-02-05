@@ -35,5 +35,5 @@ hack/tools/bin
 local
 
 # e2e test
-e2e/env.json
-e2e/static
+e2e/static/akodeploymentconfig.yaml
+e2e/static/tkg-config.yaml

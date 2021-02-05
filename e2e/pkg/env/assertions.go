@@ -92,5 +92,12 @@ func (o *E2ETestCase) EnsureCRSandAviUserDeleted(clusterName string) {
 	EnsureObjectGone(o.Clients.Kubectl, "secret", clusterName+"-ako")
 	EnsureObjectGone(o.Clients.Kubectl, "ClusterResourceSet", clusterName+"-ako")
 	// Check Avi user
-	EnsureObjectGone(o.Clients.Kubectl, "secret", clusterName+"-avi-credentials")	
+	EnsureObjectGone(o.Clients.Kubectl, "secret", clusterName+"-avi-credentials")
+}
+
+func (o *E2ETestCase) EnsureAviResourcesDeleted(clusterName string) {
+	o.Clients.Avi = NewAviRunner(o.Clients.Kubectl)
+	// Avi Resources are regarded as deleted if VirtualService and Pool are deleted
+	EnsureAviObjectDeleted(o.Clients.Avi, clusterName, "virtualservice")
+	EnsureAviObjectDeleted(o.Clients.Avi, clusterName, "pool")
 }
