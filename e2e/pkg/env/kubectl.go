@@ -143,7 +143,7 @@ func GetLoadBalancerServices(runner *KubectlRunner, expectedNum int, namespace s
 		res = r
 		return len(r)
 		// 5 minutes timeout wait for ip available
-	}, "300", "5s").Should(Equal(expectedNum))
+	}, "300s", "5s").Should(Equal(expectedNum))
 	return res
 }
 
