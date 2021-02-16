@@ -8,6 +8,8 @@ import (
 	"os"
 
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
+	controllerruntime "gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
@@ -20,7 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	// +kubebuilder:scaffold:imports
 )
 
 var (
@@ -53,6 +54,11 @@ func main() {
 		MetricsBindAddress: metricsAddr,
 		LeaderElection:     enableLeaderElection,
 		Port:               9443,
+		NewClient: controllerruntime.NewClientBuilder().WithUncached(
+			&corev1.Secret{},
+			&clustereaddonv1alpha3.ClusterResourceSet{},
+			&corev1.ConfigMap{},
+		).Build,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
