@@ -181,7 +181,7 @@ func (r *AkoUserReconciler) reconcileAviUserNormal(
 				// enter the reconciliation
 				aviPassword := utils.GenereatePassword(10, true, true, true, true)
 
-				managementClusterSecret := r.createAviUserSecret(
+				mcSecret = r.createAviUserSecret(
 					mcSecretName,
 					mcSecretNamespace,
 					aviUsername,
@@ -191,7 +191,7 @@ func (r *AkoUserReconciler) reconcileAviUserNormal(
 					false,
 				)
 				log.Info("No AVI Secret found for cluster in the management cluster, start the creation")
-				if err := r.Client.Create(ctx, managementClusterSecret); err != nil {
+				if err := r.Client.Create(ctx, mcSecret); err != nil {
 					log.Error(err, "Failed to create AVI secret for Cluster in the management cluster, requeue")
 					return res, err
 				}
