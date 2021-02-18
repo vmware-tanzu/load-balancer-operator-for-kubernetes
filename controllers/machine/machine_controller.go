@@ -99,6 +99,13 @@ func (r *MachineReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, reterr e
 		return res, nil
 	}
 
+	// Removes the pre-terminate hook when machine is being deleted directly and it's parent cluster is not.
+	if !obj.GetDeletionTimestamp().IsZero() && cluster.GetDeletionTimestamp().IsZero() {
+		delete(obj.Annotations, akoov1alpha1.PreTerminateAnnotation)
+		log.Info("Machine is being deleted though its parent Cluster is not, removing pre-terminate hook")
+		return res, nil
+	}
+
 	// Handle deleted cluster resources.
 	if !cluster.GetDeletionTimestamp().IsZero() {
 		res, err := r.reconcileClusterDelete(ctx, log, obj, cluster)
