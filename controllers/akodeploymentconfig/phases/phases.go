@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
+	handlers "gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime/handlers"
 )
 
 // ReconcilePhase defines a function that reconciles one aspect of
@@ -140,5 +141,14 @@ func ListAkoDeplymentConfigDeployedClusters(ctx context.Context, kclient client.
 	if err := kclient.List(ctx, &clusters, listOptions...); err != nil {
 		return nil, err
 	}
+
+	var newItems []clusterv1.Cluster
+	for _, c := range clusters.Items {
+		if !handlers.SkipCluster(&c) {
+			newItems = append(newItems, c)
+		}
+	}
+	clusters.Items = newItems
+	
 	return &clusters, nil
 }

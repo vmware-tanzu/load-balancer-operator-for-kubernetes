@@ -151,7 +151,6 @@ func (r *ClusterReconciler) ReconcileCRSDelete(
 		log.Error(err, "Failed to delete ClusterResourceSet, requeue")
 		return res, err
 	}
-
 	log.Info("ClusterResourceSet deletion finished")
 	return ctrl.Result{}, nil
 }

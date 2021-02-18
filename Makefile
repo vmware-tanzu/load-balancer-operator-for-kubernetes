@@ -11,7 +11,7 @@ PUBLISH?=publish
 BUILD_VERSION ?= $(shell git describe --always --match "v*" | sed 's/v//')
 
 # TKG Version
-TKG_VERSION ?= v1.2.0+vmware.2
+TKG_VERSION ?= v1.3.0+vmware.1
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
