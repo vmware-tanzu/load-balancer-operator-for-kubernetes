@@ -8,6 +8,7 @@ import (
 
 	"github.com/avinetworks/sdk/go/models"
 	"github.com/go-logr/logr"
+	"github.com/pkg/errors"
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/aviclient"
 	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/utils"
@@ -70,6 +71,12 @@ func (r *AkoUserReconciler) ReconcileAviUserDelete(
 	cluster *clusterv1.Cluster,
 	obj *akoov1alpha1.AKODeploymentConfig,
 ) (ctrl.Result, error) {
+	// cluster existing, don't delete avi user
+	if cluster.GetDeletionTimestamp().IsZero() {
+		log.Info("workload cluster existing, don't delete avi user")
+		return ctrl.Result{}, nil
+	}
+
 	// Check if there is a cleanup condition in the Cluster status , if not, update it
 	if !conditions.Has(cluster, akoov1alpha1.AviUserCleanupSucceededCondition) {
 		conditions.MarkFalse(cluster, akoov1alpha1.AviUserCleanupSucceededCondition, akoov1alpha1.AviResourceCleanupReason, clusterv1.ConditionSeverityInfo, "Cleaning up the AVI load balancing user credentials before deletion")
@@ -81,8 +88,8 @@ func (r *AkoUserReconciler) ReconcileAviUserDelete(
 		return r.reconcileAviUserDelete(ctx, log, cluster, obj)
 	}
 
-	log.Info("Wait cluster avi resources get deleted, requeue", "finalizer", akoov1alpha1.ClusterFinalizer)
-	return ctrl.Result{}, nil
+	log.Info("Wait until AVI resource deletion for cluster finishes, requeue", "condition", akoov1alpha1.AviResourceCleanupSucceededCondition)
+	return ctrl.Result{}, errors.New("requeue to wait AVI resource deletion for cluster")
 }
 
 // reconcileAviUserDelete clean up all avi user account related resources when workload cluster delete or
