@@ -9,6 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/machine"
+	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/aviclient"
 	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/test/builder"
 	testutil "gitlab.eng.vmware.com/core-build/ako-operator/pkg/test/util"
 	corev1 "k8s.io/api/core/v1"
@@ -24,6 +25,9 @@ import (
 // suite is used for unit and integration testing this controller.
 var suite = builder.NewTestSuiteForController(
 	func(mgr ctrlmgr.Manager) error {
+
+		builder.FakeAvi = aviclient.NewFakeAviClient()
+
 		if err := (&machine.MachineReconciler{
 			Client: mgr.GetClient(),
 			Log:    ctrl.Log.WithName("controllers").WithName("Machine"),

@@ -21,8 +21,8 @@ import (
 
 func (r *AKODeploymentConfigReconciler) initCluster(log logr.Logger) {
 	// Lazily initialize clusterReconciler
-	if r.clusterReconciler == nil {
-		r.clusterReconciler = cluster.NewReconciler(r.Client, r.Log, r.Scheme)
+	if r.ClusterReconciler == nil {
+		r.ClusterReconciler = cluster.NewReconciler(r.Client, r.Log, r.Scheme)
 		log.Info("Cluster reconciler initialized")
 	}
 }
@@ -41,11 +41,11 @@ func (r *AKODeploymentConfigReconciler) reconcileClusters(
 		[]phases.ReconcileClusterPhase{
 			r.applyClusterLabel,
 			r.addClusterFinalizer,
-			r.clusterReconciler.ReconcileCRS,
+			r.ClusterReconciler.ReconcileCRS,
 		},
 		[]phases.ReconcileClusterPhase{
-			r.clusterReconciler.ReconcileCRSDelete,
-			r.clusterReconciler.ReconcileDelete,
+			r.ClusterReconciler.ReconcileCRSDelete,
+			r.ClusterReconciler.ReconcileDelete,
 		},
 	)
 }
@@ -67,11 +67,11 @@ func (r *AKODeploymentConfigReconciler) reconcileClustersDelete(
 		[]phases.ReconcileClusterPhase{
 			r.removeClusterLabel,
 			r.removeClusterFinalizer,
-			r.clusterReconciler.ReconcileCRSDelete,
+			r.ClusterReconciler.ReconcileCRSDelete,
 		},
 		[]phases.ReconcileClusterPhase{
-			r.clusterReconciler.ReconcileCRSDelete,
-			r.clusterReconciler.ReconcileDelete,
+			r.ClusterReconciler.ReconcileCRSDelete,
+			r.ClusterReconciler.ReconcileDelete,
 		},
 	)
 }

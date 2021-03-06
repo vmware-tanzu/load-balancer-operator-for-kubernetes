@@ -10,6 +10,7 @@ import (
 	"github.com/go-logr/logr"
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako"
@@ -30,11 +31,14 @@ const (
 // NewReconciler initializes a ClusterReconciler
 func NewReconciler(c client.Client, log logr.Logger, scheme *runtime.Scheme) *ClusterReconciler {
 	return &ClusterReconciler{
-		Client: c,
-		Log:    log,
-		Scheme: scheme,
+		Client:          c,
+		Log:             log,
+		Scheme:          scheme,
+		GetRemoteClient: remote.NewClusterClient,
 	}
 }
+
+type RemoteClientGetter func(ctx context.Context, c client.Client, cluster client.ObjectKey, scheme *runtime.Scheme) (client.Client, error)
 
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters;clusters/status,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines;machines/status,verbs=get;list;watch;create;update;patch;delete
@@ -43,8 +47,9 @@ func NewReconciler(c client.Client, log logr.Logger, scheme *runtime.Scheme) *Cl
 
 type ClusterReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Log             logr.Logger
+	Scheme          *runtime.Scheme
+	GetRemoteClient RemoteClientGetter
 }
 
 // ReconcileDelete removes the finalizer on Cluster once AKO finishes its
@@ -93,7 +98,7 @@ func (r *ClusterReconciler) cleanup(
 		log.Info("Trigger the AKO cleanup in the target Cluster and set Cluster condition", "condition", akoov1alpha1.AviResourceCleanupSucceededCondition)
 	}
 
-	remoteClient, err := remote.NewClusterClient(ctx, r.Client, client.ObjectKey{
+	remoteClient, err := r.GetRemoteClient(ctx, r.Client, client.ObjectKey{
 		Name:      obj.Name,
 		Namespace: obj.Namespace,
 	}, r.Scheme)
@@ -149,4 +154,9 @@ func (r *ClusterReconciler) cleanup(
 	}
 
 	return false, nil
+}
+
+func GetFakeRemoteClient(ctx context.Context, c client.Client, cluster client.ObjectKey, scheme *runtime.Scheme) (client.Client, error) {
+	// return fake client
+	return fake.NewFakeClient(), nil
 }

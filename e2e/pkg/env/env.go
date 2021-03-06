@@ -70,7 +70,7 @@ type Clients struct {
 	Kubectl *KubectlRunner
 	TKGCli  *TKGRunner
 	VIP     *VIPRunner
-	Avi     *aviclient.Client
+	Avi     aviclient.Client
 }
 
 // Init initializes the namespace

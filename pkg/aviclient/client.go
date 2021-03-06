@@ -13,12 +13,11 @@ import (
 	"strings"
 
 	"github.com/avinetworks/sdk/go/clients"
+	"github.com/avinetworks/sdk/go/models"
 	"github.com/avinetworks/sdk/go/session"
 )
 
-var SharedAviClient *Client
-
-type Client struct {
+type realAviClient struct {
 	config *AviClientConfig
 	*clients.AviClient
 }
@@ -39,7 +38,7 @@ type AviClientConfig struct {
 }
 
 // NewAviClient creates an Client
-func NewAviClient(config *AviClientConfig) (*Client, error) {
+func NewAviClient(config *AviClientConfig) (*realAviClient, error) {
 	// Initialize transport
 	var transport *http.Transport
 	if config.CA != "" {
@@ -71,7 +70,7 @@ func NewAviClient(config *AviClientConfig) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Client{
+	return &realAviClient{
 		AviClient: client,
 		config:    config,
 	}, nil
@@ -115,4 +114,60 @@ func IsAviRoleNonExistentError(err error) bool {
 	}
 	matched, err := regexp.Match(`No object of type role with name .*is found`, []byte(err.Error()))
 	return err == nil && matched
+}
+
+func (r *realAviClient) NetworkGetByName(name string, options ...session.ApiOptionsParams) (*models.Network, error) {
+	return r.Network.GetByName(name)
+}
+
+func (r *realAviClient) NetworkUpdate(obj *models.Network, options ...session.ApiOptionsParams) (*models.Network, error) {
+	return r.Network.Update(obj)
+}
+
+func (r *realAviClient) CloudGetByName(name string, options ...session.ApiOptionsParams) (*models.Cloud, error) {
+	return r.Cloud.GetByName(name)
+}
+
+func (r *realAviClient) IPAMDNSProviderProfileGet(uuid string, options ...session.ApiOptionsParams) (*models.IPAMDNSProviderProfile, error) {
+	return r.IPAMDNSProviderProfile.Get(uuid)
+}
+
+func (r *realAviClient) IPAMDNSProviderProfileUpdate(obj *models.IPAMDNSProviderProfile, options ...session.ApiOptionsParams) (*models.IPAMDNSProviderProfile, error) {
+	return r.IPAMDNSProviderProfile.Update(obj)
+}
+
+func (r *realAviClient) UserGetByName(name string, options ...session.ApiOptionsParams) (*models.User, error) {
+	return r.User.GetByName(name)
+}
+
+func (r *realAviClient) UserDeleteByName(name string, options ...session.ApiOptionsParams) error {
+	return r.User.DeleteByName(name)
+}
+
+func (r *realAviClient) UserCreate(obj *models.User, options ...session.ApiOptionsParams) (*models.User, error) {
+	return r.User.Create(obj)
+}
+
+func (r *realAviClient) UserUpdate(obj *models.User, options ...session.ApiOptionsParams) (*models.User, error) {
+	return r.User.Update(obj)
+}
+
+func (r *realAviClient) TenantGet(uuid string, options ...session.ApiOptionsParams) (*models.Tenant, error) {
+	return r.Tenant.Get(uuid)
+}
+
+func (r *realAviClient) RoleGetByName(name string, options ...session.ApiOptionsParams) (*models.Role, error) {
+	return r.Role.GetByName(name)
+}
+
+func (r *realAviClient) RoleCreate(obj *models.Role, options ...session.ApiOptionsParams) (*models.Role, error) {
+	return r.Role.Create(obj)
+}
+
+func (r *realAviClient) VirtualServiceGetByName(name string, options ...session.ApiOptionsParams) (*models.VirtualService, error) {
+	return r.VirtualService.GetByName(name)
+}
+
+func (r *realAviClient) PoolGetByName(name string, options ...session.ApiOptionsParams) (*models.Pool, error) {
+	return r.Pool.GetByName(name)
 }

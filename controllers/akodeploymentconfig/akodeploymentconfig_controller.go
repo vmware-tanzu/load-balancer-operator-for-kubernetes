@@ -45,11 +45,15 @@ func (r *AKODeploymentConfigReconciler) SetupWithManager(mgr ctrl.Manager) error
 
 type AKODeploymentConfigReconciler struct {
 	client.Client
-	aviClient         *aviclient.Client
+	aviClient         aviclient.Client
 	Log               logr.Logger
 	Scheme            *runtime.Scheme
 	userReconciler    *user.AkoUserReconciler
-	clusterReconciler *cluster.ClusterReconciler
+	ClusterReconciler *cluster.ClusterReconciler
+}
+
+func (r *AKODeploymentConfigReconciler) SetAviClient(client aviclient.Client) {
+	r.aviClient = client
 }
 
 // AKODeploymentConfigReconciler reconciles a AKODeploymentConfig object

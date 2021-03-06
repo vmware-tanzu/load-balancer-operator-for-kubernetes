@@ -8,12 +8,14 @@ import (
 
 	//nolint
 	. "github.com/onsi/ginkgo"
+	uuid "github.com/satori/go.uuid"
+
 	//nolint
 	. "github.com/onsi/gomega"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testing"
-	uuid "github.com/satori/go.uuid"
+	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/aviclient"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -24,6 +26,7 @@ import (
 type IntegrationTestContext struct {
 	context.Context
 	Client    client.Client
+	AviClient aviclient.FakeAviClient
 	Namespace string
 	suite     *TestSuite
 }
@@ -53,9 +56,10 @@ func (ctx *IntegrationTestContext) AfterEach() {
 // with the IntegrationTestContext returned by this function
 func (s *TestSuite) NewIntegrationTestContext() *IntegrationTestContext {
 	ctx := &IntegrationTestContext{
-		Context: context.Background(),
-		Client:  s.integrationTestClient,
-		suite:   s,
+		Context:   context.Background(),
+		AviClient: *FakeAvi,
+		Client:    s.integrationTestClient,
+		suite:     s,
 	}
 
 	By("Creating a temporary namespace", func() {

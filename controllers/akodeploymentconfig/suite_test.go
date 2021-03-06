@@ -8,7 +8,9 @@ import (
 	"testing"
 
 	. "github.com/onsi/ginkgo"
+	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig"
+	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/aviclient"
 	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/test/builder"
 	testutil "gitlab.eng.vmware.com/core-build/ako-operator/pkg/test/util"
 	corev1 "k8s.io/api/core/v1"
@@ -19,23 +21,36 @@ import (
 	clustereaddonv1alpha3 "sigs.k8s.io/cluster-api/exp/addons/api/v1alpha3"
 	ctrl "sigs.k8s.io/controller-runtime"
 
+	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/cluster"
 	ctrlmgr "sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // suite is used for unit and integration testing this controller.
 var suite = builder.NewTestSuiteForController(
 	func(mgr ctrlmgr.Manager) error {
-		if err := (&akodeploymentconfig.AKODeploymentConfigReconciler{
+		rec := &akodeploymentconfig.AKODeploymentConfigReconciler{
 			Client: mgr.GetClient(),
 			Log:    ctrl.Log.WithName("controllers").WithName("AKODeploymentConfig"),
 			Scheme: mgr.GetScheme(),
-		}).SetupWithManager(mgr); err != nil {
+		}
+		builder.FakeAvi = aviclient.NewFakeAviClient()
+		rec.SetAviClient(builder.FakeAvi)
+
+		clusterReconciler := cluster.NewReconciler(rec.Client, rec.Log, rec.Scheme)
+		clusterReconciler.GetRemoteClient = cluster.GetFakeRemoteClient
+		rec.ClusterReconciler = clusterReconciler
+
+		if err := rec.SetupWithManager(mgr); err != nil {
 			return err
 		}
 		return nil
 	},
 	func(scheme *runtime.Scheme) (err error) {
 		err = networkv1alpha1.AddToScheme(scheme)
+		if err != nil {
+			return err
+		}
+		err = akoov1alpha1.AddToScheme(scheme)
 		if err != nil {
 			return err
 		}
@@ -65,7 +80,7 @@ var _ = BeforeSuite(suite.BeforeSuite)
 var _ = AfterSuite(suite.AfterSuite)
 
 func intgTests() {
-	Describe("MachineDeletionHook Test", intgTestMachineDeletionHook)
+	Describe("AkoDeploymentConfigController Test", intgTestAkoDeploymentConfigController)
 }
 
 func unitTests() {

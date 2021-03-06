@@ -5,6 +5,7 @@ package user
 
 import (
 	"context"
+
 	"github.com/avinetworks/sdk/go/models"
 	"github.com/go-logr/logr"
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
@@ -25,14 +26,14 @@ import (
 // AkoUserReconciler reconcile avi user related resources
 type AkoUserReconciler struct {
 	client.Client
-	aviClient *aviclient.Client
+	aviClient aviclient.Client
 	Log       logr.Logger
 	Scheme    *runtime.Scheme
 }
 
 // NewReconciler returns AKOUserReconciler object.
 func NewProvider(client client.Client,
-	aviClient *aviclient.Client,
+	aviClient aviclient.Client,
 	logger logr.Logger,
 	scheme *runtime.Scheme) *AkoUserReconciler {
 	return &AkoUserReconciler{Client: client,
@@ -116,7 +117,7 @@ func (r *AkoUserReconciler) reconcileAviUserDelete(
 		}
 	}
 
-	if err := r.aviClient.User.DeleteByName(string(secret.Data["username"])); err != nil {
+	if err := r.aviClient.UserDeleteByName(string(secret.Data["username"])); err != nil {
 		log.Error(err, "Failed to delete avi user account in avi controller, requeue")
 		return res, err
 	}
@@ -321,14 +322,14 @@ func (r *AkoUserReconciler) getAVIControllerCA(ctx context.Context, obj *akoov1a
 
 // createOrUpdateAviUser create an avi user in avi controller
 func (r *AkoUserReconciler) createOrUpdateAviUser(aviUsername, aviPassword, tenantName string) (*models.User, error) {
-	aviUser, err := r.aviClient.User.GetByName(aviUsername)
+	aviUser, err := r.aviClient.UserGetByName(aviUsername)
 	// user not found, create one
 	if aviclient.IsAviUserNonExistentError(err) {
 		// for avi essential version the default tenant is admin
 		if tenantName == "" {
 			tenantName = "admin"
 		}
-		tenant, err := r.aviClient.Tenant.Get(tenantName)
+		tenant, err := r.aviClient.TenantGet(tenantName)
 		if err != nil {
 			return nil, err
 		}
@@ -348,21 +349,21 @@ func (r *AkoUserReconciler) createOrUpdateAviUser(aviUsername, aviPassword, tena
 				},
 			},
 		}
-		return r.aviClient.User.Create(aviUser)
+		return r.aviClient.UserCreate(aviUser)
 	}
 	// Update the password when user found, this is needed when the AVI user was
 	// created before the mc Secret. And this operation will sync
 	// the User's password to be the same as mc Secret's
 	if err == nil {
 		aviUser.Password = &aviPassword
-		return r.aviClient.User.Update(aviUser)
+		return r.aviClient.UserUpdate(aviUser)
 	}
 	return nil, err
 }
 
 // getOrCreateAkoUserRole get ako user's role, create one if not exist
 func (r *AkoUserReconciler) getOrCreateAkoUserRole(roleTenantRef *string) (*models.Role, error) {
-	role, err := r.aviClient.Role.GetByName(akoov1alpha1.AkoUserRoleName)
+	role, err := r.aviClient.RoleGetByName(akoov1alpha1.AkoUserRoleName)
 	//not found ako user role, create one
 	if aviclient.IsAviRoleNonExistentError(err) {
 		role = &models.Role{
@@ -370,7 +371,7 @@ func (r *AkoUserReconciler) getOrCreateAkoUserRole(roleTenantRef *string) (*mode
 			Privileges: AkoRolePermission,
 			TenantRef:  roleTenantRef,
 		}
-		return r.aviClient.Role.Create(role)
+		return r.aviClient.RoleCreate(role)
 	}
 	// else return role or error
 	return role, err

@@ -16,6 +16,7 @@ import (
 	//nolint
 	. "github.com/onsi/gomega"
 
+	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/aviclient"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog"
@@ -256,3 +257,5 @@ func (s *TestSuite) stopManager() {
 	close(s.managerDone)
 	Eventually(s.getManagerRunning).Should((BeFalse()))
 }
+
+var FakeAvi *aviclient.FakeAviClient

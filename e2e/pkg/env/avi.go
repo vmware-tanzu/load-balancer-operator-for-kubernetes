@@ -11,7 +11,7 @@ import (
 	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/aviclient"
 )
 
-func NewAviRunner(runner *KubectlRunner) *aviclient.Client {
+func NewAviRunner(runner *KubectlRunner) aviclient.Client {
 
 	aviClient, _ := aviclient.NewAviClient(&aviclient.AviClientConfig{
 		ServerIP: GetAviObject(runner, "akodeploymentconfig", "ako-deployment-config", "spec", "controller"),
@@ -23,15 +23,15 @@ func NewAviRunner(runner *KubectlRunner) *aviclient.Client {
 	return aviClient
 }
 
-func EnsureAviObjectDeleted(aviClient *aviclient.Client, clusterName string, obj string) {
+func EnsureAviObjectDeleted(aviClient aviclient.Client, clusterName string, obj string) {
 	Eventually(func() bool {
 		var err error
 
 		switch obj {
 		case "virtualservice":
-			_, err = aviClient.VirtualService.GetByName(clusterName + "--default-static-ip")
+			_, err = aviClient.VirtualServiceGetByName(clusterName + "--default-static-ip")
 		case "pool":
-			_, err = aviClient.Pool.GetByName(clusterName + "--default-static-ip--80")
+			_, err = aviClient.PoolGetByName(clusterName + "--default-static-ip--80")
 		default:
 			GinkgoT().Logf("EnsureAviObjectDeleted function doesn't support checking " + obj)
 			return false

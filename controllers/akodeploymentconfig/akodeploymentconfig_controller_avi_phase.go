@@ -149,7 +149,7 @@ func (r *AKODeploymentConfigReconciler) reconcileNetworkSubnets(
 
 	log.Info("Start reconciling AVI Network Subnets")
 
-	network, err := r.aviClient.Network.GetByName(obj.Spec.DataNetwork.Name)
+	network, err := r.aviClient.NetworkGetByName(obj.Spec.DataNetwork.Name)
 	if err != nil {
 		log.Error(err, "Failed to get the Data Network from AVI Controller")
 		return res, nil
@@ -174,7 +174,7 @@ func (r *AKODeploymentConfigReconciler) reconcileNetworkSubnets(
 
 	if modified {
 		log.V(3).Info("Change detected, updating Network", "network", obj.Spec.DataNetwork.Name)
-		_, err := r.aviClient.Network.Update(network)
+		_, err := r.aviClient.NetworkUpdate(network)
 		if err != nil {
 			log.Error(err, "Failed to update Network, requeue the request", "network", network)
 			return res, err
@@ -202,13 +202,13 @@ func (r *AKODeploymentConfigReconciler) reconcileCloudUsableNetwork(
 		RequeueAfter: time.Second * 60,
 	}
 
-	network, err := r.aviClient.Network.GetByName(obj.Spec.DataNetwork.Name)
+	network, err := r.aviClient.NetworkGetByName(obj.Spec.DataNetwork.Name)
 	if err != nil {
 		log.Error(err, "Failed to get the Data Network from AVI Controller")
 		return requeueAfter, nil
 	}
 
-	cloud, err := r.aviClient.Cloud.GetByName(obj.Spec.CloudName)
+	cloud, err := r.aviClient.CloudGetByName(obj.Spec.CloudName)
 	if err != nil {
 		log.Error(err, "Faild to find cloud, requeue the request")
 		// Cannot find the configured cloud, requeue the request but
@@ -226,7 +226,7 @@ func (r *AKODeploymentConfigReconciler) reconcileCloudUsableNetwork(
 
 	log = log.WithValues("ipam-profile", *(cloud.IPAMProviderRef))
 
-	ipam, err := r.aviClient.IPAMDNSProviderProfile.Get(ipamProviderUUID)
+	ipam, err := r.aviClient.IPAMDNSProviderProfileGet(ipamProviderUUID)
 	if err != nil {
 		log.Error(err, "Failed to find ipam profile")
 		return requeueAfter, nil
@@ -243,7 +243,7 @@ func (r *AKODeploymentConfigReconciler) reconcileCloudUsableNetwork(
 	}
 	if !foundUsableNetwork {
 		ipam.InternalProfile.UsableNetworkRefs = append(ipam.InternalProfile.UsableNetworkRefs, *(network.URL))
-		_, err := r.aviClient.IPAMDNSProviderProfile.Update(ipam)
+		_, err := r.aviClient.IPAMDNSProviderProfileUpdate(ipam)
 		if err != nil {
 			log.Error(err, "Failed to add usable network", "network", network.Name)
 			return res, nil
