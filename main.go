@@ -5,6 +5,8 @@ package main
 
 import (
 	"flag"
+	"net/http"
+	"net/http/pprof"
 	"os"
 
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
@@ -41,13 +43,22 @@ func init() {
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
+	var profilerAddress string
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false, "Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
+	flag.StringVar(&profilerAddress, "profiler-addr", "", "Bind address to expose the pprof profiler")
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(func(o *zap.Options) {
 		o.Development = true
 	}))
+
+	if profilerAddress != "" {
+		setupLog.Info(
+			"Profiler listening for requests",
+			"profiler-addr", profilerAddress)
+		go runProfiler(profilerAddress)
+	}
 
 	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{
 		Scheme:             scheme,
@@ -75,5 +86,18 @@ func main() {
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
+	}
+}
+
+func runProfiler(addr string) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/debug/pprof/", pprof.Index)
+	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	err := http.ListenAndServe(addr, mux)
+	if err != nil {
+		setupLog.Error(err, "unable to start listening")
 	}
 }

@@ -185,3 +185,41 @@ cluster.cluster.x-k8s.io "workload-cls" deleted
 ➜ git: ✗ kk get cluster
 No resources found in default namespace.
 ```
+
+### Enable pprof in your deployment
+
+[Ref](https://gist.github.com/slok/33dad1d0d0bae07977e6d32bcc010188)
+
+```bash
+# Add flag to akoo deployment manager args
+- args:
+   - --metrics-addr=127.0.0.1:8080
+   - --profiler-addr=127.0.0.1:8081
+   command:
+   - /manager
+```
+
+```bash
+# Expose the pod's port
+kubectl port-forward pods/ako-operator-controller-manager-<id> 8081:8081 -n tkg-system-networking
+```
+
+```bash
+# Get memory profile
+curl -s http://127.0.0.1:8081/debug/pprof/heap > ./heap.out
+go tool pprof -http=:8080 ./heap.out
+```
+
+```bash
+# Get CPU profile
+curl -s http://127.0.0.1:8081/debug/pprof/profile > ./cpu.out
+go tool pprof -http=:8080 ./cpu.out
+```
+
+```bash
+# Get CPU trace
+curl -s http://127.0.0.1:8081/debug/pprof/trace > ./cpu-trace.out
+go tool trace -http=:8080 ./cpu-trace.out
+```
+
+To get more data, please read [link](https://jvns.ca/blog/2017/09/24/profiling-go-with-pprof/)
