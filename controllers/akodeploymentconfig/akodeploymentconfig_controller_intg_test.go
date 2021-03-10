@@ -8,6 +8,7 @@ import (
 	"github.com/avinetworks/sdk/go/session"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pkg/errors"
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 	controllerruntime "gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime"
 	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/test/builder"
@@ -37,6 +38,11 @@ func intgTestAkoDeploymentConfigController() {
 		staticControllerCA          *corev1.Secret
 		testLabels                  map[string]string
 		err                         error
+
+		networkUpdate        *models.Network
+		userUpdateCalled     bool
+		userRoleCreateCalled bool
+		userCreateCalled     bool
 	)
 
 	staticCluster = &clusterv1.Cluster{
@@ -76,7 +82,6 @@ func intgTestAkoDeploymentConfigController() {
 				Name:      "controller-ca",
 				Namespace: "default",
 			},
-			WorkloadCredentialRef: &akoov1alpha1.SecretRef{},
 			ExtraConfigs: akoov1alpha1.ExtraConfigs{
 				Image: akoov1alpha1.AKOImageConfig{
 					Repository: "harbor-pks.vmware.com/tkgextensions/tkg-networking/ako",
@@ -180,11 +185,28 @@ func intgTestAkoDeploymentConfigController() {
 			obj := &clusterv1.Cluster{}
 			err := ctx.Client.Get(ctx.Context, key, obj)
 			if err != nil {
-				println(err.Error())
 				return false
 			}
 			_, ok := obj.Labels[akoov1alpha1.AviClusterLabel]
 			return expect == ok
+		}).Should(BeTrue())
+	}
+
+	ensureSubnetMatchExpectation := func(newIPAddrEnd string, expect bool) {
+		Eventually(func() bool {
+			found := false
+			for _, subnet := range networkUpdate.ConfiguredSubnets {
+				for _, sr := range subnet.StaticRanges {
+					if *(sr.End.Addr) == newIPAddrEnd {
+						found = true
+						break
+					}
+				}
+				if found {
+					break
+				}
+			}
+			return expect == found
 		}).Should(BeTrue())
 	}
 
@@ -205,8 +227,8 @@ func intgTestAkoDeploymentConfigController() {
 			return res, nil
 		})
 		ctx.AviClient.Network.SetUpdateFn(func(obj *models.Network, options ...session.ApiOptionsParams) (*models.Network, error) {
-			res := &models.Network{}
-			return res, nil
+			networkUpdate = obj
+			return &models.Network{}, nil
 		})
 		ctx.AviClient.Cloud.SetGetByNameCloudFunc(func(name string, options ...session.ApiOptionsParams) (*models.Cloud, error) {
 			res := &models.Cloud{
@@ -224,6 +246,30 @@ func intgTestAkoDeploymentConfigController() {
 		})
 		ctx.AviClient.IPAMDNSProviderProfile.SetUpdateIPAMFn(func(obj *models.IPAMDNSProviderProfile, options ...session.ApiOptionsParams) (*models.IPAMDNSProviderProfile, error) {
 			return obj, nil
+		})
+		ctx.AviClient.User.SetGetByNameUserFunc(func(name string, options ...session.ApiOptionsParams) (*models.User, error) {
+			return &models.User{}, nil
+		})
+		ctx.AviClient.User.SetDeleteByNameUserFunc(func(name string, options ...session.ApiOptionsParams) error {
+			return nil
+		})
+		ctx.AviClient.User.SetUpdateUserFunc(func(obj *models.User, options ...session.ApiOptionsParams) (*models.User, error) {
+			userUpdateCalled = true
+			return &models.User{}, nil
+		})
+		ctx.AviClient.User.SetCreateUserFunc(func(obj *models.User, options ...session.ApiOptionsParams) (*models.User, error) {
+			userCreateCalled = true
+			return &models.User{}, nil
+		})
+		ctx.AviClient.Role.SetGetByNameRoleFunc(func(name string, options ...session.ApiOptionsParams) (*models.Role, error) {
+			return &models.Role{}, errors.New("No object of type role with name intg-test-avi-role is found")
+		})
+		ctx.AviClient.Role.SetCreateRoleFunc(func(obj *models.Role, options ...session.ApiOptionsParams) (*models.Role, error) {
+			userRoleCreateCalled = true
+			return &models.Role{}, nil
+		})
+		ctx.AviClient.Tenant.SetGetTenantFunc(func(uuid string, options ...session.ApiOptionsParams) (*models.Tenant, error) {
+			return &models.Tenant{}, nil
 		})
 	})
 	AfterEach(func() {
@@ -293,16 +339,155 @@ func intgTestAkoDeploymentConfigController() {
 			})
 
 			When("akoDeploymentConfig and cluster are created", func() {
-
 				// Reconcile -> reconcileNormal
 				When("AKODeploymentConfig is not being deleted", func() {
+					// Reconcile -> reconcileNormal -> r.reconcileNetworkSubnets
+					When("subnet exists and AKODeploymentConfig's subnet is contained", func() {
+						BeforeEach(func() {
+							ctx.AviClient.Network.SetGetByNameFn(func(name string, options ...session.ApiOptionsParams) (*models.Network, error) {
+								return &models.Network{
+									URL: pointer.StringPtr("10.0.0.1"),
+									ConfiguredSubnets: []*models.Subnet{{
+										Prefix: &models.IPAddrPrefix{
+											IPAddr: &models.IPAddr{
+												Addr: pointer.StringPtr("10.0.0.1"),
+											},
+											Mask: pointer.Int32Ptr(24),
+										},
+										StaticRanges: []*models.IPAddrRange{{
+											Begin: &models.IPAddr{
+												Addr: pointer.StringPtr("10.0.0.1"),
+											},
+											End: &models.IPAddr{
+												Addr: pointer.StringPtr("10.0.0.10"),
+											},
+										}},
+									}},
+								}, nil
+							})
+						})
+						It("shouldn't reconcile Network Subnets", func() {
+							ensureSubnetMatchExpectation("10.0.0.10", true)
+						})
+					})
 
+					When("subnet exists and AKODeploymentConfig's subnet is not contained", func() {
+						BeforeEach(func() {
+							ctx.AviClient.Network.SetGetByNameFn(func(name string, options ...session.ApiOptionsParams) (*models.Network, error) {
+								return &models.Network{
+									URL: pointer.StringPtr("10.0.0.1"),
+									ConfiguredSubnets: []*models.Subnet{{
+										Prefix: &models.IPAddrPrefix{
+											IPAddr: &models.IPAddr{
+												Addr: pointer.StringPtr("10.0.0.1"),
+											},
+											Mask: pointer.Int32Ptr(24),
+										},
+										StaticRanges: []*models.IPAddrRange{{
+											Begin: &models.IPAddr{
+												Addr: pointer.StringPtr("10.0.0.1"),
+											},
+											End: &models.IPAddr{
+												Addr: pointer.StringPtr("10.0.0.5"),
+											},
+										}},
+									}},
+								}, nil
+							})
+						})
+						It("should merge Network Subnets", func() {
+							ensureSubnetMatchExpectation("10.0.0.10", true)
+						})
+					})
+
+					When("subnet doesn't exist", func() {
+						BeforeEach(func() {
+							ctx.AviClient.Network.SetGetByNameFn(func(name string, options ...session.ApiOptionsParams) (*models.Network, error) {
+								return &models.Network{
+									URL: pointer.StringPtr("10.0.0.1"),
+									ConfiguredSubnets: []*models.Subnet{{
+										Prefix: &models.IPAddrPrefix{
+											IPAddr: &models.IPAddr{
+												Addr: pointer.StringPtr("10.0.0.10"),
+											},
+											Mask: pointer.Int32Ptr(24),
+										},
+										StaticRanges: []*models.IPAddrRange{{
+											Begin: &models.IPAddr{
+												Addr: pointer.StringPtr("10.0.0.10"),
+											},
+											End: &models.IPAddr{
+												Addr: pointer.StringPtr("10.0.0.20"),
+											},
+										}},
+									}},
+								}, nil
+							})
+						})
+						It("shouldn't reconcile Network Subnets", func() {
+							ensureSubnetMatchExpectation("10.0.0.10", true)
+							ensureSubnetMatchExpectation("10.0.0.20", true)
+						})
+					})
+
+					// Reconcile -> reconcileNormal -> r.reconcileCloudUsableNetwork
+					// No need to test since all the functions in reconcileCloudUsableNetwork are fake functions
+
+					When("the cluster is not deleted ", func() {
+						//Reconcile -> reconcileNormal -> r.userReconciler.reconcileAviUserNormal
+						When("AVI user credentials managed by tkg system", func() {
+							It("should create Avi user secret", func() {
+								ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+									Name:      cluster.Name + "-" + "avi-credentials",
+									Namespace: cluster.Namespace,
+								}, &corev1.Secret{}, true)
+							})
+
+							When("AVI user exists", func() {
+								It("should update AVI user", func() {
+									Eventually(func() bool {
+										return userUpdateCalled
+									}).Should(BeTrue())
+								})
+							})
+
+							When("AVI user doesn't exist", func() {
+								BeforeEach(func() {
+									ctx.AviClient.User.SetGetByNameUserFunc(func(name string, options ...session.ApiOptionsParams) (*models.User, error) {
+										return &models.User{}, errors.New("No object of type user with name intg-test-avi-user is found")
+									})
+								})
+								It("should create role and user", func() {
+									Eventually(func() bool {
+										return userRoleCreateCalled && userCreateCalled
+									}).Should(BeTrue())
+								})
+							})
+						})
+					})
+
+					When("the cluster is being deleted ", func() {
+						BeforeEach(func() {
+							deleteObjects(cluster)
+							ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+								Name:      cluster.Name,
+								Namespace: cluster.Namespace,
+							}, &clusterv1.Cluster{}, false)
+						})
+
+						//Reconcile -> reconcileNormal -> r.userReconciler.ReconcileAviUserDelete
+						It("should delete Avi user", func() {
+							ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+								Name:      cluster.Name + "-" + "avi-credentials",
+								Namespace: cluster.Namespace,
+							}, &corev1.Secret{}, false)
+						})
+					})
 				})
 
 				// Reconcile -> reconcileDelete
 				When("AKODeploymentConfig is being deleted", func() {
 					BeforeEach(func() {
-						// ctrlutil.AddFinalizer(akoDeploymentConfig, akoov1alpha1.AkoDeploymentConfigFinalizer)
 						deleteObjects(akoDeploymentConfig)
 						ensureRuntimeObjectMatchExpectation(client.ObjectKey{
 							Name: akoDeploymentConfig.Name,
@@ -325,6 +510,25 @@ func intgTestAkoDeploymentConfigController() {
 								Namespace: cluster.Namespace,
 							}, false)
 						})
+						//Reconcile -> reconcileDelete -> reconcileClusters(normal phase) -> r.reconcileClustersDelete -> r.clusterReconciler.ReconcileCRSDelete
+						It("should remove Cluster CRS", func() {
+							ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+								Name:      cluster.Name + "-ako",
+								Namespace: cluster.Namespace,
+							}, &clustereaddonv1alpha3.ClusterResourceSet{}, false)
+						})
+					})
+
+					When("the cluster is being deleted ", func() {
+						BeforeEach(func() {
+							deleteObjects(cluster)
+							ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+								Name:      cluster.Name,
+								Namespace: cluster.Namespace,
+							}, &clusterv1.Cluster{}, false)
+						})
+
+						//Reconcile -> reconcileDelete -> r.reconcileClustersDelete -> r.clusterReconciler.ReconcileCRSDelete
 						It("should remove Cluster CRS", func() {
 							ensureRuntimeObjectMatchExpectation(client.ObjectKey{
 								Name:      cluster.Name + "-ako",

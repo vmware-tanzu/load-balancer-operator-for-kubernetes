@@ -76,7 +76,6 @@ func (r *AkoUserReconciler) ReconcileAviUserDelete(
 		log.Info("workload cluster existing, don't delete avi user")
 		return ctrl.Result{}, nil
 	}
-
 	// Check if there is a cleanup condition in the Cluster status , if not, update it
 	if !conditions.Has(cluster, akoov1alpha1.AviUserCleanupSucceededCondition) {
 		conditions.MarkFalse(cluster, akoov1alpha1.AviUserCleanupSucceededCondition, akoov1alpha1.AviResourceCleanupReason, clusterv1.ConditionSeverityInfo, "Cleaning up the AVI load balancing user credentials before deletion")
