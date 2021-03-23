@@ -76,7 +76,7 @@ func (r *AkoUserReconciler) ReconcileAviUserDelete(
 		log.Info("workload cluster existing, don't delete avi user")
 		return ctrl.Result{}, nil
 	}
-	// Check if there is a cleanup condition in the Cluster status , if not, update it
+	// Check if there is a cleanup condition in the Cluster status, if not, update it
 	if !conditions.Has(cluster, akoov1alpha1.AviUserCleanupSucceededCondition) {
 		conditions.MarkFalse(cluster, akoov1alpha1.AviUserCleanupSucceededCondition, akoov1alpha1.AviResourceCleanupReason, clusterv1.ConditionSeverityInfo, "Cleaning up the AVI load balancing user credentials before deletion")
 		log.Info("Trigger the Avi user cleanup in the target Cluster and set Cluster condition", "condition", akoov1alpha1.AviUserCleanupSucceededCondition)
@@ -88,7 +88,7 @@ func (r *AkoUserReconciler) ReconcileAviUserDelete(
 	}
 
 	log.Info("Wait until AVI resource deletion for cluster finishes, requeue", "condition", akoov1alpha1.AviResourceCleanupSucceededCondition)
-	return ctrl.Result{}, errors.New("requeue to wait AVI resource deletion for cluster")
+	return ctrl.Result{}, errors.Errorf("requeue to wait AVI resource deletion for cluster: %s/%s", cluster.Namespace, cluster.Name)
 }
 
 // reconcileAviUserDelete clean up all avi user account related resources when workload cluster delete or
@@ -101,6 +101,11 @@ func (r *AkoUserReconciler) reconcileAviUserDelete(
 	obj *akoov1alpha1.AKODeploymentConfig,
 ) (ctrl.Result, error) {
 	res := ctrl.Result{}
+
+	if conditions.IsTrue(cluster, akoov1alpha1.AviUserCleanupSucceededCondition) {
+		log.Info("AVI user credentails were cleaned up before, skip")
+		return res, nil
+	}
 
 	if obj.Spec.WorkloadCredentialRef != nil {
 		log.Info("AVI user credentials managed by customers, no need to delete, skip")

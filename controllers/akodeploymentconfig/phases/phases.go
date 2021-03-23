@@ -149,6 +149,6 @@ func ListAkoDeplymentConfigDeployedClusters(ctx context.Context, kclient client.
 		}
 	}
 	clusters.Items = newItems
-	
+
 	return &clusters, nil
 }

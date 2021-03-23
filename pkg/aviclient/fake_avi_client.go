@@ -251,7 +251,6 @@ func (client *PoolClient) GetByName(name string, options ...session.ApiOptionsPa
 	return client.getByNameFn(name)
 }
 
-
 // VirtualService Client
 type VirtualServiceClient struct {
 	getByNameFn GetByNameVSFunc
@@ -266,4 +265,3 @@ func (client *VirtualServiceClient) SetGetByNameFn(fn GetByNameVSFunc) {
 func (client *VirtualServiceClient) GetByName(name string, options ...session.ApiOptionsParams) (*models.VirtualService, error) {
 	return client.getByNameFn(name)
 }
-

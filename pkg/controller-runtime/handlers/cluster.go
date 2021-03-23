@@ -13,7 +13,8 @@ func SkipCluster(cluster *clusterv1.Cluster) bool {
 	if cluster.Namespace == akoov1alpha1.TKGSystemNamespace {
 		return true
 	}
-	if !conditions.IsTrue(cluster, clusterv1.ReadyCondition) {
+	// if condition.ready is false and cluster is not being deleted, skip
+	if conditions.IsFalse(cluster, clusterv1.ReadyCondition) && cluster.DeletionTimestamp.IsZero() {
 		return true
 	}
 	return false

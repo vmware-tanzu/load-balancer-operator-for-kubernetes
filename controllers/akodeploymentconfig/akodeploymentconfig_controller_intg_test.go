@@ -132,6 +132,13 @@ func intgTestAkoDeploymentConfigController() {
 			_ = ctx.Client.Delete(ctx.Context, o)
 		}
 	}
+	getCluster := func(obj *clusterv1.Cluster, name, namespace string) {
+		err := ctx.Client.Get(ctx.Context, client.ObjectKey{
+			Name:      name,
+			Namespace: namespace,
+		}, obj)
+		Expect(err).To(BeNil())
+	}
 
 	ensureAKODeploymentConfigFinalizerMatchExpectation := func(key client.ObjectKey, expectReconciled bool) {
 		Eventually(func() bool {
@@ -467,22 +474,46 @@ func intgTestAkoDeploymentConfigController() {
 					})
 
 					When("the cluster is being deleted ", func() {
-						BeforeEach(func() {
-							deleteObjects(cluster)
-							ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-								Name:      cluster.Name,
-								Namespace: cluster.Namespace,
-							}, &clusterv1.Cluster{}, false)
-						})
+						When("the cluster is ready", func() {
+							BeforeEach(func() {
+								deleteObjects(cluster)
+								ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+									Name:      cluster.Name,
+									Namespace: cluster.Namespace,
+								}, &clusterv1.Cluster{}, false)
+							})
 
-						//Reconcile -> reconcileNormal -> r.userReconciler.ReconcileAviUserDelete
-						It("should delete Avi user", func() {
-							ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-								Name:      cluster.Name + "-" + "avi-credentials",
-								Namespace: cluster.Namespace,
-							}, &corev1.Secret{}, false)
+							//Reconcile -> reconcileNormal -> r.userReconciler.ReconcileAviUserDelete
+							It("should delete Avi user", func() {
+								ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+									Name:      cluster.Name + "-" + "avi-credentials",
+									Namespace: cluster.Namespace,
+								}, &corev1.Secret{}, false)
+							})
+						})
+						When("the cluster is not ready", func() {
+							BeforeEach(func() {
+								obj := &clusterv1.Cluster{}
+								getCluster(obj, cluster.Name, cluster.Namespace)
+								conditions.MarkFalse(cluster, clusterv1.ReadyCondition, clusterv1.DeletingReason, clusterv1.ConditionSeverityInfo, "")
+								updateObjects(obj)
+								deleteObjects(obj)
+								ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+									Name:      obj.Name,
+									Namespace: obj.Namespace,
+								}, &clusterv1.Cluster{}, false)
+							})
+
+							//Reconcile -> reconcileNormal -> r.userReconciler.ReconcileAviUserDelete
+							It("should delete Avi user", func() {
+								ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+									Name:      cluster.Name + "-" + "avi-credentials",
+									Namespace: cluster.Namespace,
+								}, &corev1.Secret{}, false)
+							})
 						})
 					})
+
 				})
 
 				// Reconcile -> reconcileDelete

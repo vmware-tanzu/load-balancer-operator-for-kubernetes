@@ -5,6 +5,7 @@ package handlers
 
 import (
 	"context"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -96,14 +97,29 @@ var _ = Describe("AKODeploymentConfig Cluster Handler", func() {
 			})
 		})
 		When("the cluster is not ready", func() {
-			BeforeEach(func() {
-				conditions.MarkFalse(cluster, clusterv1.ReadyCondition, "test-reason", clusterv1.ConditionSeverityInfo, "test-msg")
-				input = handler.MapObject{
-					Object: cluster,
-				}
+			When("cluster is not being deleted", func() {
+				BeforeEach(func() {
+					conditions.MarkFalse(cluster, clusterv1.ReadyCondition, "test-reason", clusterv1.ConditionSeverityInfo, "test-msg")
+					input = handler.MapObject{
+						Object: cluster,
+					}
+				})
+				It("should not create any request", func() {
+					Expect(len(requests)).To(Equal(0))
+				})
 			})
-			It("should not create any request", func() {
-				Expect(len(requests)).To(Equal(0))
+			When("cluster is being deleted", func() {
+				BeforeEach(func() {
+					conditions.MarkFalse(cluster, clusterv1.ReadyCondition, clusterv1.DeletingReason, clusterv1.ConditionSeverityInfo, "")
+					deletionTime := metav1.NewTime(time.Now())
+					cluster.SetDeletionTimestamp(&deletionTime)
+					input = handler.MapObject{
+						Object: cluster,
+					}
+				})
+				It("should create 1 request", func() {
+					Expect(len(requests)).To(Equal(1))
+				})
 			})
 		})
 	})
