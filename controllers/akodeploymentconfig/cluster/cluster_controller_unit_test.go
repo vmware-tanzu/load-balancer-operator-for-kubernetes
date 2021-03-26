@@ -37,7 +37,7 @@ func unitTestAKODeploymentYaml() {
 				value.Image.Repository:                          akoDeploymentConfig.Spec.ExtraConfigs.Image.Repository,
 				value.Image.PullPolicy:                          akoDeploymentConfig.Spec.ExtraConfigs.Image.PullPolicy,
 				value.Image.Version:                             akoDeploymentConfig.Spec.ExtraConfigs.Image.Version,
-				value.AKOSettings.ClusterName:                   cluster.Name,
+				value.AKOSettings.ClusterName:                   cluster.Namespace + "-" + cluster.Name,
 				value.ControllerSettings.CloudName:              akoDeploymentConfig.Spec.CloudName,
 				value.ControllerSettings.ControllerIP:           akoDeploymentConfig.Spec.Controller,
 				value.ControllerSettings.ServiceEngineGroupName: akoDeploymentConfig.Spec.ServiceEngineGroup,

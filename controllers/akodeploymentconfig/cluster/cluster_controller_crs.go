@@ -296,7 +296,7 @@ func PopluateValues(obj *akoov1alpha1.AKODeploymentConfig, cluster *clusterv1.Cl
 	values.Image.PullPolicy = obj.Spec.ExtraConfigs.Image.PullPolicy
 	values.Image.Version = obj.Spec.ExtraConfigs.Image.Version
 
-	values.AKOSettings.ClusterName = cluster.Name
+	values.AKOSettings.ClusterName = cluster.Namespace + "-" + cluster.Name
 
 	values.ControllerSettings.CloudName = obj.Spec.CloudName
 	values.ControllerSettings.ControllerIP = obj.Spec.Controller
