@@ -86,8 +86,10 @@ func intgTestMachineController() {
 		})
 		It("Delete one machine directly", func() {
 			deleteObjects(machine)
-			err := ctx.Client.Get(ctx.Context, client.ObjectKey{Name: "test-machine", Namespace: "test"}, &clusterv1.Machine{})
-			Expect(apierrors.IsNotFound(err)).Should(Equal(true))
+			Eventually(func() bool {
+				err := ctx.Client.Get(ctx.Context, client.ObjectKey{Name: "test-machine", Namespace: "test"}, &clusterv1.Machine{})
+				return apierrors.IsNotFound(err)
+			}).Should(BeTrue())
 		})
 		AfterEach(func() {
 			deleteObjects(cluster)

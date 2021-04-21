@@ -11,6 +11,8 @@ const (
 	TKGSystemNamespace  = "tkg-system"
 	TKGClusterNameLabel = "tkg.tanzu.vmware.com/cluster-name"
 
+	ManagementClusterAkoDeploymentConfig = "install-ako-for-management-cluster"
+
 	AkoUserRoleName              = "ako-essential-role"
 	ClusterFinalizer             = "ako-operator.networking.tkg.tanzu.vmware.com"
 	AkoDeploymentConfigFinalizer = "ako-operator.networking.tkg.tanzu.vmware.com"

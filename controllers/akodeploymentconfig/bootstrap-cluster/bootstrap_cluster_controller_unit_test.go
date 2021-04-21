@@ -1,29 +1,26 @@
 // Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package cluster_test
+package bootstrap_cluster_test
 
 import (
+	bootstrap_cluster "gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/bootstrap-cluster"
+	ako_operator "gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako-operator"
+	"os"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
-	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/cluster"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
 )
 
 func unitTestAKODeploymentYaml() {
-	Context("PopluateValues", func() {
+	Context("PopulateValues", func() {
 		var (
 			akoDeploymentConfig *akoov1alpha1.AKODeploymentConfig
-			capicluster         *clusterv1.Cluster
 		)
-		BeforeEach(func() {
-			capicluster = &clusterv1.Cluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-cluster",
-				},
-			}
+
+		JustBeforeEach(func() {
+			os.Setenv(ako_operator.ManagementClusterName, "test")
 		})
 
 		When("a valid AKODeploymentYaml is provided", func() {
@@ -71,13 +68,13 @@ func unitTestAKODeploymentYaml() {
 			})
 
 			It("should populate correct values in crs yaml", func() {
-				_, err := cluster.AKODeploymentYaml(akoDeploymentConfig, capicluster)
+				_, err := bootstrap_cluster.ConvertToAKODeploymentYaml(akoDeploymentConfig)
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
 			It("should throw error if template not match", func() {
 				akoDeploymentConfig.Spec.DataNetwork.CIDR = "test"
-				_, err := cluster.AKODeploymentYaml(akoDeploymentConfig, capicluster)
+				_, err := bootstrap_cluster.ConvertToAKODeploymentYaml(akoDeploymentConfig)
 				Expect(err).Should(HaveOccurred())
 				akoDeploymentConfig.Spec.DataNetwork.CIDR = "10.0.0.0/24"
 			})

@@ -92,8 +92,9 @@ var _ = Describe("AKODeploymentConfig Cluster Handler", func() {
 					Object: cluster,
 				}
 			})
-			It("should not create any request", func() {
-				Expect(len(requests)).To(Equal(0))
+			// After Dakar, ako would also be deployed in management cluster.
+			It("should create 1 request", func() {
+				Expect(len(requests)).To(Equal(1))
 			})
 		})
 		When("the cluster is not ready", func() {

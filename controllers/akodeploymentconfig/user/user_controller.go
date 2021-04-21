@@ -5,6 +5,7 @@ package user
 
 import (
 	"context"
+	ako_operator "gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako-operator"
 
 	"github.com/avinetworks/sdk/go/models"
 	"github.com/go-logr/logr"
@@ -50,7 +51,11 @@ func (r *AkoUserReconciler) ReconcileAviUser(
 	cluster *clusterv1.Cluster,
 	obj *akoov1alpha1.AKODeploymentConfig,
 ) (ctrl.Result, error) {
-	if cluster.Namespace == akoov1alpha1.TKGSystemNamespace {
+	// skip when other akodeploymentconfig selects management cluster
+	if cluster.Namespace == akoov1alpha1.TKGSystemNamespace &&
+		!ako_operator.IsBootStrapCluster() &&
+		obj.Name != akoov1alpha1.ManagementClusterAkoDeploymentConfig {
+		log.Info("select management cluster by other akodeploymentconfig, skip")
 		return ctrl.Result{}, nil
 	}
 	log.V(1).Info("Start reconciling workload cluster avi credentials")
@@ -249,16 +254,21 @@ func (r *AkoUserReconciler) createOrUpdateWorkloadClusterSecret(
 ) (ctrl.Result, error) {
 	var found bool
 	var res ctrl.Result
-
-	remoteClient, err := r.createWorkloadClusterClient(ctx, cluster.Name, cluster.Namespace)
-	if err != nil {
-		log.Error(err, "Failed to create client for cluster, requeue")
-		return res, err
+	var remoteClient client.Client
+	var err error
+	if cluster.Namespace == akoov1alpha1.TKGSystemNamespace {
+		remoteClient = r.Client
+	} else {
+		remoteClient, err = r.createWorkloadClusterClient(ctx, cluster.Name, cluster.Namespace)
+		if err != nil {
+			log.Error(err, "Failed to create client for cluster, requeue")
+			return res, err
+		}
 	}
 
 	// ensures the workload cluster Secret exists and matches the mc secret
 	wcSecret := &corev1.Secret{}
-	if err := remoteClient.Get(ctx, client.ObjectKey{
+	if err = remoteClient.Get(ctx, client.ObjectKey{
 		Name:      akoov1alpha1.AviSecretName,
 		Namespace: akoov1alpha1.AviNamespace,
 	}, wcSecret); err != nil {
@@ -290,13 +300,13 @@ func (r *AkoUserReconciler) createOrUpdateWorkloadClusterSecret(
 
 	if !found {
 		log.Info("No AKO Secret found in th workload cluster, start the creation")
-		if err := remoteClient.Create(ctx, wcSecret); err != nil {
+		if err = remoteClient.Create(ctx, wcSecret); err != nil {
 			log.Error(err, "Failed to create AKO Secret in the workload cluster, requeue")
 			return res, err
 		}
 	} else {
 		log.Info("Updating AKO Secret in the workload cluster")
-		if err := remoteClient.Update(ctx, wcSecret); err != nil {
+		if err = remoteClient.Update(ctx, wcSecret); err != nil {
 			log.Error(err, "Failed to update AKO Secret in the workload cluster, requeue")
 			return res, err
 		}

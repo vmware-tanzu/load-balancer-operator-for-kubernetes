@@ -6,12 +6,10 @@ package cluster
 import (
 	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
-	"net"
-	"strconv"
 	"text/template"
 	"time"
+
+	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -226,126 +224,13 @@ func akoDeploymentSecret(base *corev1.Secret, obj *akoov1alpha1.AKODeploymentCon
 	return res, nil
 }
 
-func setDefaultValues(values *Values) {
-	values.AKOSettings = AKOSettings{
-		LogLevel:               "INFO",
-		ApiServerPort:          8080,
-		DeleteConfig:           false,
-		DisableStaticRouteSync: true,
-		FullSyncFrequency:      "1800",
-		// CniPlugin: don't set, use default value in AKO
-		// SyncNamespace: don't set, use default value in AKO
-		// ClusterName: populate in runtime
-	}
-	values.ReplicaCount = 1
-	values.L7Settings = L7Settings{
-		DefaultIngController: false,
-		ServiceType:          "NodePort",
-		ShardVSSize:          "SMALL",
-		// L7ShardingScheme: don't set, use default value in AKO
-		// PassthroughShardSize: don't set, use default value in AKO
-	}
-	values.L4Settings = L4Settings{
-		// DefaultDomain: don't set, use default value in AKO
-	}
-	values.ControllerSettings = ControllerSettings{
-		// ServiceEngineGroupName: populate in runtime
-		// CloudName: populate in runtime
-		// ControllerIP: populate in runtime
-		// ControllerVersion: don't set, depend on AKO to autodetect,
-		// also because we don't consider version skew in Calgary
-	}
-	values.NodePortSelector = NodePortSelector{
-		// Key: don't set, use default value in AKO
-		// Value: don't set, use default value in AKO
-	}
-	values.Resources = Resources{
-		Limits: Limits{
-			Cpu:    "250m",
-			Memory: "300Mi",
-		},
-		Requests: Requests{
-			Cpu:    "100m",
-			Memory: "200Mi",
-		},
-	}
-	values.NetworkSettings = NetworkSettings{
-		// SubnetIP: don't set, populate in runtime
-		// SubnetPrefix: don't set, populate in runtime
-		// NetworkName: don't set, populate in runtime
-		// NodeNetworkList: don't set, populate in runtime
-		// NodeNetworkListJson: don't set, populate in runtime
-	}
-
-	values.Namespace = akoov1alpha1.AviNamespace
-}
-
-func PopluateValues(obj *akoov1alpha1.AKODeploymentConfig, cluster *clusterv1.Cluster) (Values, error) {
-	values := Values{}
-
-	setDefaultValues(&values)
-
-	values.Image.Repository = obj.Spec.ExtraConfigs.Image.Repository
-	values.Image.PullPolicy = obj.Spec.ExtraConfigs.Image.PullPolicy
-	values.Image.Version = obj.Spec.ExtraConfigs.Image.Version
-
-	values.AKOSettings.ClusterName = cluster.Namespace + "-" + cluster.Name
-
-	values.AKOSettings.DisableStaticRouteSync = obj.Spec.ExtraConfigs.DisableStaticRouteSync
-
-	values.ControllerSettings.CloudName = obj.Spec.CloudName
-	values.ControllerSettings.ControllerIP = obj.Spec.Controller
-	values.ControllerSettings.ServiceEngineGroupName = obj.Spec.ServiceEngineGroup
-
-	network := obj.Spec.DataNetwork
-	values.NetworkSettings.NetworkName = network.Name
-	ip, ipnet, err := net.ParseCIDR(network.CIDR)
-	if err != nil {
-		return values, err
-	}
-	values.NetworkSettings.SubnetIP = ip.String()
-	ones, _ := ipnet.Mask.Size()
-	values.NetworkSettings.SubnetPrefix = strconv.Itoa(ones)
-	values.NetworkSettings.NodeNetworkList = obj.Spec.ExtraConfigs.IngressConfigs.NodeNetworkList
-
-	if len(values.NetworkSettings.NodeNetworkList) != 0 {
-		// preprocessing
-		nodeNetworkListJson, jsonerr := json.Marshal(values.NetworkSettings.NodeNetworkList)
-		if jsonerr != nil {
-			fmt.Println("Can't convert network setting into json. Error: ", jsonerr)
-		}
-		values.NetworkSettings.NodeNetworkListJson = string(nodeNetworkListJson)
-	}
-
-	values.PersistentVolumeClaim = obj.Spec.ExtraConfigs.Log.PersistentVolumeClaim
-	values.MountPath = obj.Spec.ExtraConfigs.Log.MountPath
-	values.LogFile = obj.Spec.ExtraConfigs.Log.LogFile
-
-	values.L7Settings.DisableIngressClass = obj.Spec.ExtraConfigs.IngressConfigs.DisableIngressClass
-	values.L7Settings.DefaultIngController = obj.Spec.ExtraConfigs.IngressConfigs.DefaultIngressController
-	if obj.Spec.ExtraConfigs.IngressConfigs.ShardVSSize != "" {
-		values.L7Settings.ShardVSSize = obj.Spec.ExtraConfigs.IngressConfigs.ShardVSSize
-	}
-	if obj.Spec.ExtraConfigs.IngressConfigs.ServiceType != "" {
-		values.L7Settings.ServiceType = obj.Spec.ExtraConfigs.IngressConfigs.ServiceType
-	}
-
-	values.Name = "ako-" + cluster.Name
-
-	values.Rbac = Rbac{
-		PspEnabled:          obj.Spec.ExtraConfigs.Rbac.PspEnabled,
-		PspPolicyApiVersion: obj.Spec.ExtraConfigs.Rbac.PspPolicyAPIVersion,
-	}
-	return values, nil
-}
-
 func AKODeploymentYaml(obj *akoov1alpha1.AKODeploymentConfig, cluster *clusterv1.Cluster) (string, error) {
-	tmpl, err := template.New("deployment").Parse(akoDeploymentYamlTemplate)
+	tmpl, err := template.New("deployment").Parse(ako.AkoDeploymentYamlTemplate)
 	if err != nil {
 		return "", err
 	}
 
-	values, err := PopluateValues(obj, cluster)
+	values, err := ako.PopulateValues(obj, cluster.Namespace+"-"+cluster.Name)
 	if err != nil {
 		return "", err
 	}
