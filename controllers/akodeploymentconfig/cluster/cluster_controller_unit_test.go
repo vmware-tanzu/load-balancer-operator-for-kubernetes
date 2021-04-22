@@ -4,6 +4,8 @@
 package cluster_test
 
 import (
+	"encoding/json"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
@@ -65,6 +67,14 @@ func unitTestAKODeploymentYaml() {
 			for k, v := range expectedBoolPairs {
 				Expect(k).To(Equal(v))
 			}
+
+			if len(akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.NodeNetworkList) != 0 {
+				nodeNetworkListJson, jsonerr := json.Marshal(akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.NodeNetworkList)
+				Expect(jsonerr).ShouldNot(HaveOccurred())
+				Expect(value.NetworkSettings.NodeNetworkListJson).To(Equal(string(nodeNetworkListJson)))
+			} else {
+				Expect(value.NetworkSettings.NodeNetworkListJson).Should(BeNil())
+			}
 		}
 
 		When("a valid AKODeploymentYaml is provided", func() {
@@ -98,6 +108,12 @@ func unitTestAKODeploymentYaml() {
 								DefaultIngressController: true,
 								ShardVSSize:              "MEDIUM",
 								ServiceType:              "NodePort",
+								NodeNetworkList: []akoov1alpha1.NodeNetwork{
+									{
+										NetworkName: "test-node-network-1",
+										Cidrs:       []string{"10.0.0.0/24", "192.168.0.0/24"},
+									},
+								},
 							},
 						},
 					},

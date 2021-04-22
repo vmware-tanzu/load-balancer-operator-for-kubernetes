@@ -273,17 +273,10 @@ func setDefaultValues(values *Values) {
 		// SubnetIP: don't set, populate in runtime
 		// SubnetPrefix: don't set, populate in runtime
 		// NetworkName: don't set, populate in runtime
-		// NodeNetworkList: don't set, use default value in AKO
-		// NodeNetworkListJson: don't set, use default value in AKO
+		// NodeNetworkList: don't set, populate in runtime
+		// NodeNetworkListJson: don't set, populate in runtime
 	}
-	if len(values.NetworkSettings.NodeNetworkList) != 0 {
-		// preprocessing
-		nodeNetworkListJson, jsonerr := json.Marshal(values.NetworkSettings.NodeNetworkList)
-		if jsonerr != nil {
-			fmt.Println("Can't convert network setting into json. Error: ", jsonerr)
-		}
-		values.NetworkSettings.NodeNetworkListJson = string(nodeNetworkListJson)
-	}
+
 	values.Namespace = akoov1alpha1.AviNamespace
 }
 
@@ -311,6 +304,16 @@ func PopluateValues(obj *akoov1alpha1.AKODeploymentConfig, cluster *clusterv1.Cl
 	values.NetworkSettings.SubnetIP = ip.String()
 	ones, _ := ipnet.Mask.Size()
 	values.NetworkSettings.SubnetPrefix = strconv.Itoa(ones)
+	values.NetworkSettings.NodeNetworkList = obj.Spec.ExtraConfigs.IngressConfigs.NodeNetworkList
+
+	if len(values.NetworkSettings.NodeNetworkList) != 0 {
+		// preprocessing
+		nodeNetworkListJson, jsonerr := json.Marshal(values.NetworkSettings.NodeNetworkList)
+		if jsonerr != nil {
+			fmt.Println("Can't convert network setting into json. Error: ", jsonerr)
+		}
+		values.NetworkSettings.NodeNetworkListJson = string(nodeNetworkListJson)
+	}
 
 	values.PersistentVolumeClaim = obj.Spec.ExtraConfigs.Log.PersistentVolumeClaim
 	values.MountPath = obj.Spec.ExtraConfigs.Log.MountPath

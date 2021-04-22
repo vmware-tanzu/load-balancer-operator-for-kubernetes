@@ -154,6 +154,20 @@ spec:
                       disableIngressClass:
                         description: DisableIngressClass will prevent AKO Operator to install AKO IngressClass into workload clusters for old version of K8s
                         type: boolean
+                      nodeNetworkList:
+                        description: NodeNetworkList describes the details of network and CIDRs are used in pool placement network for vcenter cloud. Node Network details are not needed when in NodePort mode / static routes are disabled / non vcenter clouds.
+                        items:
+                          properties:
+                            cidrs:
+                              description: Cidrs represents all the IP CIDRs in this network
+                              items:
+                                type: string
+                              type: array
+                            networkName:
+                              description: NetworkName is the name of this network
+                              type: string
+                          type: object
+                        type: array
                       serviceType:
                         description: ServiceType string describes ingress methods for a service Valid value should be NodePort or ClusterIP
                         enum:

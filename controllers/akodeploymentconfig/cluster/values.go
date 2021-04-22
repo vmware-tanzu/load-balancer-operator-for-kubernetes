@@ -4,6 +4,7 @@
 package cluster
 
 import (
+	"gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 	rand "math/rand"
 	"strconv"
 	"time"
@@ -53,13 +54,8 @@ type NetworkSettings struct {
 	SubnetIP            string // Subnet IP of the vip network
 	SubnetPrefix        string // Subnet Prefix of the vip network
 	NetworkName         string // Network Name of the vip network
-	NodeNetworkList     []NodeNetwork
+	NodeNetworkList     []v1alpha1.NodeNetwork
 	NodeNetworkListJson string
-}
-
-type NodeNetwork struct {
-	NetworkName string
-	Cidrs       []string
 }
 
 // This section outlines all the knobs  used to control Layer 7 loadbalancing settings in AKO.

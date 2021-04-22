@@ -131,6 +131,21 @@ type AKOIngressConfig struct {
 	// +kubebuilder:validation:Enum=NodePort;ClusterIP
 	// +optional
 	ServiceType string `json:"serviceType,omitempty"`
+
+	// NodeNetworkList describes the details of network and CIDRs
+	// are used in pool placement network for vcenter cloud. Node Network details
+	// are not needed when in NodePort mode / static routes are disabled / non vcenter clouds.
+	// +optional
+	NodeNetworkList []NodeNetwork `json:"nodeNetworkList,omitempty"`
+}
+
+type NodeNetwork struct {
+	// NetworkName is the name of this network
+	// +optional
+	NetworkName string `json:"networkName,omitempty"`
+	// Cidrs represents all the IP CIDRs in this network
+	// +optional
+	Cidrs []string `json:"cidrs,omitempty"`
 }
 
 type AKOImageConfig struct {
