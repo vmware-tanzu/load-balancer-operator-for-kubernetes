@@ -214,6 +214,13 @@ spec:
               configMapKeyRef:
                 name: avi-k8s-config
                 key: disableStaticRouteSync
+           {{ if .Values.NetworkSettings.NodeNetworkListJson }}
+          - name: NODE_NETWORK_LIST
+            valueFrom:
+              configMapKeyRef:
+                name: avi-k8s-config
+                key: nodeNetworkList
+           {{ end }}
            {{ if .Values.AKOSettings.SyncNamespace  }}
           - name: SYNC_NAMESPACE
             valueFrom:
