@@ -129,6 +129,9 @@ spec:
               extraConfigs:
                 description: ExtraConfigs contains extra configurations for AKO Deployment
                 properties:
+                  disableStaticRouteSync:
+                    description: DisableStaticRouteSync describes ako should sync static routing or not. If the POD networks are reachable from the Avi SE, this should be to true. Otherwise, it should be false. It would be true by default.
+                    type: boolean
                   image:
                     description: Image specifies the configuration for AKO docker image
                     properties:

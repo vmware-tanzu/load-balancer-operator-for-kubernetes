@@ -60,9 +60,10 @@ func unitTestAKODeploymentYaml() {
 			}
 
 			expectedBoolPairs := map[bool]bool{
-				value.L7Settings.DisableIngressClass:  akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.DisableIngressClass,
-				value.L7Settings.DefaultIngController: akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.DefaultIngressController,
-				value.Rbac.PspEnabled:                 akoDeploymentConfig.Spec.ExtraConfigs.Rbac.PspEnabled,
+				value.AKOSettings.DisableStaticRouteSync: akoDeploymentConfig.Spec.ExtraConfigs.DisableStaticRouteSync,
+				value.L7Settings.DisableIngressClass:     akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.DisableIngressClass,
+				value.L7Settings.DefaultIngController:    akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.DefaultIngressController,
+				value.Rbac.PspEnabled:                    akoDeploymentConfig.Spec.ExtraConfigs.Rbac.PspEnabled,
 			}
 			for k, v := range expectedBoolPairs {
 				Expect(k).To(Equal(v))
@@ -115,6 +116,7 @@ func unitTestAKODeploymentYaml() {
 									},
 								},
 							},
+							DisableStaticRouteSync: true,
 						},
 					},
 				}

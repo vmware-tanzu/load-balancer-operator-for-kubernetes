@@ -104,6 +104,13 @@ type ExtraConfigs struct {
 	// IngressConfigs specifies ingress configuration for ako
 	// +optional
 	IngressConfigs AKOIngressConfig `json:"ingress,omitempty"`
+
+	// DisableStaticRouteSync describes ako should sync static routing or not.
+	// If the POD networks are reachable from the Avi SE, this should be to true.
+	// Otherwise, it should be false.
+	// It would be true by default.
+	// +optional
+	DisableStaticRouteSync bool `json:"disableStaticRouteSync,omitempty"`
 }
 
 // AKOIngressConfig contains ingress configurations for AKO Deployment
