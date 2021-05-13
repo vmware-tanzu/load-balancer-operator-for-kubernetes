@@ -20,6 +20,7 @@ const (
 	AkoDeploymentConfigVersion   = "networking.tanzu.vmware.com/v1alpha1"
 	AkoConfigMapName             = "avi-k8s-config"
 
+	AVI_VERSION                                                  = "20.1.3"
 	AviClusterLabel                                              = "networking.tkg.tanzu.vmware.com/avi"
 	AviClusterSecretType                                         = "avi.cluster.x-k8s.io/secret"
 	AviSecretName                                                = "avi-secret"

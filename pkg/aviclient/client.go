@@ -38,7 +38,7 @@ type AviClientConfig struct {
 }
 
 // NewAviClient creates an Client
-func NewAviClient(config *AviClientConfig) (*realAviClient, error) {
+func NewAviClient(config *AviClientConfig, version string) (*realAviClient, error) {
 	// Initialize transport
 	var transport *http.Transport
 	if config.CA != "" {
@@ -61,6 +61,7 @@ func NewAviClient(config *AviClientConfig) (*realAviClient, error) {
 	options := []func(*session.AviSession) error{
 		session.SetPassword(config.Password),
 		session.SetTransport(transport),
+		session.SetVersion(version),
 	}
 	if config.CA == "" {
 		options = append(options, session.SetInsecure)
