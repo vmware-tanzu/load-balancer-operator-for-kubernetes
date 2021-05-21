@@ -5,7 +5,6 @@ package user
 
 import (
 	"context"
-	ako_operator "gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako-operator"
 
 	"github.com/avinetworks/sdk/go/models"
 	"github.com/go-logr/logr"
@@ -51,13 +50,6 @@ func (r *AkoUserReconciler) ReconcileAviUser(
 	cluster *clusterv1.Cluster,
 	obj *akoov1alpha1.AKODeploymentConfig,
 ) (ctrl.Result, error) {
-	// skip when other akodeploymentconfig selects management cluster
-	if cluster.Namespace == akoov1alpha1.TKGSystemNamespace &&
-		!ako_operator.IsBootStrapCluster() &&
-		obj.Name != akoov1alpha1.ManagementClusterAkoDeploymentConfig {
-		log.Info("select management cluster by other akodeploymentconfig, skip")
-		return ctrl.Result{}, nil
-	}
 	log.V(1).Info("Start reconciling workload cluster avi credentials")
 	if !cluster.GetDeletionTimestamp().IsZero() {
 		log.Info("reconcile deleting workload cluster avi user resource")
@@ -171,6 +163,15 @@ func (r *AkoUserReconciler) reconcileAviUserNormal(
 	}
 
 	aviCA := string(aviControllerCASecret.Data[akoov1alpha1.AviCertificateKey][:])
+
+	if cluster.Namespace == akoov1alpha1.TKGSystemNamespace {
+		err = r.deployManagementClusterSecret(ctx, log, obj, aviControllerCASecret)
+		if err != nil {
+			log.Error(err, "Failed to generate avi-secret in management cluster")
+		}
+		return res, err
+	}
+
 	// Ensures the management cluster Secret exists
 	mcSecret := &corev1.Secret{}
 	if obj.Spec.WorkloadCredentialRef != nil {
@@ -434,6 +435,40 @@ func (r *AkoUserReconciler) createAviUserSecret(name, namespace, username, passw
 	secret.Data["password"] = []byte(password)
 	secret.Data[akoov1alpha1.AviCertificateKey] = []byte(aviCA)
 	return secret
+}
+
+func (r *AkoUserReconciler) deployManagementClusterSecret(
+	ctx context.Context,
+	log logr.Logger,
+	obj *akoov1alpha1.AKODeploymentConfig,
+	aviControllerCA *corev1.Secret,
+) error {
+	adminCredential := &corev1.Secret{}
+	if err := r.Client.Get(ctx, client.ObjectKey{
+		Name:      obj.Spec.AdminCredentialRef.Name,
+		Namespace: obj.Spec.AdminCredentialRef.Namespace,
+	}, adminCredential); err != nil {
+		log.Error(err, "Failed to find referenced AdminCredential Secret")
+		return err
+	}
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      akoov1alpha1.AviSecretName,
+			Namespace: akoov1alpha1.AviNamespace,
+		},
+		Type: akoov1alpha1.AviClusterSecretType,
+		Data: map[string][]byte{
+			"username":                     adminCredential.Data["username"],
+			"password":                     adminCredential.Data["password"],
+			akoov1alpha1.AviCertificateKey: aviControllerCA.Data[akoov1alpha1.AviCertificateKey],
+		},
+	}
+	err := r.Client.Create(ctx, secret)
+	if apierrors.IsAlreadyExists(err) {
+		log.Info("avi secret already exists, update avi-secret")
+		return r.Client.Update(ctx, secret)
+	}
+	return err
 }
 
 // createWorkloadClusterClient create workload cluster corresponding client

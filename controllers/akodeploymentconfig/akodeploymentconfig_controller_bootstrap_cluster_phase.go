@@ -33,6 +33,23 @@ func (r *AKODeploymentConfigReconciler) reconcileBootstrapCluster(
 	return phases.ReconcilePhases(ctx, log, obj,
 		[]phases.ReconcilePhase{
 			r.BootstrapClusterReconciler.DeployAKO,
+			r.BootstrapClusterReconciler.DeployAKOSecret,
+		},
+	)
+}
+
+// reconcileBootstrapClusterDelete reconciles bootstrap cluster deletion
+// It's a reconcilePhase function
+func (r *AKODeploymentConfigReconciler) reconcileBootstrapClusterDelete(
+	ctx context.Context,
+	log logr.Logger,
+	obj *akoov1alpha1.AKODeploymentConfig,
+) (ctrl.Result, error) {
+	r.initBootstrapCluster(log)
+
+	return phases.ReconcilePhases(ctx, log, obj,
+		[]phases.ReconcilePhase{
+			r.BootstrapClusterReconciler.DeleteAKO,
 		},
 	)
 }

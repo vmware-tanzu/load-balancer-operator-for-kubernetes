@@ -5,7 +5,6 @@ package phases
 
 import (
 	"context"
-
 	"github.com/go-logr/logr"
 
 	"github.com/pkg/errors"
@@ -145,7 +144,12 @@ func ListAkoDeplymentConfigDeployedClusters(ctx context.Context, kclient client.
 	var newItems []clusterv1.Cluster
 	for _, c := range clusters.Items {
 		if !handlers.SkipCluster(&c) {
-			newItems = append(newItems, c)
+			// workload cluster can be selected by any akodeploymentconfig
+			// management cluster can only be selected by management cluster akodeploymentconfig
+			if c.Namespace != akoov1alpha1.TKGSystemNamespace ||
+				(c.Namespace == akoov1alpha1.TKGSystemNamespace && obj.Name == akoov1alpha1.ManagementClusterAkoDeploymentConfig) {
+				newItems = append(newItems, c)
+			}
 		}
 	}
 	clusters.Items = newItems

@@ -5,18 +5,24 @@ package cluster
 
 import (
 	"context"
+	"github.com/pkg/errors"
+	ako_operator "gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako-operator"
+	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime/handlers"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/cluster-api/util/patch"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	clustereaddonv1alpha3 "sigs.k8s.io/cluster-api/exp/addons/api/v1alpha3"
 
 	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
+	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/haprovider"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
-	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -28,13 +34,19 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		// Watch Cluster resources.
 		For(&clusterv1.Cluster{}).
+		Watches(
+			&source.Kind{Type: &corev1.Service{}},
+			&handler.EnqueueRequestsFromMapFunc{
+				ToRequests: handlers.ClusterForService(r.Client, r.Log),
+			}).
 		Complete(r)
 }
 
 type ClusterReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Log        logr.Logger
+	Scheme     *runtime.Scheme
+	Haprovider *haprovider.HAProvider
 }
 
 func (r *ClusterReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, reterr error) {
@@ -52,15 +64,6 @@ func (r *ClusterReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, reterr e
 		return res, err
 	}
 
-	log = log.WithValues("Cluster", cluster.Namespace+"/"+cluster.Name)
-
-	if _, exist := cluster.Labels[akoov1alpha1.AviClusterLabel]; !exist {
-		log.Info("Cluster doesn't have AVI enabled, skip Cluster reconciling")
-		return res, nil
-	}
-
-	log.Info("Cluster has AVI enabled, start Cluster reconciling")
-
 	// Always Patch when exiting this function so changes to the resource are updated on the API server.
 	patchHelper, err := patch.NewHelper(cluster, r.Client)
 	if err != nil {
@@ -76,6 +79,26 @@ func (r *ClusterReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, reterr e
 		}
 	}()
 
+	if ako_operator.IsHAProvider() {
+		log.Info("AVI is control plane HA provider")
+		r.Haprovider = haprovider.NewProvider(r.Client, r.Log)
+		if err = r.Haprovider.CreateOrUpdateHAService(ctx, cluster); err != nil {
+			log.Error(err, "Fail to reconcile HA service")
+			return res, err
+		}
+		if ako_operator.IsBootStrapCluster() {
+			return res, nil
+		}
+	}
+
+	log = log.WithValues("Cluster", cluster.Namespace+"/"+cluster.Name)
+
+	if _, exist := cluster.Labels[akoov1alpha1.AviClusterLabel]; !exist {
+		log.Info("Cluster doesn't have AVI enabled, skip Cluster reconciling")
+		return res, nil
+	}
+
+	log.Info("Cluster has AVI enabled, start Cluster reconciling")
 	// Getting all akodeploymentconfigs
 	var akoDeploymentConfigs akoov1alpha1.AKODeploymentConfigList
 	if err := r.Client.List(ctx, &akoDeploymentConfigs); err != nil {

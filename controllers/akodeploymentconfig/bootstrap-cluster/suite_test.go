@@ -35,5 +35,4 @@ func intgTests() {
 }
 
 func unitTests() {
-	Describe("Bootstrap cluster AKO Deployment Spec generation", unitTestAKODeploymentYaml)
 }

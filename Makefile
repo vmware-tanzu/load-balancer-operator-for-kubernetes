@@ -78,6 +78,7 @@ integration-test: $(GINKGO) $(ETCD)
 	$(GINKGO) -v controllers/akodeploymentconfig/user -- -enable-integration-tests -enable-unit-tests=false -root-dir="../../.."
 	$(GINKGO) -v controllers/akodeploymentconfig -- -enable-integration-tests -enable-unit-tests=false
 	$(GINKGO) -v controllers/machine -- -enable-integration-tests -enable-unit-tests=false
+	$(GINKGO) -v controllers/cluster -- -enable-integration-tests -enable-unit-tests=false
 
 .PHONY: kind-e2e-test
 kind-e2e-test: $(KUSTOMIZE) $(KIND) $(KUBECTL) $(JQ) $(YTT)

@@ -128,11 +128,11 @@ func (r *AKODeploymentConfigReconciler) reconcileNormal(
 		ctrlutil.AddFinalizer(obj, akoov1alpha1.AkoDeploymentConfigFinalizer)
 	}
 
-	reconcilePhases := []phases.ReconcilePhase{r.reconcileAVI}
+	var reconcilePhases []phases.ReconcilePhase
 	if akoo.IsBootStrapCluster() {
-		reconcilePhases = append(reconcilePhases, r.reconcileBootstrapCluster)
+		reconcilePhases = []phases.ReconcilePhase{r.reconcileBootstrapCluster}
 	} else {
-		reconcilePhases = append(reconcilePhases, r.reconcileClusters)
+		reconcilePhases = []phases.ReconcilePhase{r.reconcileAVI, r.reconcileClusters}
 	}
 
 	return phases.ReconcilePhases(ctx, log, obj, reconcilePhases)
@@ -159,8 +159,10 @@ func (r *AKODeploymentConfigReconciler) reconcileDelete(
 	}()
 
 	var reconcilePhases []phases.ReconcilePhase
-	if !akoo.IsBootStrapCluster() {
-		reconcilePhases = append(reconcilePhases, r.reconcileClustersDelete, r.reconcileAVIDelete)
+	if akoo.IsBootStrapCluster() {
+		reconcilePhases = []phases.ReconcilePhase{r.reconcileBootstrapClusterDelete}
+	} else {
+		reconcilePhases = []phases.ReconcilePhase{r.reconcileClustersDelete, r.reconcileAVIDelete}
 	}
 	return phases.ReconcilePhases(ctx, log, obj, reconcilePhases)
 }

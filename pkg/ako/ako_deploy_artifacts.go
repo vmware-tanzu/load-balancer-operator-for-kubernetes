@@ -37,6 +37,7 @@ data:
   defaultIngController: "{{ .Values.L7Settings.DefaultIngController }}"
   shardVSSize: "{{ .Values.L7Settings.ShardVSSize }}"
   deleteConfig: "{{ .Values.AKOSettings.DeleteConfig }}"
+  vipNetworkList: "[]"
   {{ if .Values.NetworkSettings.NodeNetworkListJson }}
   nodeNetworkList: |-
     {{ .Values.NetworkSettings.NodeNetworkListJson }}
@@ -86,7 +87,7 @@ metadata:
 rules:
   - apiGroups: [""]
     resources: ["*"]
-    verbs: ['get', 'watch', 'list']
+    verbs: ['get', 'watch', 'list', 'patch']
   - apiGroups: ["apps"]
     resources: ["statefulsets"]
     verbs: ["get","watch","list"]
@@ -109,7 +110,7 @@ rules:
     resources: ["routes", "routes/status"]
     verbs: ["get", "watch", "list", "patch", "update"]
   - apiGroups: ["ako.vmware.com"]
-    resources: ["hostrules", "hostrules/status", "httprules", "httprules/status"]
+    resources: ["aviinfrasettings", "aviinfrasettings/status", "hostrules", "hostrules/status", "httprules", "httprules/status"]
     verbs: ["get","watch","list","patch", "update"]
   - apiGroups: ["networking.x-k8s.io"]
     resources: ["gateways", "gateways/status", "gatewayclasses", "gatewayclasses/status"]
@@ -238,6 +239,11 @@ spec:
               configMapKeyRef:
                 name: avi-k8s-config
                 key: subnetPrefix
+          - name: VIP_NETWORK_LIST
+            valueFrom:
+              configMapKeyRef:
+                name: avi-k8s-config
+                key: vipNetworkList
           - name: DEFAULT_ING_CONTROLLER
             valueFrom:
               configMapKeyRef:
@@ -542,6 +548,80 @@ spec:
       name: HOST
       type: string
     - description: status of the httprule object
+      jsonPath: .status.status
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: aviinfrasettings.ako.vmware.com
+spec:
+  conversion:
+    strategy: None
+  group: ako.vmware.com
+  names:
+    kind: AviInfraSetting
+    listKind: AviInfraSettingList
+    plural: aviinfrasettings
+    singular: aviinfrasetting
+  scope: Cluster
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: AviInfraSetting is used to select specific Avi controller infra attributes.
+        properties:
+          spec:
+            properties:
+              network:
+                properties:
+                  names:
+                    items:
+                      type: string
+                    type: array
+                  enableRhi:
+                    type: boolean
+                type: object
+                required:
+                - names
+              seGroup:
+                properties:
+                  name:
+                    type: string
+                type: object
+                required:
+                - name
+              l7Settings:
+                properties:
+                  shardSize:
+                    enum:
+                    - SMALL
+                    - MEDIUM
+                    - LARGE
+                    - DEDICATED
+                    type: string
+                type: object
+                required:
+                - shardSize
+            type: object
+          status:
+            properties:
+              error:
+                type: string
+              status:
+                type: string
+            type: object
+        type: object
+    additionalPrinterColumns:
+    - description: status of the nas object
       jsonPath: .status.status
       name: Status
       type: string

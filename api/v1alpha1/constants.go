@@ -8,8 +8,9 @@ import (
 )
 
 const (
-	TKGSystemNamespace  = "tkg-system"
-	TKGClusterNameLabel = "tkg.tanzu.vmware.com/cluster-name"
+	TKGSystemNamespace       = "tkg-system"
+	TKGClusterNameLabel      = "tkg.tanzu.vmware.com/cluster-name"
+	TKGClusterNameSpaceLabel = "tkg.tanzu.vmware.com/cluster-namespace"
 
 	ManagementClusterAkoDeploymentConfig = "install-ako-for-management-cluster"
 
@@ -30,4 +31,9 @@ const (
 	AviResourceCleanupSucceededCondition clusterv1.ConditionType = "AviResourceCleanupSucceeded"
 	AviUserCleanupSucceededCondition     clusterv1.ConditionType = "AviUserCleanupSucceeded"
 	PreTerminateAnnotation                                       = clusterv1.PreTerminateDeleteHookAnnotationPrefix + "/avi-cleanup"
+
+	HAServiceName                      = "control-plane-ha-lb"
+	HAServiceBootstrapClusterFinalizer = "ako-operator.networking.tkg.tanzu.vmware.com/ha"
+	HAServiceAnnotationsKey            = "skipnodeport.ako.vmware.com/enabled"
+	ClusterControlPlaneAnnotations     = "tkg.tanzu.vmware.com/cluster-controlplane-endpoint"
 )

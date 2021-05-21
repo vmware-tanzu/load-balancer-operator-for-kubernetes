@@ -5,10 +5,12 @@ package machine
 
 import (
 	"context"
+	ako_operator "gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako-operator"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
+	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/haprovider"
 
 	controllerruntime "gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime"
 	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime/handlers"
@@ -41,8 +43,9 @@ func (r *MachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 type MachineReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Log        logr.Logger
+	Scheme     *runtime.Scheme
+	Haprovider *haprovider.HAProvider
 }
 
 func (r *MachineReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, reterr error) {
@@ -74,6 +77,17 @@ func (r *MachineReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, reterr e
 			log.Error(err, "patch failed")
 		}
 	}()
+
+	if ako_operator.IsHAProvider() {
+		r.Haprovider = haprovider.NewProvider(r.Client, log)
+		if err = r.Haprovider.CreateOrUpdateHAEndpoints(ctx, obj); err != nil {
+			log.Error(err, "Fail to reconcile HA endpoint")
+			return res, err
+		}
+		if ako_operator.IsBootStrapCluster() {
+			return res, nil
+		}
+	}
 
 	// Get the name of the cluster to which the current machine belongs
 	clusterName, exist := obj.Labels[clusterv1.ClusterLabelName]
