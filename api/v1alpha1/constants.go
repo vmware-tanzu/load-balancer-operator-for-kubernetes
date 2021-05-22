@@ -32,7 +32,7 @@ const (
 	AviUserCleanupSucceededCondition     clusterv1.ConditionType = "AviUserCleanupSucceeded"
 	PreTerminateAnnotation                                       = clusterv1.PreTerminateDeleteHookAnnotationPrefix + "/avi-cleanup"
 
-	HAServiceName                      = "control-plane-ha-lb"
+	HAServiceName                      = "control-plane"
 	HAServiceBootstrapClusterFinalizer = "ako-operator.networking.tkg.tanzu.vmware.com/ha"
 	HAServiceAnnotationsKey            = "skipnodeport.ako.vmware.com/enabled"
 	ClusterControlPlaneAnnotations     = "tkg.tanzu.vmware.com/cluster-controlplane-endpoint"
