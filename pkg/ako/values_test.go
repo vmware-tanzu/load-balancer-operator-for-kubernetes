@@ -29,6 +29,7 @@ var _ = Describe("AKO", func() {
 				value.Image.PullPolicy:                          akoDeploymentConfig.Spec.ExtraConfigs.Image.PullPolicy,
 				value.Image.Version:                             akoDeploymentConfig.Spec.ExtraConfigs.Image.Version,
 				value.AKOSettings.ClusterName:                   "test",
+				value.AKOSettings.CniPlugin:                     akoDeploymentConfig.Spec.ExtraConfigs.CniPlugin,
 				value.ControllerSettings.CloudName:              akoDeploymentConfig.Spec.CloudName,
 				value.ControllerSettings.ControllerIP:           akoDeploymentConfig.Spec.Controller,
 				value.ControllerSettings.ServiceEngineGroupName: akoDeploymentConfig.Spec.ServiceEngineGroup,
@@ -106,6 +107,7 @@ var _ = Describe("AKO", func() {
 								},
 							},
 							DisableStaticRouteSync: true,
+							CniPlugin:              "antrea",
 						},
 					},
 				}

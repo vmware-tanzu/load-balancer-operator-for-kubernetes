@@ -129,6 +129,9 @@ spec:
               extraConfigs:
                 description: ExtraConfigs contains extra configurations for AKO Deployment
                 properties:
+                  cniPlugin:
+                    description: 'CniPlugin describes which cni plugin cluster is using. default value should be antrea, set this string if cluster cni is other type. enum: calico|canal|flannel|openshift|antrea'
+                    type: string
                   disableStaticRouteSync:
                     description: DisableStaticRouteSync describes ako should sync static routing or not. If the POD networks are reachable from the Avi SE, this should be to true. Otherwise, it should be false. It would be true by default.
                     type: boolean

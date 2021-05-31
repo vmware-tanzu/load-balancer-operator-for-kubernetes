@@ -42,16 +42,16 @@ data:
   nodeNetworkList: |-
     {{ .Values.NetworkSettings.NodeNetworkListJson }}
   {{ end }}
+  {{ if .Values.AKOSettings.CniPlugin }}
+  cniPlugin: "{{ .Values.AKOSettings.CniPlugin }}"
+  {{ end }}
   {{/* The following fields in .Values.ControllerSettings are omitted:
           1. controllerVersion: because we don't consider backward compatibility in Calgary so
 	     there is no explicit intention to set it;
              controllerVersion: "{{ .Values.ControllerSettings.ControllerVersion }}"
   */}}
-  {{/* The following fields in .Values.AKOSettings are omitted:
-          1. cniPlugin
-	     cniPlugin: "{{ .Values.AKOSettings.CniPlugin }}"
-       The following fields are used:
-          1. disableStaticRouteSync
+  {{/* The following fields in .Values.AKOSettings are used:
+      1. disableStaticRouteSync
 	  2. deleteConfig
 	  3. fullSyncFrequency
   */}}

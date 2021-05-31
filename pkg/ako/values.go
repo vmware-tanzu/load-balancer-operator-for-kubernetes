@@ -196,7 +196,7 @@ func PopulateValues(obj *akoov1alpha1.AKODeploymentConfig, clusterNameSpacedName
 	values.Image.Version = obj.Spec.ExtraConfigs.Image.Version
 
 	values.AKOSettings.ClusterName = clusterNameSpacedName
-
+	values.AKOSettings.CniPlugin = obj.Spec.ExtraConfigs.CniPlugin
 	values.AKOSettings.DisableStaticRouteSync = obj.Spec.ExtraConfigs.DisableStaticRouteSync
 
 	values.ControllerSettings.CloudName = obj.Spec.CloudName

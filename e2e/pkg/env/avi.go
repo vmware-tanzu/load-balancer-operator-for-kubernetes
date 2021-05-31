@@ -8,8 +8,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/aviclient"
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
+	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/aviclient"
 )
 
 func NewAviRunner(runner *KubectlRunner) aviclient.Client {

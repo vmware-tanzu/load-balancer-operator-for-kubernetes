@@ -111,6 +111,12 @@ type ExtraConfigs struct {
 	// It would be true by default.
 	// +optional
 	DisableStaticRouteSync bool `json:"disableStaticRouteSync,omitempty"`
+
+	// CniPlugin describes which cni plugin cluster is using.
+	// default value should be antrea, set this string if cluster cni is other type.
+	// enum: calico|canal|flannel|openshift|antrea
+	// +optional
+	CniPlugin string `json:"cniPlugin,omitempty"`
 }
 
 // AKOIngressConfig contains ingress configurations for AKO Deployment
