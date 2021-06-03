@@ -61,6 +61,8 @@ type NetworkSettings struct {
 	NetworkName         string // Network Name of the vip network
 	NodeNetworkList     []v1alpha1.NodeNetwork
 	NodeNetworkListJson string
+	VIPNetworkList      []v1alpha1.NodeNetwork
+	VIPNetworkListJson  string
 }
 
 // This section outlines all the knobs  used to control Layer 7 loadbalancing settings in AKO.

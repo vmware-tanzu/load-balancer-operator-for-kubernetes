@@ -13,7 +13,7 @@ import (
 )
 
 func unitTestAKODeploymentYaml() {
-	Context("PopluateValues", func() {
+	Context("PopulateValues", func() {
 		var (
 			akoDeploymentConfig *akoov1alpha1.AKODeploymentConfig
 			capicluster         *clusterv1.Cluster
@@ -71,13 +71,13 @@ func unitTestAKODeploymentYaml() {
 			})
 
 			It("should populate correct values in crs yaml", func() {
-				_, err := cluster.AKODeploymentYaml(akoDeploymentConfig, capicluster)
+				_, err := cluster.AkoAddonSecretYaml(capicluster, akoDeploymentConfig)
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
 			It("should throw error if template not match", func() {
 				akoDeploymentConfig.Spec.DataNetwork.CIDR = "test"
-				_, err := cluster.AKODeploymentYaml(akoDeploymentConfig, capicluster)
+				_, err := cluster.AkoAddonSecretYaml(capicluster, akoDeploymentConfig)
 				Expect(err).Should(HaveOccurred())
 				akoDeploymentConfig.Spec.DataNetwork.CIDR = "10.0.0.0/24"
 			})

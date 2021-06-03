@@ -12,6 +12,13 @@ const (
 	TKGClusterNameLabel      = "tkg.tanzu.vmware.com/cluster-name"
 	TKGClusterNameSpaceLabel = "tkg.tanzu.vmware.com/cluster-namespace"
 
+	TKGAddonAnnotationKey       = "tkg.tanzu.vmware.com/addon-type"
+	TKGAddOnLabelAddonNameKey   = "tkg.tanzu.vmware.com/addon-name"
+	TKGAddOnLabelClusterNameKey = "tkg.tanzu.vmware.com/cluster-name"
+	TKGAddOnLabelClusterctlKey  = "clusterctl.cluster.x-k8s.io/move"
+	TKGAddOnSecretType          = "tkg.tanzu.vmware.com/addon"
+	TKGAddOnSecretDataKey       = "values.yaml"
+
 	ManagementClusterAkoDeploymentConfig = "install-ako-for-management-cluster"
 
 	AkoUserRoleName              = "ako-essential-role"

@@ -13,8 +13,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	clustereaddonv1alpha3 "sigs.k8s.io/cluster-api/exp/addons/api/v1alpha3"
-
 	"github.com/go-logr/logr"
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/haprovider"
@@ -120,9 +118,9 @@ func (r *ClusterReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, reterr e
 	log.Info("Removing finalizer", "finalizer", akoov1alpha1.ClusterFinalizer)
 	ctrlutil.RemoveFinalizer(cluster, akoov1alpha1.ClusterFinalizer)
 
-	// Removing crs and its associated resources for a AKO
-	if _, err := r.deleteCRS(ctx, log, cluster); err != nil {
-		log.Error(err, "Failed to remove crs", cluster.Name)
+	// Removing add on secret and its associated resources for a AKO
+	if _, err := r.deleteAddonSecret(ctx, log, cluster); err != nil {
+		log.Error(err, "Failed to remove secret", cluster.Name)
 		return res, err
 	}
 
@@ -132,38 +130,34 @@ func (r *ClusterReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, reterr e
 	return res, nil
 }
 
-// deleteCRS delete cluster related crs
-func (r *ClusterReconciler) deleteCRS(
+// deleteAddonSecret delete cluster related add on secret
+func (r *ClusterReconciler) deleteAddonSecret(
 	ctx context.Context,
 	log logr.Logger,
 	cluster *clusterv1.Cluster,
 ) (ctrl.Result, error) {
-	log.Info("Starts reconciling ClusterResourceSet deletion")
-
+	log.Info("Starts reconciling add on secret deletion")
 	res := ctrl.Result{}
-	crs := &clustereaddonv1alpha3.ClusterResourceSet{}
+	secret := &corev1.Secret{}
 	if err := r.Get(ctx, client.ObjectKey{
-		Name:      akoDeploymentCRSName(cluster),
+		Name:      r.akoAddonSecretName(cluster),
 		Namespace: cluster.Namespace,
-	}, crs); err != nil {
+	}, secret); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.V(3).Info("ClusterResourceSet is already deleted")
+			log.V(3).Info("add on secret is already deleted")
 			return res, nil
 		}
-		log.Error(err, "Failed to get ClusterResourceSet, requeue")
+		log.Error(err, "Failed to get add on secret, requeue")
 		return res, err
 	}
 
-	// CAPI CRS controller will remove ClusterResourceBinding and CRS's
-	// associated resources on our behalf, so deleting CRS is enough
-	if err := r.Delete(ctx, crs); err != nil {
-		log.Error(err, "Failed to delete ClusterResourceSet, requeue")
+	if err := r.Delete(ctx, secret); err != nil {
+		log.Error(err, "Failed to delete add on secret, requeue")
 		return res, err
 	}
-
 	return res, nil
 }
 
-func akoDeploymentCRSName(cluster *clusterv1.Cluster) string {
-	return cluster.Name + "-ako"
+func (r *ClusterReconciler) akoAddonSecretName(cluster *clusterv1.Cluster) string {
+	return cluster.Name + "-load-balancer-and-ingress-service-addon"
 }

@@ -14,7 +14,6 @@ import (
 	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/test/builder"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	clustereaddonv1alpha3 "sigs.k8s.io/cluster-api/exp/addons/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	kcfg "sigs.k8s.io/cluster-api/util/kubeconfig"
 
@@ -337,12 +336,12 @@ func intgTestAkoDeploymentConfigController() {
 					Namespace: cluster.Namespace,
 				}, true)
 
-				//Reconcile -> reconcileNormal -> reconcileClusters(normal phase) -> r.clusterReconciler.ReconcileCRS
-				By("should Reconcile Cluster CRS")
+				//Reconcile -> reconcileNormal -> reconcileClusters(normal phase) -> r.clusterReconciler.ReconcileAddonSecret
+				By("should Reconcile Cluster add-on secret")
 				ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-					Name:      cluster.Name + "-ako",
+					Name:      cluster.Name + "-load-balancer-and-ingress-service-addon",
 					Namespace: cluster.Namespace,
-				}, &clustereaddonv1alpha3.ClusterResourceSet{}, true)
+				}, &corev1.Secret{}, true)
 			})
 
 			When("akoDeploymentConfig and cluster are created", func() {
@@ -541,12 +540,12 @@ func intgTestAkoDeploymentConfigController() {
 								Namespace: cluster.Namespace,
 							}, false)
 						})
-						//Reconcile -> reconcileDelete -> reconcileClusters(normal phase) -> r.reconcileClustersDelete -> r.clusterReconciler.ReconcileCRSDelete
-						It("should remove Cluster CRS", func() {
+						//Reconcile -> reconcileDelete -> reconcileClusters(normal phase) -> r.reconcileClustersDelete -> r.clusterReconciler.ReconcileAddonSecretDelete
+						It("should remove add-on secret", func() {
 							ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-								Name:      cluster.Name + "-ako",
+								Name:      cluster.Name + "-load-balancer-and-ingress-service-addon",
 								Namespace: cluster.Namespace,
-							}, &clustereaddonv1alpha3.ClusterResourceSet{}, false)
+							}, &corev1.Secret{}, false)
 						})
 					})
 
@@ -559,12 +558,12 @@ func intgTestAkoDeploymentConfigController() {
 							}, &clusterv1.Cluster{}, false)
 						})
 
-						//Reconcile -> reconcileDelete -> r.reconcileClustersDelete -> r.clusterReconciler.ReconcileCRSDelete
-						It("should remove Cluster CRS", func() {
+						//Reconcile -> reconcileDelete -> r.reconcileClustersDelete -> r.clusterReconciler.ReconcileAddonSecretDelete
+						It("should remove Cluster Add-on Secret", func() {
 							ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-								Name:      cluster.Name + "-ako",
+								Name:      cluster.Name + "-load-balancer-and-ingress-service-addon",
 								Namespace: cluster.Namespace,
-							}, &clustereaddonv1alpha3.ClusterResourceSet{}, false)
+							}, &corev1.Secret{}, false)
 						})
 					})
 				})
