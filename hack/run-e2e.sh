@@ -1,6 +1,5 @@
 #!/bin/bash
-
-# Copyright (c) 2021 VMware, Inc. All Rights Reserved.
+# Copyright 2020 VMware, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 ################################################################################

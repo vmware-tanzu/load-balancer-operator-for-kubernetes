@@ -1,4 +1,4 @@
-// Copyright (c) 2020 VMware, Inc. All Rights Reserved.
+// Copyright 2020 VMware, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
 // This packages provides utilities to interact with AKO

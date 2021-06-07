@@ -1,3 +1,5 @@
+# Copyright 2021 VMware, Inc.
+# SPDX-License-Identifier: Apache-2.0
 IMAGE_REGISTRY ?= harbor-pks.vmware.com/tkgextensions
 IMAGE_TAG ?= $(shell git log -1 --format=%h)
 CACHE_IMAGE_REGISTRY ?= harbor-repo.vmware.com/dockerhub-proxy-cache
@@ -54,12 +56,16 @@ run: generate fmt vet manifests
 	go run ./main.go
 
 # Run go fmt against code
-fmt:
+fmt: header-check
 	go fmt ./...
 
 # Run go vet against code
 vet:
 	go vet ./...
+
+# Run header check against code
+header-check:
+	./hack/header-check.sh
 
 # Generate code
 generate: $(CONTROLLER_GEN)
@@ -82,7 +88,7 @@ integration-test: $(GINKGO) $(ETCD)
 
 .PHONY: kind-e2e-test
 kind-e2e-test: $(KUSTOMIZE) $(KIND) $(KUBECTL) $(JQ) $(YTT)
-	./hack/test_e2e.sh
+	./hack/test-e2e.sh
 
 .PHONY: ytt
 ytt: $(YTT)

@@ -1,11 +1,15 @@
+// Copyright 2021 VMware, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 package cluster_test
 
 import (
+	"os"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	ako_operator "gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako-operator"
 	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/test/builder"
-	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1 "k8s.io/api/core/v1"

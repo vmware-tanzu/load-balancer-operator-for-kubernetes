@@ -1,4 +1,4 @@
-// Copyright (c) 2021 VMware, Inc. All Rights Reserved.
+// Copyright 2021 VMware, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
 package ako

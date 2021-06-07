@@ -1,4 +1,6 @@
-# Copyright (C) 2020 VMware, Inc. All rights reserved.
+#!/bin/bash
+# Copyright 2021 VMware, Inc.
+# SPDX-License-Identifier: Apache-2.0
 
 # This script is used to prepare gobuild slave using
 # template linux-centos72-gc32 to install docker.
