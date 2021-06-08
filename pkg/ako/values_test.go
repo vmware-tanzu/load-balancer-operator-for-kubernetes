@@ -25,9 +25,10 @@ var _ = Describe("AKO", func() {
 
 		ensureValueIsExpected := func(value Values, akoDeploymentConfig *akoov1alpha1.AKODeploymentConfig) {
 			expectedPairs := map[string]string{
-				value.Image.Repository:                          akoDeploymentConfig.Spec.ExtraConfigs.Image.Repository,
+				value.Image.Repository:                          "test/image",
 				value.Image.PullPolicy:                          akoDeploymentConfig.Spec.ExtraConfigs.Image.PullPolicy,
 				value.Image.Version:                             akoDeploymentConfig.Spec.ExtraConfigs.Image.Version,
+				value.Image.Path:                                "ako",
 				value.AKOSettings.ClusterName:                   "test",
 				value.AKOSettings.CniPlugin:                     akoDeploymentConfig.Spec.ExtraConfigs.CniPlugin,
 				value.ControllerSettings.CloudName:              akoDeploymentConfig.Spec.CloudName,
@@ -81,7 +82,7 @@ var _ = Describe("AKO", func() {
 						},
 						ExtraConfigs: akoov1alpha1.ExtraConfigs{
 							Image: akoov1alpha1.AKOImageConfig{
-								Repository: "test/image",
+								Repository: "test/image/ako",
 								PullPolicy: "IfNotPresent",
 								Version:    "1.3.1",
 							},

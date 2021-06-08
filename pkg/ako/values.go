@@ -5,10 +5,12 @@ package ako
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net"
 	"strconv"
+	"strings"
 	"time"
 
 	"gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
@@ -41,6 +43,7 @@ type Image struct {
 	Repository string
 	PullPolicy string // enum: INFO|DEBUG|WARN|ERROR
 	Version    string
+	Path       string
 }
 
 type AKOSettings struct {
@@ -193,9 +196,15 @@ func PopulateValues(obj *akoov1alpha1.AKODeploymentConfig, clusterNameSpacedName
 
 	SetDefaultValues(&values)
 
-	values.Image.Repository = obj.Spec.ExtraConfigs.Image.Repository
+	imageInfo := strings.Split(obj.Spec.ExtraConfigs.Image.Repository, "/")
+	if len(imageInfo) == 0 {
+		return values, errors.New("configured incorrect AKO image path")
+	}
+
+	values.Image.Repository = strings.Join(imageInfo[:len(imageInfo)-1], "/")
 	values.Image.PullPolicy = obj.Spec.ExtraConfigs.Image.PullPolicy
 	values.Image.Version = obj.Spec.ExtraConfigs.Image.Version
+	values.Image.Path = imageInfo[len(imageInfo)-1]
 
 	values.AKOSettings.ClusterName = clusterNameSpacedName
 	values.AKOSettings.CniPlugin = obj.Spec.ExtraConfigs.CniPlugin

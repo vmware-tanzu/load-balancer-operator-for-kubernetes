@@ -25,16 +25,19 @@ var (
 #@data/values
 #@overlay/match-child-defaults missing_ok=True
 ---
+imageInfo:
+  imageRepository: {{ .Values.Image.Repository }}
+  imagePullPolicy: {{ .Values.Image.PullPolicy }}
+  images:
+    loadBalancerAndIngressServiceImage:
+      imagePath: {{ .Values.Image.Path }}
+      tag: {{ .Values.Image.Version }}
 loadBalancerAndIngressService:
   name: {{ .Values.Name }}
   namespace: {{ .Values.Namespace }}
   config:
     is_cluster_service: {{ .Values.IsClusterService }}
     replica_count: {{ .Values.ReplicaCount }}
-    image_settings:
-      repository: {{ .Values.Image.Repository }}
-      pull_policy: {{ .Values.Image.PullPolicy }}
-      version: {{ .Values.Image.Version }}
     ako_settings:
       log_level: {{ .Values.AKOSettings.LogLevel }}
       full_sync_frequency: {{ .Values.AKOSettings.FullSyncFrequency }}

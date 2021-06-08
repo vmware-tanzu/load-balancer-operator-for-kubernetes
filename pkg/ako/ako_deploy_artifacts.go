@@ -177,7 +177,7 @@ spec:
           - mountPath: {{ .Values.MountPath }}
             name: ako-pv-storage
           {{ end }}
-          image: "{{ .Values.Image.Repository }}:{{ .Values.Image.Version }}"
+          image: "{{ .Values.Image.Repository }}/{{ .Values.Image.Path }}:{{ .Values.Image.Version }}"
           imagePullPolicy: {{ .Values.Image.PullPolicy }}
           env:
           - name: CTRL_USERNAME
