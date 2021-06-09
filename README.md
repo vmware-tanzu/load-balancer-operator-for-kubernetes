@@ -7,8 +7,8 @@
 Load Balancer Operator for Kubernetes is a Cluster API speaking operator for AKO([AVI Kubernetes Operator](https://github.com/vmware/load-balancer-and-ingress-services-for-kubernetes)), which
 
 1. manages lifecycles of AKO
-   1. See [Getting started with AKO](https://confluence.eng.vmware.com/display/TKG/Getting+started+with+AKO) for the manual steps required nowadays for EACH TKG workload cluster;
-   2. AKO will be deployed automatically to the selected group of clusters
+   1. AKO will be deployed automatically to the selected group of clusters
+   2. AKO will also be upgraded automatically when AKO Operator is upgraded
 
 2. cleans up left behind resources on AVI when a workload cluster is deleted from the management cluster by "tkg delete cluster"
    1. This is necessary because AKO will be deleted together immediately with the cluster by the above command
@@ -27,10 +27,10 @@ We welcome new contributors to our repository. Following are the pre-requisties 
 you get started:
 
 - Before contributing, please get familiar with our
-[Code of Conduct](CODE_OF_CONDUCT.md).
+[Code of Conduct](CODE-OF-CONDUCT.md).
 - Check out our [Contributor Guide](CONTRIBUTING.md) for information
 about setting up your development environment and our contribution workflow.
 
 ## License
 
-Load Balancer Operator for Kubernetes is licensed under the [Apache License, version 2.0](LICENSE)
+Load Balancer Operator for Kubernetes is licensed under the [Apache License, version 2.0](LICENSE.txt)
