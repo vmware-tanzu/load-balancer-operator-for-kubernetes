@@ -20,10 +20,6 @@ spec:
               end: 10.161.136.42
               type: V4
     extraConfigs:
-        image:
-            repository: harbor-pks.vmware.com/tkgextensions/tkg-networking/ako
-            pullPolicy: IfNotPresent
-            version: 2.1.1-5100
         disableIngressClass: true
 ---
 apiVersion: v1

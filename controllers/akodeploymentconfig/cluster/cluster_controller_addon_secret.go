@@ -25,13 +25,6 @@ var (
 #@data/values
 #@overlay/match-child-defaults missing_ok=True
 ---
-imageInfo:
-  imageRepository: {{ .Values.Image.Repository }}
-  imagePullPolicy: {{ .Values.Image.PullPolicy }}
-  images:
-    loadBalancerAndIngressServiceImage:
-      imagePath: {{ .Values.Image.Path }}
-      tag: {{ .Values.Image.Version }}
 loadBalancerAndIngressService:
   name: {{ .Values.Name }}
   namespace: {{ .Values.Namespace }}

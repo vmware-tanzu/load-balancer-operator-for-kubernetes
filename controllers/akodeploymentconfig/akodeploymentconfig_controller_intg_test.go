@@ -81,13 +81,7 @@ func intgTestAkoDeploymentConfigController() {
 				Name:      "controller-ca",
 				Namespace: "default",
 			},
-			ExtraConfigs: akoov1alpha1.ExtraConfigs{
-				Image: akoov1alpha1.AKOImageConfig{
-					Repository: "harbor-pks.vmware.com/tkgextensions/tkg-networking/ako",
-					PullPolicy: "IfNotPresent",
-					Version:    "1.3.2-75300bb1",
-				},
-			},
+			ExtraConfigs: akoov1alpha1.ExtraConfigs{},
 		},
 	}
 

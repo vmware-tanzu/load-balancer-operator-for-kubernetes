@@ -89,10 +89,6 @@ type AKODeploymentConfigSpec struct {
 
 // ExtraConfigs contains extra configurations for AKO Deployment
 type ExtraConfigs struct {
-	// Image specifies the configuration for AKO docker image
-	// +optional
-	Image AKOImageConfig `json:"image,omitempty"`
-
 	// Log specifies the configuration for AKO logging
 	// +optional
 	Log AKOLogConfig `json:"log,omitempty"`
@@ -159,20 +155,6 @@ type NodeNetwork struct {
 	// Cidrs represents all the IP CIDRs in this network
 	// +optional
 	Cidrs []string `json:"cidrs,omitempty"`
-}
-
-type AKOImageConfig struct {
-	// Repository is the AKO Docker image repository
-	// +optional
-	Repository string `json:"repository,omitempty"`
-
-	// Version is the AKO Docker image version
-	// +optional
-	Version string `json:"version,omitempty"`
-
-	// +kubebuilder:validation:Enum=Always;Never;IfNotPresent
-	// +optional
-	PullPolicy string `json:"pullPolicy,omitempty"`
 }
 
 type AKOLogConfig struct {

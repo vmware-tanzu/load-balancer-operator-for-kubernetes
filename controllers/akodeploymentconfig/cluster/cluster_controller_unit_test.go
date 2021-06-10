@@ -38,11 +38,6 @@ func unitTestAKODeploymentYaml() {
 							CIDR: "10.0.0.0/24",
 						},
 						ExtraConfigs: akoov1alpha1.ExtraConfigs{
-							Image: akoov1alpha1.AKOImageConfig{
-								Repository: "test/image",
-								PullPolicy: "IfNotPresent",
-								Version:    "1.3.1",
-							},
 							Rbac: akoov1alpha1.AKORbacConfig{
 								PspEnabled:          true,
 								PspPolicyAPIVersion: "test/1.2",

@@ -135,22 +135,6 @@ spec:
                   disableStaticRouteSync:
                     description: DisableStaticRouteSync describes ako should sync static routing or not. If the POD networks are reachable from the Avi SE, this should be to true. Otherwise, it should be false. It would be true by default.
                     type: boolean
-                  image:
-                    description: Image specifies the configuration for AKO docker image
-                    properties:
-                      pullPolicy:
-                        enum:
-                        - Always
-                        - Never
-                        - IfNotPresent
-                        type: string
-                      repository:
-                        description: Repository is the AKO Docker image repository
-                        type: string
-                      version:
-                        description: Version is the AKO Docker image version
-                        type: string
-                    type: object
                   ingress:
                     description: IngressConfigs specifies ingress configuration for ako
                     properties:
