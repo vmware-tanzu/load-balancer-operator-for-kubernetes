@@ -95,7 +95,7 @@ func (r *HAProvider) createService(
 			Type: corev1.ServiceTypeLoadBalancer,
 			Ports: []corev1.ServicePort{{
 				Protocol:   "TCP",
-				Port:       6443,
+				Port:       ako_operator.GetControlPlaneEndpointPort(),
 				TargetPort: intstr.FromInt(int(6443)),
 			},
 			},
@@ -129,7 +129,7 @@ func (r *HAProvider) updateClusterControlPlaneEndpoint(cluster *clusterv1.Cluste
 	ingress := service.Status.LoadBalancer.Ingress
 	if len(ingress) > 0 && net.ParseIP(ingress[0].IP) != nil {
 		cluster.Spec.ControlPlaneEndpoint.Host = service.Status.LoadBalancer.Ingress[0].IP
-		cluster.Spec.ControlPlaneEndpoint.Port = 6443
+		cluster.Spec.ControlPlaneEndpoint.Port = ako_operator.GetControlPlaneEndpointPort()
 		return nil
 	}
 	return errors.New(service.Name + " service external ip is not ready")

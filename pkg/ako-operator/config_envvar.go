@@ -3,7 +3,10 @@
 
 package ako_operator
 
-import "os"
+import (
+	"os"
+	"strconv"
+)
 
 // Environment variables
 const (
@@ -15,6 +18,9 @@ const (
 
 	// ManagementClusterName - defines the management cluster name ako operator running in
 	ManagementClusterName = "tkg_management_cluster_name"
+
+	// ControlPlaneEndpointPort - defines the control plane endpoint port
+	ControlPlaneEndpointPort = "control_plane_endpoint_port"
 )
 
 func IsBootStrapCluster() bool {
@@ -23,4 +29,12 @@ func IsBootStrapCluster() bool {
 
 func IsHAProvider() bool {
 	return os.Getenv(IsControlPlaneHAProvider) == "True"
+}
+
+func GetControlPlaneEndpointPort() int32 {
+	port, err := strconv.Atoi(os.Getenv(ControlPlaneEndpointPort))
+	if err != nil || port <= 0 {
+		return 6443
+	}
+	return int32(port)
 }
