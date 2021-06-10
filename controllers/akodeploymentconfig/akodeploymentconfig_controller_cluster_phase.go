@@ -5,10 +5,10 @@ package akodeploymentconfig
 
 import (
 	"context"
-
 	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/cluster"
 	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/phases"
 	controllerruntime "gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
 
@@ -91,7 +91,14 @@ func (r *AKODeploymentConfigReconciler) applyClusterLabel(
 		log.Info("Adding label to cluster", "label", akoov1alpha1.AviClusterLabel)
 	} else {
 		log.Info("Label already applied to cluster", "label", akoov1alpha1.AviClusterLabel)
-
+	}
+	selector, err := metav1.LabelSelectorAsSelector(&obj.Spec.ClusterSelector)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	// cluster selected by AKODeploymentConfig with selectors
+	if !selector.Empty() {
+		cluster.Labels[akoov1alpha1.AviClusterSelectedLabel] = ""
 	}
 	// Always set avi label on managed cluster
 	cluster.Labels[akoov1alpha1.AviClusterLabel] = ""
@@ -111,6 +118,7 @@ func (r *AKODeploymentConfigReconciler) removeClusterLabel(
 	}
 	// Always deletes avi label on managed cluster
 	delete(cluster.Labels, akoov1alpha1.AviClusterLabel)
+	delete(cluster.Labels, akoov1alpha1.AviClusterSelectedLabel)
 	return ctrl.Result{}, nil
 }
 

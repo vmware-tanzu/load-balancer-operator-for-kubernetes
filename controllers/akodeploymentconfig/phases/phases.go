@@ -144,12 +144,19 @@ func ListAkoDeplymentConfigDeployedClusters(ctx context.Context, kclient client.
 	var newItems []clusterv1.Cluster
 	for _, c := range clusters.Items {
 		if !handlers.SkipCluster(&c) {
-			// workload cluster can be selected by any akodeploymentconfig
-			// management cluster can only be selected by management cluster akodeploymentconfig
-			if c.Namespace != akoov1alpha1.TKGSystemNamespace ||
-				(c.Namespace == akoov1alpha1.TKGSystemNamespace && obj.Name == akoov1alpha1.ManagementClusterAkoDeploymentConfig) {
-				newItems = append(newItems, c)
+			_, selected := c.Labels[akoov1alpha1.AviClusterSelectedLabel]
+			// when cluster selected by non-default AKODeploymentConfig,
+			// skip default select all AKODeploymentConfig
+			if selector.Empty() && selected {
+				continue
 			}
+			// management cluster can't be selected by other AKODeploymentConfig
+			// instead of management cluster AKODeploymentConfig
+			if c.Namespace == akoov1alpha1.TKGSystemNamespace &&
+				obj.Name != akoov1alpha1.ManagementClusterAkoDeploymentConfig {
+				continue
+			}
+			newItems = append(newItems, c)
 		}
 	}
 	clusters.Items = newItems
