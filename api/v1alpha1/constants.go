@@ -30,6 +30,7 @@ const (
 
 	AVI_VERSION                                                  = "20.1.3"
 	AviClusterLabel                                              = "networking.tkg.tanzu.vmware.com/avi"
+	AviClusterSelectedLabel                                      = "networking.tkg.tanzu.vmware.com/avi-skip-default-adc"
 	AviClusterSecretType                                         = "avi.cluster.x-k8s.io/secret"
 	AviSecretName                                                = "avi-secret"
 	AviNamespace                                                 = "avi-system"
