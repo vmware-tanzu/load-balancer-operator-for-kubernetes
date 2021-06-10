@@ -252,7 +252,7 @@ type AKODeploymentConfigStatus struct {
 }
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:path=akodeploymentconfigs,scope=Cluster
+// +kubebuilder:resource:shortName=adc,path=akodeploymentconfigs,scope=Cluster
 // +kubebuilder:subresource:status
 
 // AKODeploymentConfig is the Schema for the akodeploymentconfigs API
