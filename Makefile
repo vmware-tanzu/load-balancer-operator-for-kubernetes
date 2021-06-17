@@ -1,6 +1,6 @@
 # Copyright 2021 VMware, Inc.
 # SPDX-License-Identifier: Apache-2.0
-IMAGE_REGISTRY ?= harbor-pks.vmware.com/tkgextensions
+IMAGE_REGISTRY ?= harbor-repo.vmware.com/tanzu_ako_operator_dev
 IMAGE_TAG ?= $(shell git log -1 --format=%h)
 CACHE_IMAGE_REGISTRY ?= harbor-repo.vmware.com/dockerhub-proxy-cache
 # Image URL to use all building/pushing image targets
