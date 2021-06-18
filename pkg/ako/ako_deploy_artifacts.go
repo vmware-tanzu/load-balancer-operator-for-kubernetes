@@ -37,7 +37,8 @@ data:
   defaultIngController: "{{ .Values.L7Settings.DefaultIngController }}"
   shardVSSize: "{{ .Values.L7Settings.ShardVSSize }}"
   deleteConfig: "{{ .Values.AKOSettings.DeleteConfig }}"
-  vipNetworkList: "[]"
+  vip_network_list: |-
+    {{ .Values.NetworkSettings.VIPNetworkListJson }}
   {{ if .Values.NetworkSettings.NodeNetworkListJson }}
   nodeNetworkList: |-
     {{ .Values.NetworkSettings.NodeNetworkListJson }}

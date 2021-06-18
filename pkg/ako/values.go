@@ -64,7 +64,7 @@ type NetworkSettings struct {
 	NetworkName         string // Network Name of the vip network
 	NodeNetworkList     []v1alpha1.NodeNetwork
 	NodeNetworkListJson string
-	VIPNetworkList      []v1alpha1.NodeNetwork
+	VIPNetworkList      []string
 	VIPNetworkListJson  string
 }
 
@@ -224,6 +224,7 @@ func PopulateValues(obj *akoov1alpha1.AKODeploymentConfig, clusterNameSpacedName
 	ones, _ := ipnet.Mask.Size()
 	values.NetworkSettings.SubnetPrefix = strconv.Itoa(ones)
 	values.NetworkSettings.NodeNetworkList = obj.Spec.ExtraConfigs.IngressConfigs.NodeNetworkList
+	values.NetworkSettings.VIPNetworkList = []string{obj.Spec.DataNetwork.Name}
 
 	if len(values.NetworkSettings.NodeNetworkList) != 0 {
 		// preprocessing
@@ -232,6 +233,14 @@ func PopulateValues(obj *akoov1alpha1.AKODeploymentConfig, clusterNameSpacedName
 			return Values{}, jsonerr
 		}
 		values.NetworkSettings.NodeNetworkListJson = string(nodeNetworkListJson)
+	}
+
+	if len(values.NetworkSettings.VIPNetworkList) != 0 {
+		vipNetworkListJson, jsonerr := json.Marshal(values.NetworkSettings.VIPNetworkList)
+		if jsonerr != nil {
+			return Values{}, jsonerr
+		}
+		values.NetworkSettings.VIPNetworkListJson = string(vipNetworkListJson)
 	}
 
 	values.PersistentVolumeClaim = obj.Spec.ExtraConfigs.Log.PersistentVolumeClaim
