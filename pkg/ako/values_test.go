@@ -67,7 +67,7 @@ var _ = Describe("AKO", func() {
 			} else {
 				Expect(value.NetworkSettings.NodeNetworkListJson).Should(BeNil())
 			}
-			vipNetworkListJson, jsonerr := json.Marshal([]string{akoDeploymentConfig.Spec.DataNetwork.Name})
+			vipNetworkListJson, jsonerr := json.Marshal([]map[string]string{{"networkName": akoDeploymentConfig.Spec.DataNetwork.Name}})
 			Expect(jsonerr).ShouldNot(HaveOccurred())
 			Expect(value.NetworkSettings.VIPNetworkListJson).To(Equal(string(vipNetworkListJson)))
 		}

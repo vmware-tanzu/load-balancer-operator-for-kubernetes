@@ -64,7 +64,7 @@ type NetworkSettings struct {
 	NetworkName         string // Network Name of the vip network
 	NodeNetworkList     []v1alpha1.NodeNetwork
 	NodeNetworkListJson string
-	VIPNetworkList      []string
+	VIPNetworkList      []map[string]string
 	VIPNetworkListJson  string
 }
 
@@ -224,7 +224,7 @@ func PopulateValues(obj *akoov1alpha1.AKODeploymentConfig, clusterNameSpacedName
 	ones, _ := ipnet.Mask.Size()
 	values.NetworkSettings.SubnetPrefix = strconv.Itoa(ones)
 	values.NetworkSettings.NodeNetworkList = obj.Spec.ExtraConfigs.IngressConfigs.NodeNetworkList
-	values.NetworkSettings.VIPNetworkList = []string{obj.Spec.DataNetwork.Name}
+	values.NetworkSettings.VIPNetworkList = []map[string]string{{"networkName": obj.Spec.DataNetwork.Name}}
 
 	if len(values.NetworkSettings.NodeNetworkList) != 0 {
 		// preprocessing
