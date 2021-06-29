@@ -51,8 +51,8 @@ loadBalancerAndIngressService:
       subnet_ip: {{ .Values.NetworkSettings.SubnetIP }}
       subnet_prefix: {{ .Values.NetworkSettings.SubnetPrefix }}
       network_name: {{ .Values.NetworkSettings.NetworkName }}
-      node_network_list: {{ .Values.NetworkSettings.NodeNetworkListJson }}
-      vip_network_list: {{ .Values.NetworkSettings.VIPNetworkListJson }}
+      node_network_list: '{{ .Values.NetworkSettings.NodeNetworkListJson }}'
+      vip_network_list: '{{ .Values.NetworkSettings.VIPNetworkListJson }}'
     l7_settings:
       disable_ingress_class: {{ .Values.L7Settings.DisableIngressClass }}
       default_ing_controller: {{ .Values.L7Settings.DefaultIngController }}
