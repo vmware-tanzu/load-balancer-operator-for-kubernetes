@@ -5,6 +5,7 @@ package akodeploymentconfig
 
 import (
 	"context"
+
 	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/cluster"
 	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/phases"
 	controllerruntime "gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime"
@@ -130,7 +131,8 @@ func (r *AKODeploymentConfigReconciler) addClusterFinalizer(
 	cluster *clusterv1.Cluster,
 	obj *akoov1alpha1.AKODeploymentConfig,
 ) (ctrl.Result, error) {
-	if !controllerruntime.ContainsFinalizer(cluster, akoov1alpha1.ClusterFinalizer) {
+	if !controllerruntime.ContainsFinalizer(cluster, akoov1alpha1.ClusterFinalizer) &&
+		cluster.Namespace != akoov1alpha1.TKGSystemNamespace {
 		log.Info("Add finalizer to cluster", "finalizer", akoov1alpha1.ClusterFinalizer)
 		ctrlutil.AddFinalizer(cluster, akoov1alpha1.ClusterFinalizer)
 	}

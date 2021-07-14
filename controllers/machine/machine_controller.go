@@ -5,6 +5,7 @@ package machine
 
 import (
 	"context"
+
 	ako_operator "gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako-operator"
 
 	"github.com/go-logr/logr"
@@ -163,7 +164,9 @@ func (r *MachineReconciler) reconcileNormal(
 		if obj.Annotations == nil {
 			obj.Annotations = make(map[string]string)
 		}
-		obj.Annotations[akoov1alpha1.PreTerminateAnnotation] = "ako-operator"
+		if cluster.Namespace != akoov1alpha1.TKGSystemNamespace {
+			obj.Annotations[akoov1alpha1.PreTerminateAnnotation] = "ako-operator"
+		}
 	}
 
 	return ctrl.Result{}, nil

@@ -134,7 +134,6 @@ func (r *AKODeploymentConfigReconciler) reconcileNormal(
 	} else {
 		reconcilePhases = []phases.ReconcilePhase{r.reconcileAVI, r.reconcileClusters}
 	}
-
 	return phases.ReconcilePhases(ctx, log, obj, reconcilePhases)
 }
 
