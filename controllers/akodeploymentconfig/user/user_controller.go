@@ -99,6 +99,12 @@ func (r *AkoUserReconciler) reconcileAviUserDelete(
 ) (ctrl.Result, error) {
 	res := ctrl.Result{}
 
+	if cluster.Namespace == akoov1alpha1.TKGSystemNamespace {
+		log.Info("No need to clean admin user, skip")
+		conditions.MarkTrue(cluster, akoov1alpha1.AviUserCleanupSucceededCondition)
+		return res, nil
+	}
+
 	if conditions.IsTrue(cluster, akoov1alpha1.AviUserCleanupSucceededCondition) {
 		log.Info("AVI user credentails were cleaned up before, skip")
 		return res, nil
