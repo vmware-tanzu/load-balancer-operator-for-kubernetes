@@ -101,9 +101,8 @@ func (r *HAProvider) createService(
 			},
 		},
 	}
-	// Add Finalizer on Bootstrap Cluster's service to avoid being deleted when
-	// Without this finalizer, vs and HA svc on avi controller may be deleted when ako is deleted
-	if ako_operator.IsBootStrapCluster() {
+	// Add Finalizer on Management Cluster's service to avoid being deleted.
+	if cluster.Namespace == akoov1alpha1.TKGSystemNamespace {
 		ctrlutil.AddFinalizer(service, akoov1alpha1.HAServiceBootstrapClusterFinalizer)
 	} else {
 		service.OwnerReferences = []metav1.OwnerReference{
