@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+
 	"github.com/go-logr/logr"
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako"
@@ -24,7 +25,12 @@ func (r *ClusterReconciler) ReconcileAddonSecret(
 ) (ctrl.Result, error) {
 	log.Info("Starts reconciling add on secret")
 	res := ctrl.Result{}
-	newSecret, err := r.createAKOAddonSecret(cluster, obj)
+	aviSecret, err := r.getClusterAviUserSecret(cluster, ctx)
+	if err != nil {
+		log.Info("Failed to get cluster avi user secret, requeue")
+		return res, err
+	}
+	newAddonSecret, err := r.createAKOAddonSecret(cluster, obj, aviSecret)
 	if err != nil {
 		log.Info("Failed to convert AKO Deployment Config to add-on secret, requeue the request")
 		return res, err
@@ -36,12 +42,12 @@ func (r *ClusterReconciler) ReconcileAddonSecret(
 	}, secret); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("AKO add on secret doesn't exist, start creating it")
-			return res, r.Create(ctx, newSecret)
+			return res, r.Create(ctx, newAddonSecret)
 		}
 		log.Error(err, "Failed to get AKO Deployment Secret, requeue")
 		return res, err
 	}
-	secret = newSecret.DeepCopy()
+	secret = newAddonSecret.DeepCopy()
 	return res, r.Update(ctx, secret)
 }
 
@@ -69,12 +75,16 @@ func (r *ClusterReconciler) ReconcileAddonSecretDelete(
 	return res, r.Delete(ctx, secret)
 }
 
+func (r *ClusterReconciler) aviUserSecretName(cluster *clusterv1.Cluster) string {
+	return cluster.Name + "-avi-credentials"
+}
+
 func (r *ClusterReconciler) akoAddonSecretName(cluster *clusterv1.Cluster) string {
 	return cluster.Name + "-load-balancer-and-ingress-service-addon"
 }
 
-func (r *ClusterReconciler) createAKOAddonSecret(cluster *clusterv1.Cluster, obj *akoov1alpha1.AKODeploymentConfig) (*corev1.Secret, error) {
-	secretStringData, err := AkoAddonSecretDataYaml(cluster, obj)
+func (r *ClusterReconciler) createAKOAddonSecret(cluster *clusterv1.Cluster, obj *akoov1alpha1.AKODeploymentConfig, aviUsersecret *corev1.Secret) (*corev1.Secret, error) {
+	secretStringData, err := AkoAddonSecretDataYaml(cluster, obj, aviUsersecret)
 	if err != nil {
 		return nil, err
 	}
@@ -99,10 +109,24 @@ func (r *ClusterReconciler) createAKOAddonSecret(cluster *clusterv1.Cluster, obj
 	return secret, nil
 }
 
-func AkoAddonSecretDataYaml(cluster *clusterv1.Cluster, obj *akoov1alpha1.AKODeploymentConfig) (string, error) {
+func AkoAddonSecretDataYaml(cluster *clusterv1.Cluster, obj *akoov1alpha1.AKODeploymentConfig, aviUsersecret *corev1.Secret) (string, error) {
 	secret, err := ako.NewValues(obj, cluster.Namespace+"-"+cluster.Name)
 	if err != nil {
 		return "", err
 	}
+	secret.LoadBalancerAndIngressService.Config.Avicredentials.Username = string(aviUsersecret.Data["username"][:])
+	secret.LoadBalancerAndIngressService.Config.Avicredentials.Password = string(aviUsersecret.Data["password"][:])
+	secret.LoadBalancerAndIngressService.Config.Avicredentials.CertificateAuthorityData = string(aviUsersecret.Data[akoov1alpha1.AviCertificateKey][:])
 	return secret.YttYaml()
+}
+
+func (r *ClusterReconciler) getClusterAviUserSecret(cluster *clusterv1.Cluster, ctx context.Context) (*corev1.Secret, error) {
+	secret := &corev1.Secret{}
+	if err := r.Get(ctx, client.ObjectKey{
+		Name:      r.aviUserSecretName(cluster),
+		Namespace: cluster.Namespace,
+	}, secret); err != nil {
+		return secret, err
+	}
+	return secret, nil
 }

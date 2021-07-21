@@ -6,12 +6,13 @@ package ako
 import (
 	"encoding/json"
 	"errors"
-	"gopkg.in/yaml.v3"
 	"math/rand"
 	"net"
 	"strconv"
 	"strings"
 	"time"
+
+	"gopkg.in/yaml.v3"
 
 	"gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
@@ -156,6 +157,7 @@ type Config struct {
 	PersistentVolumeClaim string             `yaml:"persistent_volume_claim"`
 	MountPath             string             `yaml:"mount_path"`
 	LogFile               string             `yaml:"log_file"`
+	Avicredentials        Avicredentials     `yaml:"avi_credentials"`
 }
 
 // AKOSettings provides the settings for AKO
@@ -381,6 +383,12 @@ func NewRbac(config v1alpha1.AKORbacConfig) Rbac {
 		PspEnabled:          config.PspEnabled,
 		PspPolicyApiVersion: config.PspPolicyAPIVersion,
 	}
+}
+
+type Avicredentials struct {
+	Username                 string `yaml:"username"`
+	Password                 string `yaml:"password"`
+	CertificateAuthorityData string `yaml:"certificate_authority_data"`
 }
 
 func (v Values) GetName() string {

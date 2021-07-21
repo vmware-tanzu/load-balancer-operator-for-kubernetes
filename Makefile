@@ -81,6 +81,7 @@ docker-push:
 
 .PHONY: integration-test
 integration-test: $(GINKGO) $(ETCD)
+	$(GINKGO) -v controllers/akodeploymentconfig/phases -- -enable-integration-tests -enable-unit-tests=false -root-dir="../../.."
 	$(GINKGO) -v controllers/akodeploymentconfig/user -- -enable-integration-tests -enable-unit-tests=false -root-dir="../../.."
 	$(GINKGO) -v controllers/akodeploymentconfig -- -enable-integration-tests -enable-unit-tests=false
 	$(GINKGO) -v controllers/machine -- -enable-integration-tests -enable-unit-tests=false

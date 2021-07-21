@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
-	"sigs.k8s.io/cluster-api/controllers/remote"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -171,7 +170,7 @@ func (r *AkoUserReconciler) reconcileAviUserNormal(
 	aviCA := string(aviControllerCASecret.Data[akoov1alpha1.AviCertificateKey][:])
 
 	if cluster.Namespace == akoov1alpha1.TKGSystemNamespace {
-		err = r.deployManagementClusterSecret(ctx, log, obj, aviControllerCASecret)
+		err = r.deployManagementClusterSecret(cluster, ctx, log, obj, aviControllerCASecret)
 		if err != nil {
 			log.Error(err, "Failed to generate avi-secret in management cluster")
 		}
@@ -237,105 +236,8 @@ func (r *AkoUserReconciler) reconcileAviUserNormal(
 			log.Info("Successfully created/updated AVI User in AVI Controller")
 		}
 	}
-	// Use the value from the management cluster
-	aviUsername := string(mcSecret.Data["username"][:])
-	aviPassword := string(mcSecret.Data["password"][:])
-
-	if res, err = r.createOrUpdateWorkloadClusterSecret(ctx, log, cluster, obj, aviUsername, aviPassword, aviCA); err != nil {
-		return res, err
-	}
 
 	return res, nil
-}
-
-// createOrUpdateWorkloadClusterSecret ensure the AKO Secret exist in the target
-// workload cluster
-func (r *AkoUserReconciler) createOrUpdateWorkloadClusterSecret(
-	ctx context.Context,
-	log logr.Logger,
-	cluster *clusterv1.Cluster,
-	obj *akoov1alpha1.AKODeploymentConfig,
-	aviUsername string,
-	aviPassword string,
-	aviCA string,
-) (ctrl.Result, error) {
-	var found bool
-	var res ctrl.Result
-	var remoteClient client.Client
-	var err error
-	if cluster.Namespace == akoov1alpha1.TKGSystemNamespace {
-		remoteClient = r.Client
-	} else {
-		remoteClient, err = r.createWorkloadClusterClient(ctx, cluster.Name, cluster.Namespace)
-		if err != nil {
-			log.Error(err, "Failed to create client for cluster, requeue")
-			return res, err
-		}
-	}
-
-	// ensures the workload cluster Secret exists and matches the mc secret
-	wcSecret := &corev1.Secret{}
-	if err = remoteClient.Get(ctx, client.ObjectKey{
-		Name:      akoov1alpha1.AviSecretName,
-		Namespace: akoov1alpha1.AviNamespace,
-	}, wcSecret); err != nil {
-		// ignore notfound error
-		if !apierrors.IsNotFound(err) {
-			log.Error(err, "Failed to get AKO Secret in the workload cluster, requeue")
-			return res, err
-		}
-	} else {
-		found = true
-	}
-
-	if !found {
-		wcSecret = r.createAviUserSecret(
-			akoov1alpha1.AviSecretName,
-			akoov1alpha1.AviNamespace,
-			aviUsername,
-			aviPassword,
-			aviCA,
-			obj,
-			true,
-		)
-	} else {
-		// Update secret Data
-		wcSecret.Data["username"] = []byte(aviUsername)
-		wcSecret.Data["password"] = []byte(aviPassword)
-		wcSecret.Data[akoov1alpha1.AviCertificateKey] = []byte(aviCA)
-	}
-
-	if !found {
-		log.Info("No AKO Secret found in th workload cluster, start the creation")
-		if err = remoteClient.Create(ctx, wcSecret); err != nil {
-			log.Error(err, "Failed to create AKO Secret in the workload cluster, requeue")
-			return res, err
-		}
-	} else {
-		log.Info("Updating AKO Secret in the workload cluster")
-		if err = remoteClient.Update(ctx, wcSecret); err != nil {
-			log.Error(err, "Failed to update AKO Secret in the workload cluster, requeue")
-			return res, err
-		}
-	}
-	return ctrl.Result{}, nil
-}
-
-// listAkoDeplymentConfigDeployedClusters list all clusters enabled current akodeploymentconfig
-func (r *AkoUserReconciler) listAkoDeplymentConfigDeployedClusters(ctx context.Context, obj *akoov1alpha1.AKODeploymentConfig) (*clusterv1.ClusterList, error) {
-	selector, err := metav1.LabelSelectorAsSelector(&obj.Spec.ClusterSelector)
-	if err != nil {
-		return nil, err
-	}
-	listOptions := []client.ListOption{
-		client.InNamespace(obj.Namespace),
-		client.MatchingLabelsSelector{Selector: selector},
-	}
-	var clusters clusterv1.ClusterList
-	if err := r.Client.List(ctx, &clusters, listOptions...); err != nil {
-		return nil, err
-	}
-	return &clusters, nil
 }
 
 // getAVIControllerCA get avi certificateAuthority secret
@@ -444,6 +346,7 @@ func (r *AkoUserReconciler) createAviUserSecret(name, namespace, username, passw
 }
 
 func (r *AkoUserReconciler) deployManagementClusterSecret(
+	cluster *clusterv1.Cluster,
 	ctx context.Context,
 	log logr.Logger,
 	obj *akoov1alpha1.AKODeploymentConfig,
@@ -459,8 +362,8 @@ func (r *AkoUserReconciler) deployManagementClusterSecret(
 	}
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      akoov1alpha1.AviSecretName,
-			Namespace: akoov1alpha1.AviNamespace,
+			Name:      cluster.Name + "-avi-credentials",
+			Namespace: cluster.Namespace,
 		},
 		Type: akoov1alpha1.AviClusterSecretType,
 		Data: map[string][]byte{
@@ -475,13 +378,4 @@ func (r *AkoUserReconciler) deployManagementClusterSecret(
 		return r.Client.Update(ctx, secret)
 	}
 	return err
-}
-
-// createWorkloadClusterClient create workload cluster corresponding client
-func (r *AkoUserReconciler) createWorkloadClusterClient(ctx context.Context, clusterName, clusterNamespace string) (client.Client, error) {
-	remoteClient, err := remote.NewClusterClient(ctx, r.Client, client.ObjectKey{
-		Name:      clusterName,
-		Namespace: clusterNamespace,
-	}, r.Scheme)
-	return remoteClient, err
 }
