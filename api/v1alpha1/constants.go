@@ -18,6 +18,7 @@ const (
 	TKGAddOnLabelClusterctlKey  = "clusterctl.cluster.x-k8s.io/move"
 	TKGAddOnSecretType          = "tkg.tanzu.vmware.com/addon"
 	TKGAddOnSecretDataKey       = "values.yaml"
+	TKGDataValueFormatString    = "#@data/values\n#@overlay/match-child-defaults missing_ok=True\n---\n"
 
 	ManagementClusterAkoDeploymentConfig = "install-ako-for-management-cluster"
 
