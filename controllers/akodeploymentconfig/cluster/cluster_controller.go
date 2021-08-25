@@ -99,8 +99,8 @@ func (r *ClusterReconciler) cleanup(
 		conditions.MarkFalse(obj, akoov1alpha1.AviResourceCleanupSucceededCondition, akoov1alpha1.AviResourceCleanupReason, clusterv1.ConditionSeverityInfo, "Cleaning up the AVI load balancing resources before deletion")
 		log.Info("Trigger the AKO cleanup in the target Cluster and set Cluster condition", "condition", akoov1alpha1.AviResourceCleanupSucceededCondition)
 	} else if conditions.IsTrue(obj, akoov1alpha1.AviResourceCleanupSucceededCondition) {
-			log.Info("Avi resource cleanup is finished")
-			return true, nil
+		log.Info("Avi resource cleanup is finished")
+		return true, nil
 	}
 
 	remoteClient, err := r.GetRemoteClient(ctx, r.Client, client.ObjectKey{
@@ -144,7 +144,7 @@ func (r *ClusterReconciler) cleanup(
 	if akoSetting["delete_config"] != "true" {
 		akoSetting["delete_config"] = "true"
 		akoAddonSecretData, err = yaml.Marshal(&values)
-		if err != nil{
+		if err != nil {
 			return false, errors.Errorf("workload cluster %s ako add-on data values marshal error", obj.Name)
 		}
 		akoAddonSecret.Data["values.yaml"] = []byte(akoov1alpha1.TKGDataValueFormatString + string(akoAddonSecretData))

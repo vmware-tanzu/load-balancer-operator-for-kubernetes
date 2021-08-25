@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	capvv1alpha3 "sigs.k8s.io/cluster-api-provider-vsphere/api/v1alpha3"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
 	clustereaddonv1alpha3 "sigs.k8s.io/cluster-api/exp/addons/api/v1alpha3"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -47,6 +48,10 @@ var suite = builder.NewTestSuiteForController(
 			return err
 		}
 		err = clustereaddonv1alpha3.AddToScheme(scheme)
+		if err != nil {
+			return err
+		}
+		err = capvv1alpha3.AddToScheme(scheme)
 		if err != nil {
 			return err
 		}
