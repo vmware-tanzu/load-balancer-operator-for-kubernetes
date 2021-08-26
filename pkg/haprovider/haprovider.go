@@ -15,7 +15,6 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	capvv1alpha3 "sigs.k8s.io/cluster-api-provider-vsphere/api/v1alpha3"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -64,7 +63,7 @@ func (r *HAProvider) CreateOrUpdateHAService(ctx context.Context, cluster *clust
 			return err
 		}
 	}
-	if err := r.updateClusterControlPlaneEndpoint(ctx, cluster, service); err != nil {
+	if err := r.updateClusterControlPlaneEndpoint(cluster, service); err != nil {
 		return err
 	}
 	if _, err := r.ensureEndpoints(ctx, serviceName, service.Namespace); err != nil {
@@ -124,23 +123,13 @@ func (r *HAProvider) createService(
 	return service, err
 }
 
-func (r *HAProvider) updateClusterControlPlaneEndpoint(ctx context.Context, cluster *clusterv1.Cluster, service *corev1.Service) error {
+func (r *HAProvider) updateClusterControlPlaneEndpoint(cluster *clusterv1.Cluster, service *corev1.Service) error {
 	// Dakar Limitation: customers ensure the service engine is running
 	ingress := service.Status.LoadBalancer.Ingress
 	if len(ingress) > 0 && net.ParseIP(ingress[0].IP) != nil {
 		cluster.Spec.ControlPlaneEndpoint.Host = service.Status.LoadBalancer.Ingress[0].IP
 		cluster.Spec.ControlPlaneEndpoint.Port = ako_operator.GetControlPlaneEndpointPort()
-		vsphereCluster := &capvv1alpha3.VSphereCluster{}
-		err := r.Client.Get(ctx, client.ObjectKey{
-			Name:      cluster.Name,
-			Namespace: cluster.Namespace,
-		}, vsphereCluster)
-		if err != nil {
-			return err
-		}
-		vsphereCluster.Spec.ControlPlaneEndpoint.Host = service.Status.LoadBalancer.Ingress[0].IP
-		vsphereCluster.Spec.ControlPlaneEndpoint.Port = ako_operator.GetControlPlaneEndpointPort()
-		return r.Client.Update(ctx, vsphereCluster)
+		return nil
 	}
 	return errors.New(service.Name + " service external ip is not ready")
 }

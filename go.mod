@@ -2,13 +2,11 @@ module gitlab.eng.vmware.com/core-build/ako-operator
 
 go 1.15
 
-replace github.com/go-logr/logr => github.com/go-logr/logr v0.1.0
-
 require (
 	github.com/avinetworks/sdk v0.0.0-20201123134013-c157ef55b6f7
 	github.com/bitly/go-simplejson v0.5.0
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
-	github.com/go-logr/logr v0.4.0
+	github.com/go-logr/logr v0.1.0
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
@@ -25,6 +23,5 @@ require (
 	k8s.io/klog v1.0.0
 	k8s.io/utils v0.0.0-20200619165400-6e3d28b6ed19
 	sigs.k8s.io/cluster-api v0.3.14
-	sigs.k8s.io/cluster-api-provider-vsphere v0.7.10
 	sigs.k8s.io/controller-runtime v0.5.14
 )
