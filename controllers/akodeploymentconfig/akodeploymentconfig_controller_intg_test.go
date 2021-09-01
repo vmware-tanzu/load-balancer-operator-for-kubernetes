@@ -131,12 +131,12 @@ func intgTestAkoDeploymentConfigController() {
 			_ = ctx.Client.Delete(ctx.Context, o)
 		}
 	}
-	getCluster := func(obj *clusterv1.Cluster, name, namespace string) {
+	getCluster := func(obj *clusterv1.Cluster, name, namespace string) error {
 		err := ctx.Client.Get(ctx.Context, client.ObjectKey{
 			Name:      name,
 			Namespace: namespace,
 		}, obj)
-		Expect(err).To(BeNil())
+		return err
 	}
 
 	ensureAKODeploymentConfigFinalizerMatchExpectation := func(key client.ObjectKey, expectReconciled bool) {
@@ -292,11 +292,16 @@ func intgTestAkoDeploymentConfigController() {
 			_ = kcfg.CreateSecret(ctx, ctx.Client, cluster)
 		})
 		AfterEach(func() {
-			deleteObjects(cluster)
-			ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-				Name:      cluster.Name,
-				Namespace: cluster.Namespace,
-			}, &clusterv1.Cluster{}, false)
+			latestCluster := &clusterv1.Cluster{}
+			if err := getCluster(latestCluster, cluster.Name, cluster.Namespace); err == nil {
+				latestCluster.Finalizers = nil
+				updateObjects(latestCluster)
+				deleteObjects(latestCluster)
+				ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+					Name:      cluster.Name,
+					Namespace: cluster.Namespace,
+				}, &clusterv1.Cluster{}, false)
+			}
 
 			deleteObjects(akoDeploymentConfig)
 			ensureRuntimeObjectMatchExpectation(client.ObjectKey{
@@ -475,7 +480,14 @@ func intgTestAkoDeploymentConfigController() {
 					When("the cluster is being deleted ", func() {
 						When("the cluster is ready", func() {
 							BeforeEach(func() {
-								deleteObjects(cluster)
+								latestCluster := &clusterv1.Cluster{}
+								err := getCluster(latestCluster, cluster.Name, cluster.Namespace)
+								Expect(err).To(BeNil())
+								conditions.MarkTrue(latestCluster, akoov1alpha1.AviResourceCleanupSucceededCondition)
+								err = ctx.Client.Status().Update(ctx, latestCluster)
+								Expect(err).To(BeNil())
+								deleteObjects(latestCluster)
+
 								ensureRuntimeObjectMatchExpectation(client.ObjectKey{
 									Name:      cluster.Name,
 									Namespace: cluster.Namespace,
@@ -493,9 +505,12 @@ func intgTestAkoDeploymentConfigController() {
 						When("the cluster is not ready", func() {
 							BeforeEach(func() {
 								obj := &clusterv1.Cluster{}
-								getCluster(obj, cluster.Name, cluster.Namespace)
-								conditions.MarkFalse(cluster, clusterv1.ReadyCondition, clusterv1.DeletingReason, clusterv1.ConditionSeverityInfo, "")
-								updateObjects(obj)
+								err := getCluster(obj, cluster.Name, cluster.Namespace)
+								Expect(err).To(BeNil())
+								conditions.MarkFalse(obj, clusterv1.ReadyCondition, clusterv1.DeletingReason, clusterv1.ConditionSeverityInfo, "")
+								conditions.MarkTrue(obj, akoov1alpha1.AviResourceCleanupSucceededCondition)
+								err = ctx.Client.Status().Update(ctx, obj)
+								Expect(err).To(BeNil())
 								deleteObjects(obj)
 								ensureRuntimeObjectMatchExpectation(client.ObjectKey{
 									Name:      obj.Name,

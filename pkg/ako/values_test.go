@@ -5,6 +5,8 @@ package ako
 
 import (
 	"encoding/json"
+	"strconv"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
@@ -31,6 +33,7 @@ var _ = Describe("AKO", func() {
 				value.Image.Path:                                "ako",
 				value.AKOSettings.ClusterName:                   "test",
 				value.AKOSettings.CniPlugin:                     akoDeploymentConfig.Spec.ExtraConfigs.CniPlugin,
+				value.AKOSettings.DisableStaticRouteSync:        strconv.FormatBool(akoDeploymentConfig.Spec.ExtraConfigs.DisableStaticRouteSync),
 				value.ControllerSettings.CloudName:              akoDeploymentConfig.Spec.CloudName,
 				value.ControllerSettings.ControllerIP:           akoDeploymentConfig.Spec.Controller,
 				value.ControllerSettings.ServiceEngineGroupName: akoDeploymentConfig.Spec.ServiceEngineGroup,
@@ -51,10 +54,9 @@ var _ = Describe("AKO", func() {
 			}
 
 			expectedBoolPairs := map[bool]bool{
-				value.AKOSettings.DisableStaticRouteSync: akoDeploymentConfig.Spec.ExtraConfigs.DisableStaticRouteSync,
-				value.L7Settings.DisableIngressClass:     akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.DisableIngressClass,
-				value.L7Settings.DefaultIngController:    akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.DefaultIngressController,
-				value.Rbac.PspEnabled:                    akoDeploymentConfig.Spec.ExtraConfigs.Rbac.PspEnabled,
+				value.L7Settings.DisableIngressClass:  akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.DisableIngressClass,
+				value.L7Settings.DefaultIngController: akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.DefaultIngressController,
+				value.Rbac.PspEnabled:                 akoDeploymentConfig.Spec.ExtraConfigs.Rbac.PspEnabled,
 			}
 			for k, v := range expectedBoolPairs {
 				Expect(k).To(Equal(v))
@@ -67,6 +69,9 @@ var _ = Describe("AKO", func() {
 			} else {
 				Expect(value.NetworkSettings.NodeNetworkListJson).Should(BeNil())
 			}
+			vipNetworkListJson, jsonerr := json.Marshal([]map[string]string{{"networkName": akoDeploymentConfig.Spec.DataNetwork.Name}})
+			Expect(jsonerr).ShouldNot(HaveOccurred())
+			Expect(value.NetworkSettings.VIPNetworkListJson).To(Equal(string(vipNetworkListJson)))
 		}
 
 		When("a valid AKODeploymentYaml is provided", func() {

@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/pkg/errors"
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
+	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -96,6 +98,9 @@ func (r *ClusterReconciler) cleanup(
 	if !conditions.Has(obj, akoov1alpha1.AviResourceCleanupSucceededCondition) {
 		conditions.MarkFalse(obj, akoov1alpha1.AviResourceCleanupSucceededCondition, akoov1alpha1.AviResourceCleanupReason, clusterv1.ConditionSeverityInfo, "Cleaning up the AVI load balancing resources before deletion")
 		log.Info("Trigger the AKO cleanup in the target Cluster and set Cluster condition", "condition", akoov1alpha1.AviResourceCleanupSucceededCondition)
+	} else if conditions.IsTrue(obj, akoov1alpha1.AviResourceCleanupSucceededCondition) {
+		log.Info("Avi resource cleanup is finished")
+		return true, nil
 	}
 
 	remoteClient, err := r.GetRemoteClient(ctx, r.Client, client.ObjectKey{
@@ -107,56 +112,68 @@ func (r *ClusterReconciler) cleanup(
 		return false, err
 	}
 
-	var cleanupFinished bool
-
-	// We then retrieve the AKO ConfigMap from the workload cluster and
-	// update the `deleteConfig` field to trigger AKO's cleanup
-	akoConfigMap := &corev1.ConfigMap{}
-	akoConfigMapKey := client.ObjectKey{
-		Name:      akoov1alpha1.AkoConfigMapName,
-		Namespace: akoov1alpha1.AviNamespace,
-	}
-	err = remoteClient.Get(ctx, akoConfigMapKey, akoConfigMap)
-	if err == nil {
-		cleanupSetting := akoConfigMap.Data["deleteConfig"]
-		log.Info("Found AKO Configmap", "deleteConfig", cleanupSetting)
-
-		// true is the only accepted string in AKO
-		if cleanupSetting != "true" {
-			log.Info("Updating deleteConfig in AKO's ConfigMap")
-			akoConfigMap.Data["deleteConfig"] = "true"
-
-			if err := remoteClient.Update(ctx, akoConfigMap); err != nil {
-				log.Info("Failed to update AKO ConfigMap, requeue the request")
-				return false, err
-			}
-		}
-	} else {
+	akoAddonSecret := &corev1.Secret{}
+	if err := remoteClient.Get(ctx, client.ObjectKey{
+		Name:      r.akoAddonDataValueName(),
+		Namespace: akoov1alpha1.TKGSystemNamespace,
+	}, akoAddonSecret); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("Cannot find AKO ConfigMap, consider the cleanup finished", "configMap", akoConfigMapKey.Namespace+"/"+akoConfigMapKey.Name)
-			cleanupFinished = true
-		} else {
-			return false, err
+			return true, nil
 		}
+		log.Error(err, "Failed to get AKO Addon Data Values, AKO clean up failed")
+		return false, err
 	}
 
-	if !cleanupFinished {
-		cleanupFinished, err = ako.CleanupFinished(ctx, remoteClient, log)
+	akoAddonSecretData := akoAddonSecret.Data["values.yaml"]
+	var values map[string]interface{}
+	if err := yaml.Unmarshal(akoAddonSecretData, &values); err != nil {
+		return false, err
+	}
+	akoInfo, ok := values["loadBalancerAndIngressService"].(map[string]interface{})
+	if !ok {
+		return false, errors.Errorf("workload cluster %s ako add-on data values parse error", obj.Name)
+	}
+	akoConfig, ok := akoInfo["config"].(map[string]interface{})
+	if !ok {
+		return false, errors.Errorf("workload cluster %s ako add-on data values parse error", obj.Name)
+	}
+	akoSetting, ok := akoConfig["ako_settings"].(map[string]interface{})
+	if !ok {
+		return false, errors.Errorf("workload cluster %s ako add-on data values parse error", obj.Name)
+	}
+	if akoSetting["delete_config"] != "true" {
+		akoSetting["delete_config"] = "true"
+		akoAddonSecretData, err = yaml.Marshal(&values)
 		if err != nil {
-			log.Error(err, "Failed to retrieve AKO cleanup status")
+			return false, errors.Errorf("workload cluster %s ako add-on data values marshal error", obj.Name)
+		}
+		akoAddonSecret.Data["values.yaml"] = []byte(akoov1alpha1.TKGDataValueFormatString + string(akoAddonSecretData))
+		if err := remoteClient.Update(ctx, akoAddonSecret); err != nil {
+			log.Error(err, "Failed to update AKO Addon Data Values, AKO clean up failed")
 			return false, err
 		}
+		log.Info("Updated `deleteConfig` field to true in AKO Addon Data Values, starting ako clean up")
 	}
+
+	cleanupFinished, err := ako.CleanupFinished(ctx, remoteClient, log)
+	if err != nil {
+		log.Error(err, "Failed to retrieve AKO cleanup status")
+		return false, err
+	}
+
 	if cleanupFinished {
 		log.Info("AKO finished cleanup, updating Cluster condition")
 		conditions.MarkTrue(obj, akoov1alpha1.AviResourceCleanupSucceededCondition)
 		return true, nil
 	}
-
 	return false, nil
 }
 
 func GetFakeRemoteClient(ctx context.Context, c client.Client, cluster client.ObjectKey, scheme *runtime.Scheme) (client.Client, error) {
 	// return fake client
 	return fake.NewFakeClient(), nil
+}
+
+func (r *ClusterReconciler) akoAddonDataValueName() string {
+	return "load-balancer-and-ingress-service-data-values"
 }

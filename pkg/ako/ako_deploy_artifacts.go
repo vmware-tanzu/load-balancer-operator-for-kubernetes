@@ -37,7 +37,8 @@ data:
   defaultIngController: "{{ .Values.L7Settings.DefaultIngController }}"
   shardVSSize: "{{ .Values.L7Settings.ShardVSSize }}"
   deleteConfig: "{{ .Values.AKOSettings.DeleteConfig }}"
-  vipNetworkList: "[]"
+  vipNetworkList: |-
+    {{ .Values.NetworkSettings.VIPNetworkListJson }}
   {{ if .Values.NetworkSettings.NodeNetworkListJson }}
   nodeNetworkList: |-
     {{ .Values.NetworkSettings.NodeNetworkListJson }}
@@ -276,6 +277,10 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.name
+          - name: POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
           ports:
             - name: http
               containerPort: 80

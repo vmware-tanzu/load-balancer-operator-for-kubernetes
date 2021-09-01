@@ -42,6 +42,8 @@ func (r *akoDeploymentConfigForCluster) Map(o handler.MapObject) []reconcile.Req
 		logger.Info("Skipping cluster in handler")
 		return []reconcile.Request{}
 	}
+	// is cluster selected by non-default akodeploymentconfig
+	_, selected := cluster.Labels[akoov1alpha1.AviClusterSelectedLabel]
 
 	logger.V(3).Info("Getting all akodeploymentconfig")
 	var akoDeploymentConfigs akoov1alpha1.AKODeploymentConfigList
@@ -53,6 +55,9 @@ func (r *akoDeploymentConfigForCluster) Map(o handler.MapObject) []reconcile.Req
 	for _, akoDeploymentConfig := range akoDeploymentConfigs.Items {
 		if selector, err := metav1.LabelSelectorAsSelector(&akoDeploymentConfig.Spec.ClusterSelector); err != nil {
 			logger.Error(err, "Failed to convert label sector to selector")
+			continue
+		} else if selector.Empty() && selected {
+			logger.V(3).Info("Cluster selected by non-default AKODeploymentConfig, skip default one")
 			continue
 		} else if selector.Matches(labels.Set(cluster.GetLabels())) {
 			logger.V(3).Info("Found matching AKODeploymentConfig", akoDeploymentConfig.Namespace+"/"+akoDeploymentConfig.Name)

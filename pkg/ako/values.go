@@ -50,8 +50,8 @@ type AKOSettings struct {
 	LogLevel               string
 	FullSyncFrequency      string // This frequency controls how often AKO polls the Avi controller to update itself with cloud configurations.
 	ApiServerPort          int    // Specify the port for the API server, default is set as 8080 // EmptyAllowed: false
-	DeleteConfig           bool   // Has to be set to true in configmap if user wants to delete AKO created objects from AVI
-	DisableStaticRouteSync bool   // If the POD networks are reachable from the Avi SE, set this knob to true.
+	DeleteConfig           string // Has to be set to true in configmap if user wants to delete AKO created objects from AVI
+	DisableStaticRouteSync string // If the POD networks are reachable from the Avi SE, set this knob to true.
 	ClusterName            string // A unique identifier for the kubernetes cluster, that helps distinguish the objects for this cluster in the avi controller. // MUST-EDIT
 	CniPlugin              string // Set the string if your CNI is calico or openshift. enum: calico|canal|flannel|openshift
 	SyncNamespace          string
@@ -64,7 +64,7 @@ type NetworkSettings struct {
 	NetworkName         string // Network Name of the vip network
 	NodeNetworkList     []v1alpha1.NodeNetwork
 	NodeNetworkListJson string
-	VIPNetworkList      []v1alpha1.NodeNetwork
+	VIPNetworkList      []map[string]string
 	VIPNetworkListJson  string
 }
 
@@ -134,8 +134,8 @@ func SetDefaultValues(values *Values) {
 	values.AKOSettings = AKOSettings{
 		LogLevel:               "INFO",
 		ApiServerPort:          8080,
-		DeleteConfig:           false,
-		DisableStaticRouteSync: true,
+		DeleteConfig:           "false",
+		DisableStaticRouteSync: "true",
 		FullSyncFrequency:      "1800",
 		// CniPlugin: don't set, use default value in AKO
 		// SyncNamespace: don't set, use default value in AKO
@@ -208,7 +208,7 @@ func PopulateValues(obj *akoov1alpha1.AKODeploymentConfig, clusterNameSpacedName
 
 	values.AKOSettings.ClusterName = clusterNameSpacedName
 	values.AKOSettings.CniPlugin = obj.Spec.ExtraConfigs.CniPlugin
-	values.AKOSettings.DisableStaticRouteSync = obj.Spec.ExtraConfigs.DisableStaticRouteSync
+	values.AKOSettings.DisableStaticRouteSync = strconv.FormatBool(obj.Spec.ExtraConfigs.DisableStaticRouteSync)
 
 	values.ControllerSettings.CloudName = obj.Spec.CloudName
 	values.ControllerSettings.ControllerIP = obj.Spec.Controller
@@ -224,6 +224,7 @@ func PopulateValues(obj *akoov1alpha1.AKODeploymentConfig, clusterNameSpacedName
 	ones, _ := ipnet.Mask.Size()
 	values.NetworkSettings.SubnetPrefix = strconv.Itoa(ones)
 	values.NetworkSettings.NodeNetworkList = obj.Spec.ExtraConfigs.IngressConfigs.NodeNetworkList
+	values.NetworkSettings.VIPNetworkList = []map[string]string{{"networkName": obj.Spec.DataNetwork.Name}}
 
 	if len(values.NetworkSettings.NodeNetworkList) != 0 {
 		// preprocessing
@@ -232,6 +233,14 @@ func PopulateValues(obj *akoov1alpha1.AKODeploymentConfig, clusterNameSpacedName
 			return Values{}, jsonerr
 		}
 		values.NetworkSettings.NodeNetworkListJson = string(nodeNetworkListJson)
+	}
+
+	if len(values.NetworkSettings.VIPNetworkList) != 0 {
+		vipNetworkListJson, jsonerr := json.Marshal(values.NetworkSettings.VIPNetworkList)
+		if jsonerr != nil {
+			return Values{}, jsonerr
+		}
+		values.NetworkSettings.VIPNetworkListJson = string(vipNetworkListJson)
 	}
 
 	values.PersistentVolumeClaim = obj.Spec.ExtraConfigs.Log.PersistentVolumeClaim

@@ -1,6 +1,6 @@
 # Copyright 2021 VMware, Inc.
 # SPDX-License-Identifier: Apache-2.0
-IMAGE_REGISTRY ?= harbor-pks.vmware.com/tkgextensions
+IMAGE_REGISTRY ?= harbor-repo.vmware.com/tanzu_ako_operator_dev
 IMAGE_TAG ?= $(shell git log -1 --format=%h)
 CACHE_IMAGE_REGISTRY ?= harbor-repo.vmware.com/dockerhub-proxy-cache
 # Image URL to use all building/pushing image targets
@@ -13,7 +13,7 @@ PUBLISH?=publish
 BUILD_VERSION ?= $(shell git describe --always --match "v*" | sed 's/v//')
 
 # TKG Version
-TKG_VERSION ?= v1.4.0+dev
+TKG_VERSION ?= v1.4.0+vmware.1
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))

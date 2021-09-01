@@ -96,7 +96,7 @@ kubebuilder: $(KUBEBUILDER) ## Install kubebuilder
 $(ETCD) $(KUBE_APISERVER) $(KUBEBUILDER):
 	@mkdir -p $(@D)
 	TEMP_DL_DIR=$$(mktemp -d) && \
-	curl -sL https://go.kubebuilder.io/dl/$(KUBEBUILDER_VERSION)/$(HOST_OS)/$(HOST_ARCH) | \
+	curl -sL https://github.com/kubernetes-sigs/kubebuilder/releases/download/v$(KUBEBUILDER_VERSION)/kubebuilder_$(KUBEBUILDER_VERSION)_$(HOST_OS)_$(HOST_ARCH).tar.gz | \
 	tar -xz -C "$${TEMP_DL_DIR}" --exclude=kubectl && \
 	mv "$${TEMP_DL_DIR}/"*/bin/* $(@D)
 

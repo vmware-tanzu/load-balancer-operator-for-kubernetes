@@ -18,6 +18,7 @@ const (
 	TKGAddOnLabelClusterctlKey  = "clusterctl.cluster.x-k8s.io/move"
 	TKGAddOnSecretType          = "tkg.tanzu.vmware.com/addon"
 	TKGAddOnSecretDataKey       = "values.yaml"
+	TKGDataValueFormatString    = "#@data/values\n#@overlay/match-child-defaults missing_ok=True\n---\n"
 
 	ManagementClusterAkoDeploymentConfig = "install-ako-for-management-cluster"
 
@@ -30,6 +31,7 @@ const (
 
 	AVI_VERSION                                                  = "20.1.3"
 	AviClusterLabel                                              = "networking.tkg.tanzu.vmware.com/avi"
+	AviClusterSelectedLabel                                      = "networking.tkg.tanzu.vmware.com/avi-skip-default-adc"
 	AviClusterSecretType                                         = "avi.cluster.x-k8s.io/secret"
 	AviSecretName                                                = "avi-secret"
 	AviNamespace                                                 = "avi-system"
