@@ -1,6 +1,6 @@
 # Getting Started
 
-## Install AKO Operator in TKG multi cloud
+## Install
 
 ```bash
 make deploy-ako-operator
@@ -20,18 +20,17 @@ hack/e2e.sh -u
 This will create a management cluster and a workload cluster locally in Docker
 for you.
 
-### Run AKO Operator against the mangement cluster
+### Run against the mangement cluster
 
 ```bash
 # Set current kubectl context to the local management cluster
 kubectl config use-context kind-tkg-lcp
 
-# Install AKODeploymentConfig CR
 make install
 
 ```
 
-Run AKO Operator as a binary
+Run as a binary
 
 ```bash
 # Set the default kubeconfig to point to the kind
@@ -39,17 +38,17 @@ Run AKO Operator as a binary
 kubectl config use-context kind-tkg-lcp
 Switched to context "kind-tkg-lcp".
 
-# Build the AKO Operator binary
+# Build the binary
 go build -o bin/manager main.go
 
-# Run AKO Operator in the local management cluster
+# Run in the local management cluster
 ./bin/manager
 ```
 
-Run AKO Operator in the kind management cluster as a Deployment
+Run in the kind management cluster as a Deployment
 
 ```bash
-# Build docker image for the AKO Operator
+# Build docker image
 make docker-build
 
 # (optional) You may need to login to the registry firstly using your company
@@ -59,13 +58,13 @@ docker login harbor-pks.vmware.com
 # Push the docker image to the VMware internal registry
 make docker-push
 
-# Deploy the AKO Operator in the management cluster
+# Deploy in the management cluster
 make deploy
 ```
 
 ### AKODeploymentConfig
 
-Deploy a AKODeploymentConfig to make AKO Operator installing AKO for you in the
+Deploy a AKODeploymentConfig to install AKO automatically in the
 workload cluster.
 
 There is one sample in config/samples/network_v1alpha1_akodeploymentconfig.yaml.
@@ -112,16 +111,16 @@ alias kw="kubectl --kubeconfig=$PWD/workload-cls.kubeconfig"
 # Set the default kubeconfig to the management cluster
 export KUBECONFIG=$PWD/tkg-lcp.kubeconfig
 
-# Build docker image for the AKO Operator
+# Build docker image
 make docker-build
 
-# Load the AKO Operator docker image into the management cluster
+# Load the docker image into the management cluster
 kind load docker-image --name tkg-lcp harbor-pks.vmware.com/tkgextensions/tkg-networking/tanzu-ako-operator:dev
 
-# Deploy the AKO Operator in the management cluster
+# Deploy in the management cluster
 make deploy
 
-# Make sure AKO Operator is up and running
+# Make sure pod is up and running
 ➜ git: ✗ kk get pods -n akoo-system
 NAME                                       READY   STATUS    RESTARTS   AGE
 akoo-controller-manager-757949b86c-6wwn7   2/2     Running   0          3s
@@ -138,7 +137,7 @@ akoo-controller-manager-757949b86c-6wwn7   2/2     Running   0          3s
 {"level":"info","ts":1604639438.7641554,"logger":"controller-runtime.controller","msg":"Starting Controller","controller":"akodeploymentconfig"}
 {"level":"info","ts":1604639438.7752495,"logger":"controller-runtime.controller","msg":"Starting workers","controller":"akodeploymentconfig","worker count":1}
 
-# Open another terminal to watch on AKO Operator's log
+# Open another terminal to watch on the log
 ➜ git: ✗ kk logs akoo-controller-manager-757949b86c-6wwn7 -c manager -f -n akoo-system
 
 # Enable AVI in the workload cluster
@@ -154,7 +153,7 @@ ako-0   1/1     Running   0          40s
 NAME             DATA   AGE
 avi-k8s-config   23     77s
 
-# Making sure AKO Operator adds the finalizer on the cluster
+# Making sure finalizer is added on the cluster
 ➜  ako-operator git:(update-readme) ✗ kk get cluster workload-cls -o yaml  | head
 apiVersion: cluster.x-k8s.io/v1alpha3
 kind: Cluster
