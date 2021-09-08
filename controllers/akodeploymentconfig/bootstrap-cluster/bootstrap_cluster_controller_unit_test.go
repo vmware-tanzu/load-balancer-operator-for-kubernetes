@@ -1,84 +1,64 @@
 // Copyright 2020 VMware, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-package ako
+package bootstrap_cluster_test
 
-var (
-	AkoDeploymentYamlTemplate = `
+import (
+	"bytes"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
+	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako"
+	ako_operator "gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako-operator"
+	"os"
+	"text/template"
+)
+
+const expectedYamlUnstructured = `
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: {{ .Values.LoadBalancerAndIngressService.Namespace }}
+  name: avi-system
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: ako-sa
-  namespace: {{ .Values.LoadBalancerAndIngressService.Namespace }}
+  namespace: avi-system
  
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: avi-k8s-config
-  namespace: {{ .Values.LoadBalancerAndIngressService.Namespace }}
+  namespace: avi-system
 data:
-  controllerIP: "{{ .Values.LoadBalancerAndIngressService.Config.ControllerSettings.ControllerIP }}"
-  serviceEngineGroupName: "{{ .Values.LoadBalancerAndIngressService.Config.ControllerSettings.ServiceEngineGroupName }}"
-  cloudName: "{{ .Values.LoadBalancerAndIngressService.Config.ControllerSettings.CloudName }}"
-  clusterName: "{{ .Values.LoadBalancerAndIngressService.Config.AKOSettings.ClusterName }}"
-  apiServerPort: "{{ .Values.LoadBalancerAndIngressService.Config.AKOSettings.ApiServerPort }}"
-  subnetIP: "{{ .Values.LoadBalancerAndIngressService.Config.NetworkSettings.SubnetIP }}"
-  subnetPrefix: "{{ .Values.LoadBalancerAndIngressService.Config.NetworkSettings.SubnetPrefix }}"
-  networkName: "{{ .Values.LoadBalancerAndIngressService.Config.NetworkSettings.NetworkName }}"
-  disableStaticRouteSync: "{{ .Values.LoadBalancerAndIngressService.Config.AKOSettings.DisableStaticRouteSync }}"
-  fullSyncFrequency: "{{ .Values.LoadBalancerAndIngressService.Config.AKOSettings.FullSyncFrequency }}"
-  serviceType:  "{{ .Values.LoadBalancerAndIngressService.Config.L7Settings.ServiceType }}"
-  defaultIngController: "{{ .Values.LoadBalancerAndIngressService.Config.L7Settings.DefaultIngController }}"
-  shardVSSize: "{{ .Values.LoadBalancerAndIngressService.Config.L7Settings.ShardVSSize }}"
-  deleteConfig: "{{ .Values.LoadBalancerAndIngressService.Config.AKOSettings.DeleteConfig }}"
+  controllerIP: "10.23.122.1"
+  serviceEngineGroupName: "Default-SEG"
+  cloudName: "test-cloud"
+  clusterName: "tkg-system-"
+  apiServerPort: "8080"
+  subnetIP: "10.0.0.0"
+  subnetPrefix: "24"
+  networkName: "test-akdc"
+  disableStaticRouteSync: "true"
+  fullSyncFrequency: "1800"
+  serviceType:  "NodePort"
+  defaultIngController: "true"
+  shardVSSize: "MEDIUM"
+  deleteConfig: "false"
   vipNetworkList: |-
-    {{ .Values.LoadBalancerAndIngressService.Config.NetworkSettings.VIPNetworkListJson }}
-  {{ if .Values.LoadBalancerAndIngressService.Config.NetworkSettings.NodeNetworkListJson }}
+    [{"networkName":"test-akdc"}]
+  
   nodeNetworkList: |-
-    {{ .Values.LoadBalancerAndIngressService.Config.NetworkSettings.NodeNetworkListJson }}
-  {{ end }}
-  {{ if .Values.LoadBalancerAndIngressService.Config.AKOSettings.CniPlugin }}
-  cniPlugin: "{{ .Values.LoadBalancerAndIngressService.Config.AKOSettings.CniPlugin }}"
-  {{ end }}
-  {{/* The following fields in .Values.ControllerSettings are omitted:
-          1. controllerVersion: because we don't consider backward compatibility in Calgary so
-	     there is no explicit intention to set it;
-             controllerVersion: "{{ .Values.ControllerSettings.ControllerVersion }}"
-  */}}
-  {{/* The following fields in .Values.LoadBalancerAndIngressService.Config.AKOSettings are used:
-      1. disableStaticRouteSync
-	  2. deleteConfig
-	  3. fullSyncFrequency
-  */}}
-  {{/* The following fields in .Values.LoadBalancerAndIngressService.Config.L4Settings are omitted:
-          1. defaultDomain
-	     defaultDomain: "{{ .Values.LoadBalancerAndIngressService.Config.L4Settings.DefaultDomain }}"
-  */}}
-  {{/* The following fields in .Values.LoadBalancerAndIngressService.Config.L7Settings are omitted:
-          1. l7ShardingScheme;
-	     l7ShardingScheme: "{{ .Values.LoadBalancerAndIngressService.Config.L7Settings.L7ShardingScheme }}"
-	  2. nodeKey;
-	  3. nodeValue;
-	     {{ if eq .Values.LoadBalancerAndIngressService.Config.L7Settings.ServiceType "NodePort" }}
-             nodeKey: "{{ .Values.LoadBalancerAndIngressService.Config.NodePortSelector.Key }}"
-	     nodeValue: "{{ .Values.LoadBalancerAndIngressService.Config.NodePortSelector.Value }}"
-             {{ end }}
-	  4. PassthroughShardSize;
-	     passthroughShardSize: "{{ .Values.LoadBalancerAndIngressService.Config.L7Settings.PassthroughShardSize }}"
-       The following fiels are used:
-          1. serviceType
-          2. defaultIngController
-      	  3. shardVSSize
-  */}}
-  {{ if .Values.LoadBalancerAndIngressService.Config.AKOSettings.SyncNamespace }}
-  syncNamespace: {{ .Values.LoadBalancerAndIngressService.Config.AKOSettings.SyncNamespace }}
-  {{ end }}
+    [{"networkName":"test-node-network-1","cidrs":["10.0.0.0/24","192.168.0.0/24"]}]
+  
+  
+  
+  
+  
+  
+  
 
 ---
 kind: ClusterRole
@@ -116,7 +96,6 @@ rules:
   - apiGroups: ["networking.x-k8s.io"]
     resources: ["gateways", "gateways/status", "gatewayclasses", "gatewayclasses/status"]
     verbs: ["get","watch","list","patch", "update"]
-{{- if .Values.LoadBalancerAndIngressService.Config.Rbac.PspEnabled }}
   - apiGroups:
     - policy
     - extensions
@@ -125,8 +104,7 @@ rules:
     verbs:
     - use
     resourceNames:
-    - {{ .Values.LoadBalancerAndIngressService.Name }}
-{{- end }}
+    - ako-tkg-system-
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -140,46 +118,46 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: ako-sa
-  namespace: {{ .Values.LoadBalancerAndIngressService.Namespace }}
+  namespace: avi-system
 
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: ako
-  namespace: {{ .Values.LoadBalancerAndIngressService.Namespace }}
+  namespace: avi-system
   labels:
-    app.kubernetes.io/name: {{ .Values.LoadBalancerAndIngressService.Name }}
-    app.kubernetes.io/version: "{{ .Values.ImageInfo.Images.LoadBalancerAndIngressServiceImage.Tag }}"
+    app.kubernetes.io/name: ako-tkg-system-
+    app.kubernetes.io/version: "1.3.1"
 spec:
-  replicas: {{ .Values.LoadBalancerAndIngressService.Config.ReplicaCount }}
+  replicas: 1
   serviceName: ako
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ .Values.LoadBalancerAndIngressService.Name }}
+      app.kubernetes.io/name: ako-tkg-system-
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: {{ .Values.LoadBalancerAndIngressService.Name }}
+        app.kubernetes.io/name: ako-tkg-system-
     spec:
       serviceAccountName: ako-sa
       securityContext: {}
-      {{ if .Values.LoadBalancerAndIngressService.Config.PersistentVolumeClaim }}
+      
       volumes:
       - name: ako-pv-storage
         persistentVolumeClaim:
-          claimName: {{ .Values.LoadBalancerAndIngressService.Config.PersistentVolumeClaim }}
-      {{ end }}
+          claimName: true
+      
       containers:
-        - name: {{ .Values.LoadBalancerAndIngressService.Name }}
+        - name: ako-tkg-system-
           securityContext: null
-          {{ if .Values.LoadBalancerAndIngressService.Config.PersistentVolumeClaim }}
+          
           volumeMounts:
-          - mountPath: {{ .Values.LoadBalancerAndIngressService.Config.MountPath }}
+          - mountPath: /var/log
             name: ako-pv-storage
-          {{ end }}
-          image: "{{ .Values.ImageInfo.ImageRepository }}/{{ .Values.ImageInfo.Images.LoadBalancerAndIngressServiceImage.ImagePath }}:{{ .Values.ImageInfo.Images.LoadBalancerAndIngressServiceImage.Tag }}"
-          imagePullPolicy: {{ .Values.ImageInfo.ImagePullPolicy }}
+          
+          image: "test/image:1.3.1"
+          imagePullPolicy: IfNotPresent
           env:
           - name: CTRL_USERNAME
             valueFrom:
@@ -216,20 +194,14 @@ spec:
               configMapKeyRef:
                 name: avi-k8s-config
                 key: disableStaticRouteSync
-           {{ if .Values.LoadBalancerAndIngressService.Config.NetworkSettings.NodeNetworkListJson }}
+           
           - name: NODE_NETWORK_LIST
             valueFrom:
               configMapKeyRef:
                 name: avi-k8s-config
                 key: nodeNetworkList
-           {{ end }}
-           {{ if .Values.LoadBalancerAndIngressService.Config.AKOSettings.SyncNamespace  }}
-          - name: SYNC_NAMESPACE
-            valueFrom:
-              configMapKeyRef:
-                name: avi-k8s-config
-                key: syncNamespace
-          {{ end }}
+           
+           
           - name: SUBNET_IP
             valueFrom:
               configMapKeyRef:
@@ -265,14 +237,14 @@ spec:
               configMapKeyRef:
                 name: avi-k8s-config
                 key: serviceType
-          {{ if .Values.LoadBalancerAndIngressService.Config.PersistentVolumeClaim }}
+          
           - name: USE_PVC
             value: "true"
-          {{ end }}
+          
           - name: LOG_FILE_PATH
-            value: {{ .Values.LoadBalancerAndIngressService.Config.MountPath }}
+            value: /var/log
           - name: LOG_FILE_NAME
-            value: {{ .Values.LoadBalancerAndIngressService.Config.LogFile }}
+            value: test-avi.log
           - name: POD_NAME
             valueFrom:
               fieldRef:
@@ -287,26 +259,25 @@ spec:
               protocol: TCP
           resources:
             limits:
-              cpu: {{ .Values.LoadBalancerAndIngressService.Config.Resources.Limits.Cpu }}
-              memory: {{ .Values.LoadBalancerAndIngressService.Config.Resources.Limits.Memory }}
+              cpu: 250m
+              memory: 300Mi
             requests:
-              cpu: {{ .Values.LoadBalancerAndIngressService.Config.Resources.Requests.Cpu }}
-              memory: {{ .Values.LoadBalancerAndIngressService.Config.Resources.Requests.Memory }}
+              cpu: 100m
+              memory: 200Mi
           livenessProbe:
             httpGet:
               path: /api/status
-              port:  {{ .Values.LoadBalancerAndIngressService.Config.AKOSettings.ApiServerPort }}
+              port:  8080
             initialDelaySeconds: 5
             periodSeconds: 10
 
 ---
-{{- if .Values.LoadBalancerAndIngressService.Config.Rbac.PspEnabled }}
-apiVersion: {{ .Values.LoadBalancerAndIngressService.Config.Rbac.PspPolicyApiVersion }} 
+apiVersion: test/1.2 
 kind: PodSecurityPolicy
 metadata:
-  name: {{ .Values.LoadBalancerAndIngressService.Name }}
+  name: ako-tkg-system-
   labels:
-    app.kubernetes.io/name: {{ .Values.LoadBalancerAndIngressService.Name }}
+    app.kubernetes.io/name: ako-tkg-system-
 spec:
   privileged: false
   # Required to prevent escalations to root.
@@ -338,24 +309,8 @@ spec:
       - min: 1
         max: 65535
   readOnlyRootFilesystem: false
-{{- end }}
 ---
-{{ if not .Values.LoadBalancerAndIngressService.Config.L7Settings.DisableIngressClass }}
-apiVersion: networking.k8s.io/v1
-kind: IngressClass
-metadata:
-  name: avi-lb
-  {{ if .Values.LoadBalancerAndIngressService.Config.L7Settings.DefaultIngController }}
-  annotations:
-    ingressclass.kubernetes.io/is-default-class: "true"
-  {{ end }}
-spec:
-  controller: ako.vmware.com/avi-lb
-  parameters:
-    apiGroup: ako.vmware.com
-    kind: IngressParameters
-    name: external-lb
-{{ end }}
+
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
@@ -638,4 +593,69 @@ spec:
     subresources:
       status: {}
 `
-)
+
+func unitTestConvertToDeploymentYaml() {
+	Context("Populate deployment components", func() {
+		var (
+			akoDeploymentConfig *akoov1alpha1.AKODeploymentConfig
+		)
+
+		When("valid AKODeploymentYaml is provided", func() {
+			BeforeEach(func() {
+				akoDeploymentConfig = &akoov1alpha1.AKODeploymentConfig{
+					Spec: akoov1alpha1.AKODeploymentConfigSpec{
+						CloudName:          "test-cloud",
+						Controller:         "10.23.122.1",
+						ServiceEngineGroup: "Default-SEG",
+						DataNetwork: akoov1alpha1.DataNetwork{
+							Name: "test-akdc",
+							CIDR: "10.0.0.0/24",
+						},
+						ExtraConfigs: akoov1alpha1.ExtraConfigs{
+							Image: akoov1alpha1.AKOImageConfig{
+								Repository: "test/image",
+								PullPolicy: "IfNotPresent",
+								Version:    "1.3.1",
+							},
+							Rbac: akoov1alpha1.AKORbacConfig{
+								PspEnabled:          true,
+								PspPolicyAPIVersion: "test/1.2",
+							},
+							Log: akoov1alpha1.AKOLogConfig{
+								PersistentVolumeClaim: "true",
+								MountPath:             "/var/log",
+								LogFile:               "test-avi.log",
+							},
+							IngressConfigs: akoov1alpha1.AKOIngressConfig{
+								DisableIngressClass:      true,
+								DefaultIngressController: true,
+								ShardVSSize:              "MEDIUM",
+								ServiceType:              "NodePort",
+								NodeNetworkList: []akoov1alpha1.NodeNetwork{
+									{
+										NetworkName: "test-node-network-1",
+										Cidrs:       []string{"10.0.0.0/24", "192.168.0.0/24"},
+									},
+								},
+							},
+							DisableStaticRouteSync: true,
+						},
+					},
+				}
+			})
+
+			It("should generate exact yaml unstructured", func() {
+				tmpl, err := template.New("deployment").Parse(ako.AkoDeploymentYamlTemplate)
+				Expect(err).Should(BeNil())
+				managementClusterName := os.Getenv(ako_operator.ManagementClusterName)
+				values, err := ako.NewValues(akoDeploymentConfig, akoov1alpha1.TKGSystemNamespace+"-"+managementClusterName)
+				Expect(err).Should(BeNil())
+
+				var buf bytes.Buffer
+				err = tmpl.Execute(&buf, map[string]interface{}{"Values": values})
+				Expect(err).Should(BeNil())
+				Expect(buf.String()).Should(Equal(expectedYamlUnstructured))
+			})
+		})
+	})
+}
