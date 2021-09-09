@@ -44,11 +44,8 @@ func NewValues(obj *akoov1alpha1.AKODeploymentConfig, clusterNameSpacedName stri
 	if err != nil {
 		return nil, err
 	}
-	akoSettings := NewAKOSettings(
-		clusterNameSpacedName,
-		obj.Spec.ExtraConfigs.CniPlugin,
-		obj.Spec.ExtraConfigs.DisableStaticRouteSync)
-	networkSettings, err := NewNetworkSettings(obj.Spec.DataNetwork, obj.Spec.ExtraConfigs.IngressConfigs.NodeNetworkList)
+	akoSettings := NewAKOSettings(clusterNameSpacedName, obj)
+	networkSettings, err := NewNetworkSettings(obj)
 	if err != nil {
 		return nil, err
 	}
@@ -57,9 +54,9 @@ func NewValues(obj *akoov1alpha1.AKODeploymentConfig, clusterNameSpacedName stri
 		obj.Spec.Controller,
 		obj.Spec.ServiceEngineGroup,
 	)
-	l7Settings := NewL7Settings(obj.Spec.ExtraConfigs.IngressConfigs)
-	l4Settings := DefaultL4Settings()
-	nodePortSelector := DefaultNodePortSelector()
+	l7Settings := NewL7Settings(&obj.Spec.ExtraConfigs.IngressConfigs)
+	l4Settings := NewL4Settings(&obj.Spec.ExtraConfigs.L4Configs)
+	nodePortSelector := NewNodePortSelector(&obj.Spec.ExtraConfigs.NodePortSelector)
 	resources := DefaultResources()
 	rbac := NewRbac(obj.Spec.ExtraConfigs.Rbac)
 
@@ -160,16 +157,27 @@ type Config struct {
 	Avicredentials        Avicredentials     `yaml:"avi_credentials"`
 }
 
+// NamespaceSelector contains label key and value used for namespace migration.
+// Same label has to be present on namespace/s which needs migration/sync to AKO
+type NamespaceSelector struct {
+	LabelKey   string `yaml:"label_key"`
+	LabelValue string `yaml:"label_value"`
+}
+
 // AKOSettings provides the settings for AKO
 type AKOSettings struct {
-	LogLevel               string `yaml:"log_level"`
-	FullSyncFrequency      string `yaml:"full_sync_frequency"`       // This frequency controls how often AKO polls the Avi controller to update itself with cloud configurations.
-	ApiServerPort          int    `yaml:"api_server_port"`           // Specify the port for the API server, default is set as 8080 // EmptyAllowed: false
-	DeleteConfig           string `yaml:"delete_config"`             // Has to be set to true in configmap if user wants to delete AKO created objects from AVI
-	DisableStaticRouteSync string `yaml:"disable_static_route_sync"` // If the POD networks are reachable from the Avi SE, set this knob to true.
-	ClusterName            string `yaml:"cluster_name"`              // A unique identifier for the kubernetes cluster, that helps distinguish the objects for this cluster in the avi controller. // MUST-EDIT
-	CniPlugin              string `yaml:"cni_plugin"`                // Set the string if your CNI is calico or openshift. enum: calico|canal|flannel|openshift
-	SyncNamespace          string `yaml:"sync_namespace"`
+	LogLevel               string            `yaml:"log_level"`
+	FullSyncFrequency      string            `yaml:"full_sync_frequency"`       // This frequency controls how often AKO polls the Avi controller to update itself with cloud configurations.
+	ApiServerPort          int               `yaml:"api_server_port"`           // Specify the port for the API server, default is set as 8080 // EmptyAllowed: false
+	DeleteConfig           string            `yaml:"delete_config"`             // Has to be set to true in configmap if user wants to delete AKO created objects from AVI
+	DisableStaticRouteSync string            `yaml:"disable_static_route_sync"` // If the POD networks are reachable from the Avi SE, set this knob to true.
+	ClusterName            string            `yaml:"cluster_name"`              // A unique identifier for the kubernetes cluster, that helps distinguish the objects for this cluster in the avi controller. // MUST-EDIT
+	CniPlugin              string            `yaml:"cni_plugin"`                // Set the string if your CNI is calico or openshift. enum: calico|canal|flannel|openshift
+	SyncNamespace          string            `yaml:"sync_namespace"`
+	EnableEVH              string            `yaml:"enable_EVH"`   // This enables the Enhanced Virtual Hosting Model in Avi Controller for the Virtual Services
+	Layer7Only             string            `yaml:"layer_7_only"` // If this flag is switched on, then AKO will only do layer 7 loadbalancing
+	ServicesAPI            string            `yaml:"services_api"` // Flag that enables AKO in services API mode. Currently implemented only for L4.
+	NamespaceSector        NamespaceSelector `yaml:"namespace_selector"`
 }
 
 // DefaultAKOSettings returns the default AKOSettings
@@ -180,19 +188,47 @@ func DefaultAKOSettings() AKOSettings {
 		DeleteConfig:           "false",
 		DisableStaticRouteSync: "true",
 		FullSyncFrequency:      "1800",
+		NamespaceSector:        NamespaceSelector{},
 		// CniPlugin: don't set, use default value in AKO
-		// SyncNamespace: don't set, use default value in AKO
 		// ClusterName: populate in runtime
 	}
 }
 
 // NewAKOSettings returns a new AKOSettings,
 // allow users to set CniPlugin, ClusterName and DisableStaticRouteSync in runtime
-func NewAKOSettings(clusterName, cniPlugin string, disableStaticRouteSync bool) (settings AKOSettings) {
+func NewAKOSettings(clusterName string, obj *akoov1alpha1.AKODeploymentConfig) (settings AKOSettings) {
 	settings = DefaultAKOSettings()
 	settings.ClusterName = clusterName
-	settings.CniPlugin = cniPlugin
-	settings.DisableStaticRouteSync = strconv.FormatBool(disableStaticRouteSync)
+	if obj.Spec.ExtraConfigs.Log.LogLevel != "" {
+		settings.LogLevel = obj.Spec.ExtraConfigs.Log.LogLevel
+	}
+	if obj.Spec.ExtraConfigs.FullSyncFrequency != "" {
+		settings.LogLevel = obj.Spec.ExtraConfigs.FullSyncFrequency
+	}
+	if obj.Spec.ExtraConfigs.ApiServerPort != nil {
+		settings.ApiServerPort = *obj.Spec.ExtraConfigs.ApiServerPort
+	}
+	if obj.Spec.ExtraConfigs.DisableStaticRouteSync != nil {
+		settings.DisableStaticRouteSync = strconv.FormatBool(*obj.Spec.ExtraConfigs.DisableStaticRouteSync)
+	}
+	if obj.Spec.ExtraConfigs.CniPlugin != "" {
+		settings.CniPlugin = obj.Spec.ExtraConfigs.CniPlugin
+	}
+	if obj.Spec.ExtraConfigs.EnableEVH != nil {
+		settings.EnableEVH = strconv.FormatBool(*obj.Spec.ExtraConfigs.EnableEVH)
+	}
+	if obj.Spec.ExtraConfigs.Layer7Only != nil {
+		settings.EnableEVH = strconv.FormatBool(*obj.Spec.ExtraConfigs.Layer7Only)
+	}
+	if obj.Spec.ExtraConfigs.ServicesAPI != nil {
+		settings.ServicesAPI = strconv.FormatBool(*obj.Spec.ExtraConfigs.ServicesAPI)
+	}
+	if obj.Spec.ExtraConfigs.NamespaceSelector.LabelKey != "" {
+		settings.NamespaceSector.LabelKey = obj.Spec.ExtraConfigs.NamespaceSelector.LabelKey
+	}
+	if obj.Spec.ExtraConfigs.NamespaceSelector.LabelValue != "" {
+		settings.NamespaceSector.LabelValue = obj.Spec.ExtraConfigs.NamespaceSelector.LabelValue
+	}
 	return
 }
 
@@ -201,10 +237,13 @@ type NetworkSettings struct {
 	SubnetIP            string                 `yaml:"subnet_ip"`     // Subnet IP of the vip network
 	SubnetPrefix        string                 `yaml:"subnet_prefix"` // Subnet Prefix of the vip network
 	NetworkName         string                 `yaml:"network_name"`  // Network Name of the vip network
-	NodeNetworkList     []v1alpha1.NodeNetwork `yaml:"-"`
+	NodeNetworkList     []v1alpha1.NodeNetwork `yaml:"-"`             // This list of network and cidrs are used in pool placement network for vcenter cloud.
 	NodeNetworkListJson string                 `yaml:"node_network_list"`
-	VIPNetworkList      []map[string]string    `yaml:"-"`
+	VIPNetworkList      []map[string]string    `yaml:"-"` // Network information of the VIP network. Multiple networks allowed only for AWS Cloud.
 	VIPNetworkListJson  string                 `yaml:"vip_network_list"`
+	EnableRHI           string                 `yaml:"enable_rhi"` // This is a cluster wide setting for BGP peering.
+	BGPPeerLabels       []string               `yaml:"-"`          // Select BGP peers using bgpPeerLabels, for selective VsVip advertisement.
+	BGPPeerLabelsJson   string                 `yaml:"bgp_peer_labels"`
 }
 
 // DefaultNetworkSettings returns default NetworkSettings
@@ -220,10 +259,10 @@ func DefaultNetworkSettings() NetworkSettings {
 
 // NewNetworkSettings returns a new NetworkSettings
 // allow user to set NetworkName, SubnetIP, SubnetPrefix, NodeNetworkList and VIPNetworkList at runtime
-func NewNetworkSettings(dataNetwork v1alpha1.DataNetwork, nodeNetworkList []v1alpha1.NodeNetwork) (NetworkSettings, error) {
+func NewNetworkSettings(obj *akoov1alpha1.AKODeploymentConfig) (NetworkSettings, error) {
 	settings := DefaultNetworkSettings()
-	settings.NetworkName = dataNetwork.Name
-	ip, ipNet, err := net.ParseCIDR(dataNetwork.CIDR)
+	settings.NetworkName = obj.Spec.DataNetwork.Name
+	ip, ipNet, err := net.ParseCIDR(obj.Spec.DataNetwork.CIDR)
 	if err != nil {
 		return NetworkSettings{}, err
 	}
@@ -231,11 +270,11 @@ func NewNetworkSettings(dataNetwork v1alpha1.DataNetwork, nodeNetworkList []v1al
 	ones, _ := ipNet.Mask.Size()
 	settings.SubnetPrefix = strconv.Itoa(ones)
 
-	settings.NodeNetworkList = nodeNetworkList
-	settings.VIPNetworkList = []map[string]string{{"networkName": dataNetwork.Name}}
+	settings.NodeNetworkList = obj.Spec.ExtraConfigs.IngressConfigs.NodeNetworkList
+	settings.VIPNetworkList = []map[string]string{{"networkName": obj.Spec.DataNetwork.Name}}
 
-	if len(nodeNetworkList) != 0 {
-		jsonBytes, err := json.Marshal(nodeNetworkList)
+	if len(settings.NodeNetworkList) != 0 {
+		jsonBytes, err := json.Marshal(settings.NodeNetworkList)
 		if err != nil {
 			return NetworkSettings{}, err
 		}
@@ -248,6 +287,17 @@ func NewNetworkSettings(dataNetwork v1alpha1.DataNetwork, nodeNetworkList []v1al
 		}
 		settings.VIPNetworkListJson = string(jsonBytes)
 	}
+	if obj.Spec.ExtraConfigs.NetworksConfig.EnableRHI != nil {
+		settings.EnableRHI = strconv.FormatBool(*obj.Spec.ExtraConfigs.NetworksConfig.EnableRHI)
+	}
+	settings.BGPPeerLabels = obj.Spec.ExtraConfigs.NetworksConfig.BGPPeerLabels
+	if len(settings.BGPPeerLabels) != 0 {
+		jsonBytes, err := json.Marshal(settings.BGPPeerLabels)
+		if err != nil {
+			return NetworkSettings{}, err
+		}
+		settings.BGPPeerLabelsJson = string(jsonBytes)
+	}
 	return settings, nil
 }
 
@@ -256,9 +306,10 @@ type L7Settings struct {
 	DisableIngressClass  bool   `yaml:"disable_ingress_class"`
 	DefaultIngController bool   `yaml:"default_ing_controller"`
 	L7ShardingScheme     string `yaml:"l7_sharding_scheme"`
-	ServiceType          string `yaml:"service_type"`           // enum NodePort|ClusterIP
+	ServiceType          string `yaml:"service_type"`           // enum NodePort|ClusterIP|NodePortLocal
 	ShardVSSize          string `yaml:"shard_vs_size"`          // Use this to control the layer 7 VS numbers. This applies to both secure/insecure VSes but does not apply for passthrough. ENUMs: LARGE, MEDIUM, SMALL
 	PassthroughShardSize string `yaml:"pass_through_shardsize"` // Control the passthrough virtualservice numbers using this ENUM. ENUMs: LARGE, MEDIUM, SMALL
+	NoPGForSNI           bool   `yaml:"no_pg_for_SNI"`
 }
 
 // DefaultL7Settings returns the default L7Settings
@@ -274,7 +325,7 @@ func DefaultL7Settings() L7Settings {
 
 // NewL7Settings returns a customized L7Settings after parsing the v1alpha1.AKOIngressConfig
 // it only modifies ServiceType and ShardVSSize when instructed by the ingressConfig
-func NewL7Settings(config v1alpha1.AKOIngressConfig) L7Settings {
+func NewL7Settings(config *akoov1alpha1.AKOIngressConfig) L7Settings {
 	settings := DefaultL7Settings()
 	settings.DisableIngressClass = config.DisableIngressClass
 	settings.DefaultIngController = config.DefaultIngressController
@@ -284,12 +335,20 @@ func NewL7Settings(config v1alpha1.AKOIngressConfig) L7Settings {
 	if config.ServiceType != "" {
 		settings.ServiceType = config.ServiceType
 	}
+	if config.PassthroughShardSize != "" {
+		settings.PassthroughShardSize = config.PassthroughShardSize
+	}
+	if config.NoPGForSNI != nil {
+		settings.NoPGForSNI = *config.NoPGForSNI
+	}
 	return settings
 }
 
 // L4Settings outlines all the knobs  used to control Layer 4 loadbalancing settings in AKO.
 type L4Settings struct {
+	AdvancedL4    string `yaml:"advanced_l4"`    // Use this knob to control the settings for the services API usage.
 	DefaultDomain string `yaml:"default_domain"` // If multiple sub-domains are configured in the cloud, use this knob to set the default sub-domain to use for L4 VSes.
+	AutoFQDN      string `yaml:"auto_fqdn"`      // ENUM: default(<svc>.<ns>.<subdomain>), flat (<svc>-<ns>.<subdomain>), "disabled"
 }
 
 // DefaultL4Settings returns the default L4Settings
@@ -297,6 +356,21 @@ func DefaultL4Settings() L4Settings {
 	return L4Settings{
 		// DefaultDomain: don't set, use default value in AKO
 	}
+}
+
+// NewL4Settings returns a customized L4Settings after parsing the v1alpha1.AKOL4Config
+func NewL4Settings(config *akoov1alpha1.AKOL4Config) L4Settings {
+	settings := DefaultL4Settings()
+	if config.AdvancedL4 != nil {
+		settings.AdvancedL4 = strconv.FormatBool(*config.AdvancedL4)
+	}
+	if config.DefaultDomain != "" {
+		settings.DefaultDomain = config.DefaultDomain
+	}
+	if config.AutoFQDN != "" {
+		settings.AutoFQDN = config.AutoFQDN
+	}
+	return settings
 }
 
 // ControllerSettings outlines settings on the Avi controller that affects AKO's functionality.
@@ -340,6 +414,18 @@ func DefaultNodePortSelector() NodePortSelector {
 		// Key: don't set, use default value in AKO
 		// Value: don't set, use default value in AKO
 	}
+}
+
+// NewNodePortSelector returns the NodePortSelector defined in AKODeploymentConfig
+func NewNodePortSelector(nodePortSelector *akoov1alpha1.NodePortSelector) NodePortSelector {
+	selector := DefaultNodePortSelector()
+	if nodePortSelector.Key != "" {
+		selector.Key = nodePortSelector.Key
+	}
+	if nodePortSelector.Value != "" {
+		selector.Key = nodePortSelector.Value
+	}
+	return selector
 }
 
 type Resources struct {

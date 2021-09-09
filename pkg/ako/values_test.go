@@ -5,6 +5,7 @@ package ako
 
 import (
 	"encoding/json"
+	"k8s.io/utils/pointer"
 	"strconv"
 
 	. "github.com/onsi/ginkgo"
@@ -41,7 +42,7 @@ var _ = Describe("AKO", func() {
 				value.ImageInfo.Images.LoadBalancerAndIngressServiceImage.ImagePath: "ako",
 				akoSettings.ClusterName:                                             "test",
 				akoSettings.CniPlugin:                                               akoDeploymentConfig.Spec.ExtraConfigs.CniPlugin,
-				akoSettings.DisableStaticRouteSync:                                  strconv.FormatBool(akoDeploymentConfig.Spec.ExtraConfigs.DisableStaticRouteSync),
+				akoSettings.DisableStaticRouteSync:                                  strconv.FormatBool(*akoDeploymentConfig.Spec.ExtraConfigs.DisableStaticRouteSync),
 				controllerSettings.CloudName:                                        akoDeploymentConfig.Spec.CloudName,
 				controllerSettings.ControllerIP:                                     akoDeploymentConfig.Spec.Controller,
 				controllerSettings.ServiceEngineGroupName:                           akoDeploymentConfig.Spec.ServiceEngineGroup,
@@ -120,7 +121,7 @@ var _ = Describe("AKO", func() {
 									},
 								},
 							},
-							DisableStaticRouteSync: true,
+							DisableStaticRouteSync: pointer.BoolPtr(true),
 							CniPlugin:              "antrea",
 						},
 					},
