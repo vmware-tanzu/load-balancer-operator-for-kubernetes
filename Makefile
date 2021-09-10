@@ -27,7 +27,13 @@ TOOLS_DIR := hack/tools
 TOOLS_BIN_DIR := $(TOOLS_DIR)/bin
 export PATH := $(abspath $(BIN_DIR)):$(abspath $(TOOLS_BIN_DIR)):$(PATH)
 export KUBEBUILDER_ASSETS := $(abspath $(TOOLS_BIN_DIR))
+
+ifdef GITHUB_ACTIONS
+export GOPROXY := direct
+else
 export GOPROXY := https://build-artifactory.eng.vmware.com/gocenter.io,direct
+endif
+
 
 CONTROLLER_GEN     := $(TOOLS_BIN_DIR)/controller-gen
 GOLANGCI_LINT      := $(TOOLS_BIN_DIR)/golangci-lint
@@ -73,7 +79,11 @@ generate: $(CONTROLLER_GEN)
 
 # Build the docker image
 docker-build: test
+ifdef GITHUB_ACTIONS
+	docker build . -t ${IMG} -f Dockerfile-for-github-ci
+else
 	docker build . -t ${IMG}
+endif
 
 # Push the docker image
 docker-push:
@@ -155,7 +165,11 @@ lint: ## Run all the lint targets
 GOLANGCI_LINT_FLAGS ?= --fast=true
 .PHONY: lint-go
 lint-go: | $(GOLANGCI_LINT) ## Lint codebase
+ifdef GITHUB_ACTIONS
+	$(GOLANGCI_LINT) run -v $(GOLANGCI_LINT_FLAGS) --timeout 3m ## Allow more time for Github Action, otherwise timeout errors is likely to occur
+else
 	$(GOLANGCI_LINT) run -v $(GOLANGCI_LINT_FLAGS)
+endif
 
 .PHONY: lint-go-full
 lint-go-full: GOLANGCI_LINT_FLAGS = --fast=false
@@ -163,11 +177,20 @@ lint-go-full: lint-go ## Run slower linters to detect possible issues
 
 .PHONY: lint-markdown
 lint-markdown: ## Lint the project's markdown
+ifdef GITHUB_ACTIONS
+	markdownlint -c md-config.json .
+else
 	docker run -i --rm -v "$$(pwd)":/work $(CACHE_IMAGE_REGISTRY)/tmknom/markdownlint -c /work/md-config.json .
+endif
 
 .PHONY: lint-shell
 lint-shell: ## Lint the project's shell scripts
+ifdef GITHUB_ACTIONS
+	shellcheck hack/*.sh
+else
+	## Lint the project's shell in Github Action. We can assume shellcheck is in PATH
 	docker run --rm -v "$$(pwd):/mnt" $(CACHE_IMAGE_REGISTRY)/koalaman/shellcheck:stable  hack/*.sh
+endif
 
 .PHONY: fix
 fix: GOLANGCI_LINT_FLAGS = --fast=false --fix

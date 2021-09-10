@@ -1,5 +1,7 @@
 # Load Balancer Operator for Kubernetes
 
+[![Load Balancer Operator for Kubernetes Checks](https://github.com/vmware-samples/load-balancer-operator-for-kubernetes/actions/workflows/actions.yml/badge.svg)](https://github.com/vmware-samples/load-balancer-operator-for-kubernetes/actions/workflows/actions.yml)
+
 ## Useful links
 
 - [Quick Start](./docs/quick-start.md)
@@ -8,10 +10,10 @@ Load Balancer Operator for Kubernetes is a Cluster API speaking operator for loa
 
 ## Features
 
-* It reconciles Cluster API objects and provisions Service type LoadBalancer for control plane Machines to achieve HA.
-* It leverages [Carvel Packaging APIs](https://carvel.dev/kapp-controller/docs/latest/packaging) to lifecycle manage load balancer provider operator. Currently, we support AKO([AVI Kubernetes Operator](https://github.com/vmware/load-balancer-and-ingress-services-for-kubernetes)) as a reference implementation.
-* It bridges [Cluster API](https://cluster-api.sigs.k8s.io/) and load balancer provider operator to ensure load balancer resources are cleaned up when cluster is deleted.
-* For AKO, it also automates the user account creation and injection per cluster.
+1. It reconciles Cluster API objects and provisions Service type LoadBalancer for control plane Machines to achieve HA.
+2. It leverages [Carvel Packaging APIs](https://carvel.dev/kapp-controller/docs/latest/packaging) to lifecycle manage load balancer provider operator. Currently, we support AKO([AVI Kubernetes Operator](https://github.com/vmware/load-balancer-and-ingress-services-for-kubernetes)) as a reference implementation.
+3. It bridges [Cluster API](https://cluster-api.sigs.k8s.io/) and load balancer provider operator to ensure load balancer resources are cleaned up when cluster is deleted.
+4. For AKO, it also automates the user account creation and injection per cluster.
 
 ## Contributing
 
