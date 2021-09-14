@@ -35,4 +35,5 @@ func intgTests() {
 }
 
 func unitTests() {
+	Describe("AKO Deployment Components generation", unitTestConvertToDeploymentYaml)
 }

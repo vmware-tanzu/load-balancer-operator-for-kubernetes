@@ -11,7 +11,6 @@ import (
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -96,38 +95,6 @@ func AkoUserReconcilerTest() {
 			Expect(secret.Name).To(Equal(workloadSecretName))
 			Expect(secret.Namespace).To(Equal(akoov1alpha1.AviNamespace))
 			Expect(len(secret.Data)).To(Equal(3))
-		})
-	})
-
-	Context("Should be able to list all workload clusters", func() {
-		var cluster *clusterv1.Cluster
-
-		BeforeEach(func() {
-			cluster = &clusterv1.Cluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cluster",
-					Namespace: "default",
-					Labels: map[string]string{
-						akoov1alpha1.AviClusterLabel: "",
-						"test":                       "test",
-					},
-				},
-				Spec: clusterv1.ClusterSpec{},
-			}
-			err = userReconciler.Create(ctx, cluster)
-			Expect(err).ShouldNot(HaveOccurred())
-		})
-
-		AfterEach(func() {
-			err = userReconciler.Delete(ctx, cluster)
-			Expect(err).ShouldNot(HaveOccurred())
-		})
-
-		It("list all selected workload clusters", func() {
-			clusterList, err := userReconciler.listAkoDeplymentConfigDeployedClusters(ctx, akoDeploymentConfig)
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(len(clusterList.Items)).To(Equal(1))
-			Expect(clusterList.Items[0].Name).To(Equal("test-cluster"))
 		})
 	})
 

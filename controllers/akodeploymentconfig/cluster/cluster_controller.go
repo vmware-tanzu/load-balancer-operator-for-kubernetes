@@ -5,12 +5,12 @@ package cluster
 
 import (
 	"context"
+	"k8s.io/client-go/kubernetes/scheme"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
-	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -60,7 +60,7 @@ func (r *ClusterReconciler) ReconcileDelete(
 	ctx context.Context,
 	log logr.Logger,
 	cluster *clusterv1.Cluster,
-	obj *akoov1alpha1.AKODeploymentConfig,
+	_ *akoov1alpha1.AKODeploymentConfig,
 ) (ctrl.Result, error) {
 	res := ctrl.Result{}
 
@@ -125,29 +125,21 @@ func (r *ClusterReconciler) cleanup(
 	}
 
 	akoAddonSecretData := akoAddonSecret.Data["values.yaml"]
-	var values map[string]interface{}
-	if err := yaml.Unmarshal(akoAddonSecretData, &values); err != nil {
+
+	values, err := ako.NewValuesFromBytes(akoAddonSecretData)
+	if err != nil {
+		log.Error(err, "Failed to unmarshal values from ako add-on data")
 		return false, err
 	}
-	akoInfo, ok := values["loadBalancerAndIngressService"].(map[string]interface{})
-	if !ok {
-		return false, errors.Errorf("workload cluster %s ako add-on data values parse error", obj.Name)
-	}
-	akoConfig, ok := akoInfo["config"].(map[string]interface{})
-	if !ok {
-		return false, errors.Errorf("workload cluster %s ako add-on data values parse error", obj.Name)
-	}
-	akoSetting, ok := akoConfig["ako_settings"].(map[string]interface{})
-	if !ok {
-		return false, errors.Errorf("workload cluster %s ako add-on data values parse error", obj.Name)
-	}
-	if akoSetting["delete_config"] != "true" {
-		akoSetting["delete_config"] = "true"
-		akoAddonSecretData, err = yaml.Marshal(&values)
+
+	akoSetting := values.LoadBalancerAndIngressService.Config.AKOSettings
+	if akoSetting.DeleteConfig != "true" {
+		akoSetting.DeleteConfig = "true"
+		secretData, err := values.YttYaml()
 		if err != nil {
 			return false, errors.Errorf("workload cluster %s ako add-on data values marshal error", obj.Name)
 		}
-		akoAddonSecret.Data["values.yaml"] = []byte(akoov1alpha1.TKGDataValueFormatString + string(akoAddonSecretData))
+		akoAddonSecret.Data["values.yaml"] = []byte(secretData)
 		if err := remoteClient.Update(ctx, akoAddonSecret); err != nil {
 			log.Error(err, "Failed to update AKO Addon Data Values, AKO clean up failed")
 			return false, err
@@ -169,9 +161,9 @@ func (r *ClusterReconciler) cleanup(
 	return false, nil
 }
 
-func GetFakeRemoteClient(ctx context.Context, c client.Client, cluster client.ObjectKey, scheme *runtime.Scheme) (client.Client, error) {
+func GetFakeRemoteClient(_ context.Context, _ client.Client, _ client.ObjectKey, _ *runtime.Scheme) (client.Client, error) {
 	// return fake client
-	return fake.NewFakeClient(), nil
+	return fake.NewFakeClientWithScheme(scheme.Scheme), nil
 }
 
 func (r *ClusterReconciler) akoAddonDataValueName() string {

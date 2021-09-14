@@ -115,7 +115,7 @@ func (r *BootstrapClusterReconciler) DeployAKOSecret(
 func (r *BootstrapClusterReconciler) DeleteAKO(
 	ctx context.Context,
 	log logr.Logger,
-	obj *akoov1alpha1.AKODeploymentConfig,
+	_ *akoov1alpha1.AKODeploymentConfig,
 ) (ctrl.Result, error) {
 	res := ctrl.Result{}
 	ns := &corev1.Namespace{}
@@ -140,11 +140,11 @@ func (r *BootstrapClusterReconciler) convertToAKODeploymentYaml(obj *akoov1alpha
 		return nil, err
 	}
 	managementClusterName := os.Getenv(ako_operator.ManagementClusterName)
-	values, err := ako.PopulateValues(obj, akoov1alpha1.TKGSystemNamespace+"-"+managementClusterName)
+	values, err := ako.NewValues(obj, akoov1alpha1.TKGSystemNamespace+"-"+managementClusterName)
 	if err != nil {
 		return nil, err
 	}
-	r.modifyAKODeploymentForBootstrapCluster(&values)
+	r.modifyAKODeploymentForBootstrapCluster(values)
 	var buf bytes.Buffer
 	if err = tmpl.Execute(&buf, map[string]interface{}{"Values": values}); err != nil {
 		return nil, err
@@ -154,7 +154,7 @@ func (r *BootstrapClusterReconciler) convertToAKODeploymentYaml(obj *akoov1alpha
 
 func (r *BootstrapClusterReconciler) modifyAKODeploymentForBootstrapCluster(values *ako.Values) {
 	// change to lower values since we don't need much resource in bootstrap cluster
-	values.Resources.Requests = ako.Requests{
+	values.LoadBalancerAndIngressService.Config.Resources.Requests = ako.Requests{
 		Cpu:    "50m",
 		Memory: "20Mi",
 	}

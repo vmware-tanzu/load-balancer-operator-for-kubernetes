@@ -16,47 +16,55 @@ var _ = Describe("AKO", func() {
 	Context("PopulateValues", func() {
 		var (
 			akoDeploymentConfig *akoov1alpha1.AKODeploymentConfig
-			rendered            Values
+			rendered            *Values
 			err                 error
 		)
 
 		JustBeforeEach(func() {
-			rendered, err = PopulateValues(akoDeploymentConfig, "test")
+			rendered, err = NewValues(akoDeploymentConfig, "test")
 			Expect(err).ToNot(HaveOccurred())
 		})
 
-		ensureValueIsExpected := func(value Values, akoDeploymentConfig *akoov1alpha1.AKODeploymentConfig) {
+		ensureValueIsExpected := func(value *Values, akoDeploymentConfig *akoov1alpha1.AKODeploymentConfig) {
+			Expect(value).ShouldNot(BeNil())
+			config := value.LoadBalancerAndIngressService.Config
+			akoSettings := config.AKOSettings
+			controllerSettings := config.ControllerSettings
+			networkSettings := config.NetworkSettings
+			l7Settings := config.L7Settings
+			rbac := config.Rbac
+
 			expectedPairs := map[string]string{
-				value.Image.Repository:                          "test/image",
-				value.Image.PullPolicy:                          akoDeploymentConfig.Spec.ExtraConfigs.Image.PullPolicy,
-				value.Image.Version:                             akoDeploymentConfig.Spec.ExtraConfigs.Image.Version,
-				value.Image.Path:                                "ako",
-				value.AKOSettings.ClusterName:                   "test",
-				value.AKOSettings.CniPlugin:                     akoDeploymentConfig.Spec.ExtraConfigs.CniPlugin,
-				value.AKOSettings.DisableStaticRouteSync:        strconv.FormatBool(akoDeploymentConfig.Spec.ExtraConfigs.DisableStaticRouteSync),
-				value.ControllerSettings.CloudName:              akoDeploymentConfig.Spec.CloudName,
-				value.ControllerSettings.ControllerIP:           akoDeploymentConfig.Spec.Controller,
-				value.ControllerSettings.ServiceEngineGroupName: akoDeploymentConfig.Spec.ServiceEngineGroup,
-				value.NetworkSettings.NetworkName:               akoDeploymentConfig.Spec.DataNetwork.Name,
-				value.NetworkSettings.SubnetIP:                  "10.0.0.0",
-				value.NetworkSettings.SubnetPrefix:              "24",
-				value.PersistentVolumeClaim:                     akoDeploymentConfig.Spec.ExtraConfigs.Log.PersistentVolumeClaim,
-				value.MountPath:                                 akoDeploymentConfig.Spec.ExtraConfigs.Log.MountPath,
-				value.LogFile:                                   akoDeploymentConfig.Spec.ExtraConfigs.Log.LogFile,
-				value.Name:                                      "ako-test",
-				value.Rbac.PspPolicyApiVersion:                  akoDeploymentConfig.Spec.ExtraConfigs.Rbac.PspPolicyAPIVersion,
-				value.Rbac.PspPolicyApiVersion:                  "test/1.2",
-				value.L7Settings.ShardVSSize:                    akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.ShardVSSize,
-				value.L7Settings.ServiceType:                    akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.ServiceType,
+				value.ImageInfo.ImageRepository:                                     "test/image",
+				value.ImageInfo.ImagePullPolicy:                                     akoDeploymentConfig.Spec.ExtraConfigs.Image.PullPolicy,
+				value.ImageInfo.Images.LoadBalancerAndIngressServiceImage.Tag:       akoDeploymentConfig.Spec.ExtraConfigs.Image.Version,
+				value.ImageInfo.Images.LoadBalancerAndIngressServiceImage.ImagePath: "ako",
+				akoSettings.ClusterName:                                             "test",
+				akoSettings.CniPlugin:                                               akoDeploymentConfig.Spec.ExtraConfigs.CniPlugin,
+				akoSettings.DisableStaticRouteSync:                                  strconv.FormatBool(akoDeploymentConfig.Spec.ExtraConfigs.DisableStaticRouteSync),
+				controllerSettings.CloudName:                                        akoDeploymentConfig.Spec.CloudName,
+				controllerSettings.ControllerIP:                                     akoDeploymentConfig.Spec.Controller,
+				controllerSettings.ServiceEngineGroupName:                           akoDeploymentConfig.Spec.ServiceEngineGroup,
+				networkSettings.NetworkName:                                         akoDeploymentConfig.Spec.DataNetwork.Name,
+				networkSettings.SubnetIP:                                            "10.0.0.0",
+				networkSettings.SubnetPrefix:                                        "24",
+				config.PersistentVolumeClaim:                                        akoDeploymentConfig.Spec.ExtraConfigs.Log.PersistentVolumeClaim,
+				config.MountPath:                                                    akoDeploymentConfig.Spec.ExtraConfigs.Log.MountPath,
+				config.LogFile:                                                      akoDeploymentConfig.Spec.ExtraConfigs.Log.LogFile,
+				value.LoadBalancerAndIngressService.Name:                            "ako-test",
+				rbac.PspPolicyApiVersion:                                            akoDeploymentConfig.Spec.ExtraConfigs.Rbac.PspPolicyAPIVersion,
+				rbac.PspPolicyApiVersion:                                            "test/1.2",
+				l7Settings.ShardVSSize:                                              akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.ShardVSSize,
+				l7Settings.ServiceType:                                              akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.ServiceType,
 			}
 			for k, v := range expectedPairs {
 				Expect(k).To(Equal(v))
 			}
 
 			expectedBoolPairs := map[bool]bool{
-				value.L7Settings.DisableIngressClass:  akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.DisableIngressClass,
-				value.L7Settings.DefaultIngController: akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.DefaultIngressController,
-				value.Rbac.PspEnabled:                 akoDeploymentConfig.Spec.ExtraConfigs.Rbac.PspEnabled,
+				l7Settings.DisableIngressClass:  akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.DisableIngressClass,
+				l7Settings.DefaultIngController: akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.DefaultIngressController,
+				rbac.PspEnabled:                 akoDeploymentConfig.Spec.ExtraConfigs.Rbac.PspEnabled,
 			}
 			for k, v := range expectedBoolPairs {
 				Expect(k).To(Equal(v))
@@ -65,13 +73,13 @@ var _ = Describe("AKO", func() {
 			if len(akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.NodeNetworkList) != 0 {
 				nodeNetworkListJson, jsonerr := json.Marshal(akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.NodeNetworkList)
 				Expect(jsonerr).ShouldNot(HaveOccurred())
-				Expect(value.NetworkSettings.NodeNetworkListJson).To(Equal(string(nodeNetworkListJson)))
+				Expect(networkSettings.NodeNetworkListJson).To(Equal(string(nodeNetworkListJson)))
 			} else {
-				Expect(value.NetworkSettings.NodeNetworkListJson).Should(BeNil())
+				Expect(networkSettings.NodeNetworkListJson).Should(BeNil())
 			}
 			vipNetworkListJson, jsonerr := json.Marshal([]map[string]string{{"networkName": akoDeploymentConfig.Spec.DataNetwork.Name}})
 			Expect(jsonerr).ShouldNot(HaveOccurred())
-			Expect(value.NetworkSettings.VIPNetworkListJson).To(Equal(string(vipNetworkListJson)))
+			Expect(networkSettings.VIPNetworkListJson).To(Equal(string(vipNetworkListJson)))
 		}
 
 		When("a valid AKODeploymentYaml is provided", func() {

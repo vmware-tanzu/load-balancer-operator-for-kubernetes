@@ -8,15 +8,85 @@ import (
 	. "github.com/onsi/gomega"
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/cluster"
+	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
 )
+
+const expectedSecretYaml = `#@data/values
+#@overlay/match-child-defaults missing_ok=True
+---
+imageInfo:
+    imageRepository: test
+    imagePullPolicy: IfNotPresent
+    images:
+        loadBalancerAndIngressServiceImage:
+            imagePath: image
+            tag: 1.3.1
+loadBalancerAndIngressService:
+    name: ako--test-cluster
+    namespace: avi-system
+    config:
+        is_cluster_service: ""
+        replica_count: 1
+        ako_settings:
+            log_level: INFO
+            full_sync_frequency: "1800"
+            api_server_port: 8080
+            delete_config: "false"
+            disable_static_route_sync: "true"
+            cluster_name: -test-cluster
+            cni_plugin: ""
+            sync_namespace: ""
+        network_settings:
+            subnet_ip: 10.0.0.0
+            subnet_prefix: "24"
+            network_name: test-akdc
+            node_network_list: '[{"networkName":"test-node-network-1","cidrs":["10.0.0.0/24","192.168.0.0/24"]}]'
+            vip_network_list: '[{"networkName":"test-akdc"}]'
+        l7_settings:
+            disable_ingress_class: true
+            default_ing_controller: true
+            l7_sharding_scheme: ""
+            service_type: NodePort
+            shard_vs_size: MEDIUM
+            pass_through_shardsize: ""
+        l4_settings:
+            default_domain: ""
+        controller_settings:
+            service_engine_group_name: Default-SEG
+            controller_version: ""
+            cloud_name: test-cloud
+            controller_ip: 10.23.122.1
+        nodeport_selector:
+            key: ""
+            value: ""
+        resources:
+            limits:
+                cpu: 250m
+                memory: 300Mi
+            request:
+                cpu: 100m
+                memory: 200Mi
+        rbac:
+            psp_enabled: true
+            psp_policy_api_version: test/1.2
+        persistent_volume_claim: "true"
+        mount_path: /var/log
+        log_file: test-avi.log
+        avi_credentials:
+            username: admin
+            password: Admin!23
+            certificate_authority_data: '-----BEGIN CERTIFICATE-----jf5Hlg==-----END CERTIFICATE-----'
+`
 
 func unitTestAKODeploymentYaml() {
 	Context("PopulateValues", func() {
 		var (
 			akoDeploymentConfig *akoov1alpha1.AKODeploymentConfig
 			capicluster         *clusterv1.Cluster
+			aviUserSecret       *corev1.Secret
 		)
 		BeforeEach(func() {
 			capicluster = &clusterv1.Cluster{
@@ -68,16 +138,40 @@ func unitTestAKODeploymentYaml() {
 						},
 					},
 				}
+				aviUserSecret = &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "cluster-avi-credentials",
+						Namespace: "default",
+					},
+					Type: "Opaque",
+					Data: map[string][]byte{
+						"username":                 []byte("admin"),
+						"password":                 []byte("Admin!23"),
+						"certificateAuthorityData": []byte("-----BEGIN CERTIFICATE-----jf5Hlg==-----END CERTIFICATE-----"),
+					},
+				}
 			})
 
 			It("should populate correct values in crs yaml", func() {
-				_, err := cluster.AkoAddonSecretYaml(capicluster, akoDeploymentConfig)
+				_, err := cluster.AkoAddonSecretDataYaml(capicluster, akoDeploymentConfig, aviUserSecret)
 				Expect(err).ShouldNot(HaveOccurred())
+			})
+
+			It("should generate the exact AddonSecretData values", func() {
+				secret, err := ako.NewValues(akoDeploymentConfig, "namespace-name")
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(secret.LoadBalancerAndIngressService.Name).Should(Equal("ako-namespace-name"))
+			})
+
+			It("should generates exact values in crs yaml with the string template approach", func() {
+				secretYaml, err := cluster.AkoAddonSecretDataYaml(capicluster, akoDeploymentConfig, aviUserSecret)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(secretYaml).Should(Equal(expectedSecretYaml))
 			})
 
 			It("should throw error if template not match", func() {
 				akoDeploymentConfig.Spec.DataNetwork.CIDR = "test"
-				_, err := cluster.AkoAddonSecretYaml(capicluster, akoDeploymentConfig)
+				_, err := cluster.AkoAddonSecretDataYaml(capicluster, akoDeploymentConfig, aviUserSecret)
 				Expect(err).Should(HaveOccurred())
 				akoDeploymentConfig.Spec.DataNetwork.CIDR = "10.0.0.0/24"
 			})
