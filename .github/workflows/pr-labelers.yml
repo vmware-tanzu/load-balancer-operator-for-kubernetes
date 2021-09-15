@@ -1,0 +1,11 @@
+name: "Label PRs from globs"
+on:
+  - pull_request_target
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/labeler@main
+        with:
+          repo-token: "${{ secrets.BOT_GITHUB_TOKEN }}"
