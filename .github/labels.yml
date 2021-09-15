@@ -1,0 +1,235 @@
+# define labels including kinds / areas etc
+kind:
+  - "api-change"
+  - "bug"
+  - "cleanup"
+  - "design"
+  - "documentation"
+  - "ecosystem-enablement"
+  - "enhancement"
+  - "example"
+  - "feature"
+  - "flake"
+  - "new-api"
+  - "postmortem"
+  - "support"
+  - "technical-debt"
+  - "velocity-improvement"
+  - "workaround-removal"
+
+area:
+  - 'HA'
+  - 'admin'
+  - 'api'
+  - 'app-config-deployment'
+  - 'auth'
+  - 'autoscaling'
+  - 'batch'
+  - 'build-release'
+  - 'cadvisor'
+  - 'cloudprovider'
+  - 'cluster-federation'
+  - 'cluster-lifecycle'
+  - 'devexp'
+  - 'downward-api'
+  - 'extensibility'
+  - 'images-registry'
+  - 'introspection'
+  - 'isolation'
+  - 'kubelet-api'
+  - 'logging'
+  - 'monitoring'
+  - 'networking'
+  - 'reliability'
+  - 'security'
+  - 'storage'
+  - 'test'
+  - 'logging'
+  - 'usability'
+  - 'volumes'
+
+
+src:
+  - '**/*.go'
+
+unit_tests:
+  - '**/*_unit_test.go'
+
+inte_tests:
+  - '**/*_intg_test.go'
+
+priority:
+  - 'P0'
+  - 'P1'
+  - 'P2'
+  - 'P3'
+
+labels:
+  - name: 0 - Backlog
+    color: CCCCCC
+  - name: 0 - Triage
+    color: AAAAAA
+  - name: 1 - Ready
+    color: CCCCCC
+  - name: 2 - Working <= 5
+    color: CCCCCC
+  - name: 3 - Review
+    color: CCCCCC
+  - name: 4 - Done
+    color: CCCCCC
+  - name: approved
+    color: 0ffa16
+  - name: area/HA
+    color: bfd4f2
+  - name: area/admin
+    color: "009800"
+  - name: area/api
+    color: e1ed21
+  - name: area/app-config-deployment
+    color: fb6420
+  - name: area/auth
+    color: 00cc00
+  - name: area/autoscaling
+    color: "5319e7"
+  - name: area/batch
+    color: c7def8
+  - name: area/build-release
+    color: bfe5bf
+  - name: area/cadvisor
+    color: fef2c0
+  - name: area/cloudprovider
+    color: f1fd21
+  - name: area/cluster-federation
+    color: fad8c7
+  - name: area/cluster-lifecycle
+    color: d4c5f9
+  - name: area/devexp
+    color: "5319e7"
+  - name: area/downward-api
+    color: 8fffcf
+  - name: area/extensibility
+    color: ffaa04
+  - name: area/images-registry
+    color: eba420
+  - name: area/introspection
+    color: bfe5bf
+  - name: area/isolation
+    color: aba420
+  - name: area/kubelet-api
+    color: fbca04
+  - name: area/logging
+    color: fef2c0
+  - name: area/monitoring
+    color: fef2c0
+  - name: area/networking
+    color: 006b75
+  - name: area/performance
+    color: d4c5f9
+  - name: area/reliability
+    color: a10d01
+  - name: area/security
+    color: d4c5f9
+  - name: area/stateful-apps
+    color: ff6060
+  - name: area/storage
+    color: 006b75
+  - name: area/system-requirement
+    color: bfdadc
+  - name: area/test
+    color: fad8c7
+  - name: area/upgrade
+    color: bfd4f2
+  - name: area/upward-api
+    color: a0c280
+  - name: area/usability
+    color: bfe5bf
+  - name: area/volumes
+    color: bfe5bf
+  - name: cherrypick-approved
+    color: fef2c0
+  - name: cherrypick-candidate
+    color: fef2c0
+  - name: 'cla: human-approved'
+    color: bfe5bf
+  - name: 'cla: no'
+    color: e11d21
+  - name: 'cla: yes'
+    color: bfe5bf
+  - name: do-not-merge
+    color: e11d21
+  - name: documentation/better-examples
+    color: f9d0c4
+  - name: documentation/confusing
+    color: f9d0c4
+  - name: documentation/content-gap
+    color: f9d0c4
+  - name: documentation/out-of-date
+    color: f9d0c4
+  - name: help-wanted
+    color: 006b75
+  - name: keep-open
+    color: fbca04
+  - name: kind/api-change
+    color: c7def8
+  - name: kind/bug
+    color: e11d21
+  - name: kind/cleanup
+    color: c7def8
+  - name: kind/design
+    color: c7def8
+  - name: kind/documentation
+    color: c7def8
+  - name: kind/ecosystem-enablement
+    color: c7def8
+  - name: kind/enhancement
+    color: c7def8
+  - name: kind/example
+    color: c7def8
+  - name: kind/feature
+    color: c7def8
+  - name: kind/flake
+    color: f7c6c7
+  - name: kind/new-api
+    color: c7def8
+  - name: kind/postmortem
+    color: bfe5bf
+  - name: kind/support
+    color: eb6420
+  - name: kind/technical-debt
+    color: c7def8
+  - name: kind/velocity-improvement
+    color: c7def8
+  - name: kind/workaround-removal
+    color: c7def8
+  - name: lgtm
+    color: 15dd18
+  - name: needs-ok-to-merge
+    color: ededed
+  - name: needs-rebase
+    color: BDBDBD
+  - name: ok-to-merge
+    color: fbca04
+  - name: priority/P0
+    color: e11d21
+  - name: priority/P1
+    color: eb6420
+  - name: priority/P2
+    color: fbca04
+  - name: priority/P3
+    color: fef2c0
+  - name: release-note
+    color: c2e0c6
+  - name: release-note-action-required
+    color: c2e0c6
+  - name: release-note-experimental
+    color: c2e0c6
+  - name: release-note-label-needed
+    color: db5a64
+  - name: release-note-none
+    color: c2e0c6
+  - name: retest-not-required
+    color: eb6420
+  - name: retest-not-required-docs-only
+    color: fbca04
+  - name: stale
+    color: "795548"
