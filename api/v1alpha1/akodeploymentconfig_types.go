@@ -97,26 +97,94 @@ type ExtraConfigs struct {
 	// +optional
 	Log AKOLogConfig `json:"log,omitempty"`
 
-	// Rbac specifies the configuration for AKO Rbac
+	// FullSyncFrequency controls how often AKO polls the Avi controller to update itself
+	// with cloud configurations. Default value is 1800
 	// +optional
-	Rbac AKORbacConfig `json:"rbac,omitempty"`
+	FullSyncFrequency string `json:"fullSyncFrequency,omitempty"`
 
-	// IngressConfigs specifies ingress configuration for ako
+	// ApiServerPort specifies Internal port for AKO's API server for the liveness probe of the AKO pod
+	// default port is 8080
 	// +optional
-	IngressConfigs AKOIngressConfig `json:"ingress,omitempty"`
+	ApiServerPort *int `json:"apiServerPort,omitempty"`
 
 	// DisableStaticRouteSync describes ako should sync static routing or not.
 	// If the POD networks are reachable from the Avi SE, this should be to true.
 	// Otherwise, it should be false.
 	// It would be true by default.
 	// +optional
-	DisableStaticRouteSync bool `json:"disableStaticRouteSync,omitempty"`
+	DisableStaticRouteSync *bool `json:"disableStaticRouteSync,omitempty"`
 
 	// CniPlugin describes which cni plugin cluster is using.
-	// default value should be antrea, set this string if cluster cni is other type.
-	// enum: calico|canal|flannel|openshift|antrea
+	// default value is antrea, set this string if cluster cni is other type.
+	// AKO supported CNI: antrea|calico|canal|flannel|openshift|ncp
+	// +kubebuilder:validation:Enum=antrea;calico;canal;flannel;openshift;ncp
 	// +optional
 	CniPlugin string `json:"cniPlugin,omitempty"`
+
+	// EnableEVH specifies if you want to enable the Enhanced Virtual Hosting Model
+	// in Avi Controller for the Virtual Services, default value is false
+	// +optional
+	EnableEVH *bool `json:"enableEVH,omitempty"`
+
+	// Layer7Only specifies if you want AKO only to do layer 7 load balancing.
+	// default value is false
+	// +optional
+	Layer7Only *bool `json:"layer7Only,omitempty"`
+
+	// NameSpaceSelector contains label key and value used for namespace migration.
+	// Same label has to be present on namespace/s which needs migration/sync to AKO
+	// +optional
+	NamespaceSelector NamespaceSelector `json:"namespaceSelector,omitempty"`
+
+	// ServicesAPI specifies if enables AKO in services API mode: https://kubernetes-sigs.github.io/service-apis/.
+	// Currently, implemented only for L4. This flag uses the upstream GA APIs which are not backward compatible
+	// with the advancedL4 APIs which uses a fork and a version of v1alpha1pre1
+	// default value is false
+	// +optional
+	ServicesAPI *bool `json:"servicesAPI,omitempty"`
+
+	// NetworksConfig specifies the network configurations for virtual services.
+	// +optional
+	NetworksConfig NetworksConfig `json:"networksConfig,omitempty"`
+
+	// IngressConfigs specifies ingress configuration for ako
+	// +optional
+	IngressConfigs AKOIngressConfig `json:"ingress,omitempty"`
+
+	// IngressConfigs specifies L4 load balancer configuration for ako
+	// +optional
+	L4Configs AKOL4Config `json:"l4Config,omitempty"`
+
+	// NodePortSelector only applicable if serviceType is NodePort
+	// +optional
+	NodePortSelector NodePortSelector `json:"nodePortSelector,omitempty"`
+
+	// Rbac specifies the configuration for AKO Rbac
+	// +optional
+	Rbac AKORbacConfig `json:"rbac,omitempty"`
+}
+
+// NameSpaceSelector contains label key and value used for namespace migration
+type NamespaceSelector struct {
+	LabelKey   string `json:"labelKey,omitempty"`
+	LabelValue string `json:"labelValue,omitempty"`
+}
+
+type NetworksConfig struct {
+	// EnableRHI specifies cluster wide setting for BGP peering.
+	// default value is false
+	// +optional
+	EnableRHI *bool `json:"enableRHI,omitempty"`
+
+	// BGPPeerLabels specifies BGP peers, this is used for selective VsVip advertisement.
+	// +optional
+	BGPPeerLabels []string `json:"bgpPeerLabels,omitempty"`
+
+	// VipNetworkList specifies Network information of the VIP network.
+	// Multiple networks allowed only for AWS Cloud.
+	// default will be the networks specified in Data Networks
+	// +optional
+	// VipNetworkList []NodeNetwork `json:"vipNetworkList,omitempty"`
 }
 
 // AKOIngressConfig contains ingress configurations for AKO Deployment
@@ -133,23 +201,59 @@ type AKOIngressConfig struct {
 	// +optional
 	DefaultIngressController bool `json:"defaultIngressController,omitempty"`
 
-	// ShardVSSize string describes ingress shared virtual service size
-	// Valid value should be SMALL, MEDIUM or LARGE, default value is SMALL
-	// +kubebuilder:validation:Enum=SMALL;MEDIUM;LARGE
+	// ServiceType string describes ingress methods for a service
+	// Valid value should be NodePort, ClusterIP and NodePortLocal
+	// +kubebuilder:validation:Enum=NodePort;ClusterIP;NodePortLocal
+	// +optional
+	ServiceType string `json:"serviceType,omitempty"`
+
+	// ShardVSSize describes ingress shared virtual service size
+	// Valid value should be SMALL, MEDIUM, LARGE or DEDICATED, default value is SMALL
+	// +kubebuilder:validation:Enum=SMALL;MEDIUM;LARGE;DEDICATED
 	// +optional
 	ShardVSSize string `json:"shardVSSize,omitempty"`
 
-	// ServiceType string describes ingress methods for a service
-	// Valid value should be NodePort or ClusterIP
-	// +kubebuilder:validation:Enum=NodePort;ClusterIP
+	// PassthroughShardSize controls the passthrough virtualservice numbers
+	// Valid value should be SMALL, MEDIUM or LARGE, default value is SMALL
+	// +kubebuilder:validation:Enum=SMALL;MEDIUM;LARGE
 	// +optional
-	ServiceType string `json:"serviceType,omitempty"`
+	PassthroughShardSize string `json:"passthroughShardSize,omitempty"`
 
 	// NodeNetworkList describes the details of network and CIDRs
 	// are used in pool placement network for vcenter cloud. Node Network details
 	// are not needed when in NodePort mode / static routes are disabled / non vcenter clouds.
 	// +optional
 	NodeNetworkList []NodeNetwork `json:"nodeNetworkList,omitempty"`
+
+	// NoPGForSNI describes if you want to get rid of poolgroups from SNI VSes.
+	// Do not use this flag, if you don't want http caching, default value is false.
+	// +optional
+	NoPGForSNI *bool `json:"noPGForSNI,omitempty"`
+}
+
+// AKOL4Config contains L4 load balancer configurations for AKO Deployment
+type AKOL4Config struct {
+	// AdvancedL4 controls the settings for the services API usage.
+	// default to not using services APIs: https://github.com/kubernetes-sigs/service-apis
+	// +optional
+	AdvancedL4 *bool `json:"advancedL4,omitempty"`
+
+	// DefaultDomain controls the default sub-domain to use for L4 VSes when multiple sub-domains
+	// are configured in the cloud.
+	// +optional
+	DefaultDomain string `json:"defaultDomain,omitempty"`
+
+	// AutoFQDN controls the FQDN generation.
+	// Valid value should be default(<svc>.<ns>.<subdomain>), flat (<svc>-<ns>.<subdomain>) or disabled,
+	// +kubebuilder:validation:Enum=default;flat;disabled
+	// +optional
+	AutoFQDN string `json:"autoFQDN,omitempty"`
+}
+
+// NodePortSelector is only applicable if serviceType is NodePort
+type NodePortSelector struct {
+	Key   string `json:"key,omitempty"`
+	Value string `json:"value,omitempty"`
 }
 
 type NodeNetwork struct {
@@ -176,6 +280,12 @@ type AKOImageConfig struct {
 }
 
 type AKOLogConfig struct {
+	// LogLevel specifies the AKO pod log level
+	// Valid value should be INFO, DEBUG, WARN or ERROR, default value is INFO
+	// +kubebuilder:validation:Enum=INFO;DEBUG;WARN;ERROR
+	// +optional
+	LogLevel string `json:"logLevel,omitempty"`
+
 	// PersistentVolumeClaim specifies if a PVC should make for AKO logging
 	// +optional
 	PersistentVolumeClaim string `json:"persistentVolumeClaim,omitempty"`

@@ -1,7 +1,7 @@
 apiVersion: network.tanzu.vmware.com/v1alpha1
 kind: AKODeploymentConfig
 metadata:
-    name: akodeploymentconfig-all
+    name: sample-akodeploymentconfig
 spec:
     cloudName: Default-Cloud
     serviceEngineGroup: Default-Group
@@ -20,11 +20,35 @@ spec:
               end: 10.161.136.42
               type: V4
     extraConfigs:
+        apiServerPort: 8080
+        fullSyncFrequency: "1800"
+        cniPlugin: antrea
+        disableStaticRouteSync: true
+        enableEVH: false
+        layer7Only: false
+        l4Config:
+            advancedL4: false
+            autoFQDN: "disabled"
+            defaultDomain: "default"
+        ingress:
+            defaultIngressController: false
+            disableIngressClass: true
+            serviceType: NodePortLocal
+            noPGForSNI: false
+            shardVSSize: SMALL
+            nodeNetworkList:
+                networkName: "VM Network"
+                cidrs:
+                - 10.161.20.0/24
+                - 10.161.136.0/24
+        log:
+            logLevel: "INFO"
+        networksConfig:
+            enableRHI: false
         image:
-            repository: harbor-pks.vmware.com/tkgextensions/tkg-networking/ako
+            repository: tanzu.vmware.com/tkgextensions/tkg-networking/ako
             pullPolicy: IfNotPresent
             version: 2.1.1-5100
-        disableIngressClass: true
 ---
 apiVersion: v1
 kind: Secret

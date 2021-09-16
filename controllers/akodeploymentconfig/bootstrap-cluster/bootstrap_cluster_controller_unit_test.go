@@ -10,6 +10,7 @@ import (
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako"
 	ako_operator "gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako-operator"
+	"k8s.io/utils/pointer"
 	"os"
 	"text/template"
 )
@@ -638,7 +639,7 @@ func unitTestConvertToDeploymentYaml() {
 									},
 								},
 							},
-							DisableStaticRouteSync: true,
+							DisableStaticRouteSync: pointer.BoolPtr(true),
 						},
 					},
 				}

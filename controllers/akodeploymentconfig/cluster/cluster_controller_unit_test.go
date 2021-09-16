@@ -11,6 +11,7 @@ import (
 	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
 )
 
@@ -39,21 +40,32 @@ loadBalancerAndIngressService:
             cluster_name: -test-cluster
             cni_plugin: ""
             sync_namespace: ""
+            enable_EVH: ""
+            layer_7_only: ""
+            services_api: ""
+            namespace_selector:
+                label_key: ""
+                label_value: ""
         network_settings:
             subnet_ip: 10.0.0.0
             subnet_prefix: "24"
             network_name: test-akdc
             node_network_list: '[{"networkName":"test-node-network-1","cidrs":["10.0.0.0/24","192.168.0.0/24"]}]'
             vip_network_list: '[{"networkName":"test-akdc"}]'
+            enable_rhi: ""
+            bgp_peer_labels: ""
         l7_settings:
             disable_ingress_class: true
-            default_ing_controller: true
+            default_ing_controller: false
             l7_sharding_scheme: ""
             service_type: NodePort
             shard_vs_size: MEDIUM
             pass_through_shardsize: ""
+            no_pg_for_SNI: false
         l4_settings:
+            advanced_l4: ""
             default_domain: ""
+            auto_fqdn: ""
         controller_settings:
             service_engine_group_name: Default-SEG
             controller_version: ""
@@ -124,7 +136,7 @@ func unitTestAKODeploymentYaml() {
 							},
 							IngressConfigs: akoov1alpha1.AKOIngressConfig{
 								DisableIngressClass:      true,
-								DefaultIngressController: true,
+								DefaultIngressController: false,
 								ShardVSSize:              "MEDIUM",
 								ServiceType:              "NodePort",
 								NodeNetworkList: []akoov1alpha1.NodeNetwork{
@@ -134,7 +146,7 @@ func unitTestAKODeploymentYaml() {
 									},
 								},
 							},
-							DisableStaticRouteSync: true,
+							DisableStaticRouteSync: pointer.BoolPtr(true),
 						},
 					},
 				}
