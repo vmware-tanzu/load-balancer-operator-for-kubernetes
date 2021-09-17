@@ -20,7 +20,7 @@ const expectedSecretYaml = `#@data/values
 ---
 loadBalancerAndIngressService:
     name: ako--test-cluster
-    namespace: avi-system
+    namespace: tkg-system-networking
     config:
         is_cluster_service: ""
         replica_count: 1

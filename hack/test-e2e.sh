@@ -60,7 +60,7 @@ akoip=""
 n=1
 while [[ -z "${akoip}" && $n -le 10 ]]; do
   sleep 5s
-  akoip="$(kw get pods -n avi-system -o wide | grep '^ako-.*Running' | grep -e '[0-9]*\.[0-9]*\.[0-9]*\.[0-9]' -o)" || true  
+  akoip="$(kw get pods -n tkg-system-networking -o wide | grep '^ako-.*Running' | grep -e '[0-9]*\.[0-9]*\.[0-9]*\.[0-9]' -o)" || true
   n=$(( n+1 ))
 done
 if [ "$n" == "11" ];then
@@ -74,7 +74,7 @@ fi
 configmap=""
 n=1
 while [[ -z "${configmap}" && $n -le 10 ]]; do
-  configmap="$(kw get configmap -n avi-system | grep '^avi-k8s-config' -o)" || true 
+  configmap="$(kw get configmap -n tkg-system-networking | grep '^avi-k8s-config' -o)" || true
   sleep 3s
   n=$(( n+1 ))
 done

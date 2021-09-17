@@ -70,7 +70,7 @@ func EnsureAKO(testcase *E2ETestCase, clusterName string) {
 		"",
 		fmt.Sprintf("%s-admin@%s", clusterName, clusterName),
 		testcase.Clients.Kubectl.Namespace)
-	EnsurePodRunningWithTimeout(wcRunner, "ako-0", 1, "avi-system", "180s")
+	EnsurePodRunningWithTimeout(wcRunner, "ako-0", 1, "tkg-system-networking", "180s")
 }
 
 func EnsureLoadBalancerService(testcase *E2ETestCase, clusterName string) {
