@@ -41,6 +41,8 @@ var _ = Describe("AKO", func() {
 				value.ImageInfo.Images.LoadBalancerAndIngressServiceImage.Tag:       akoDeploymentConfig.Spec.ExtraConfigs.Image.Version,
 				value.ImageInfo.Images.LoadBalancerAndIngressServiceImage.ImagePath: "ako",
 				akoSettings.ClusterName:                                             "test",
+				akoSettings.LogLevel:                                                akoDeploymentConfig.Spec.ExtraConfigs.Log.LogLevel,      // use default value if not provided
+				akoSettings.FullSyncFrequency:                                       akoDeploymentConfig.Spec.ExtraConfigs.FullSyncFrequency, // use default value if not provided
 				akoSettings.CniPlugin:                                               akoDeploymentConfig.Spec.ExtraConfigs.CniPlugin,
 				akoSettings.DisableStaticRouteSync:                                  strconv.FormatBool(*akoDeploymentConfig.Spec.ExtraConfigs.DisableStaticRouteSync),
 				controllerSettings.CloudName:                                        akoDeploymentConfig.Spec.CloudName,
@@ -95,6 +97,7 @@ var _ = Describe("AKO", func() {
 							CIDR: "10.0.0.0/24",
 						},
 						ExtraConfigs: akoov1alpha1.ExtraConfigs{
+							FullSyncFrequency: "1900",
 							Image: akoov1alpha1.AKOImageConfig{
 								Repository: "test/image/ako",
 								PullPolicy: "IfNotPresent",
@@ -105,6 +108,7 @@ var _ = Describe("AKO", func() {
 								PspPolicyAPIVersion: "test/1.2",
 							},
 							Log: akoov1alpha1.AKOLogConfig{
+								LogLevel:              "DEBUG",
 								PersistentVolumeClaim: "true",
 								MountPath:             "/var/log",
 								LogFile:               "test-avi.log",
