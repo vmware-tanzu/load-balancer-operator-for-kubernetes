@@ -1,0 +1,9 @@
+github-cicd:
+  - .github/**/*
+
+docs:
+  - docs/**/*
+
+config:
+  - config/**/*
+
