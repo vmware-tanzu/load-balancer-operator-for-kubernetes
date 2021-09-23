@@ -9,7 +9,6 @@ import (
 	"math/rand"
 	"net"
 	"strconv"
-	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -18,19 +17,9 @@ import (
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 )
 
-// StripLast strips the last token seperated by the separator
-func StripLast(repository, separator string) (string, []string, error) {
-	splits := strings.Split(repository, separator)
-	if len(splits) == 0 {
-		return "", nil, errors.New("cannot strip last, incorrect format")
-	}
-	return strings.Join(splits[:len(splits)-1], separator), splits, nil
-}
-
 // Values defines the structures of an Ako addon secret string data
 // this constructs the payload (string data) of the corev1.Secret
 type Values struct {
-	ImageInfo                     ImageInfo                     `yaml:"imageInfo"`
 	LoadBalancerAndIngressService LoadBalancerAndIngressService `yaml:"loadBalancerAndIngressService"`
 }
 
@@ -39,10 +28,6 @@ type Values struct {
 func NewValues(obj *akoov1alpha1.AKODeploymentConfig, clusterNameSpacedName string) (*Values, error) {
 	if obj == nil {
 		return nil, errors.New("provided AKODeploymentConfig is nil")
-	}
-	repository, repositorySplits, err := StripLast(obj.Spec.ExtraConfigs.Image.Repository, "/")
-	if err != nil {
-		return nil, err
 	}
 	akoSettings := NewAKOSettings(clusterNameSpacedName, obj)
 	networkSettings, err := NewNetworkSettings(obj)
@@ -61,16 +46,6 @@ func NewValues(obj *akoov1alpha1.AKODeploymentConfig, clusterNameSpacedName stri
 	rbac := NewRbac(obj.Spec.ExtraConfigs.Rbac)
 
 	return &Values{
-		ImageInfo: ImageInfo{
-			ImageRepository: repository,
-			ImagePullPolicy: obj.Spec.ExtraConfigs.Image.PullPolicy,
-			Images: ImageInfoImages{
-				LoadBalancerAndIngressServiceImage: LoadBalancerAndIngressServiceImage{
-					ImagePath: repositorySplits[len(repositorySplits)-1],
-					Tag:       obj.Spec.ExtraConfigs.Image.Version,
-				},
-			},
-		},
 		LoadBalancerAndIngressService: LoadBalancerAndIngressService{
 			Name:      "ako-" + clusterNameSpacedName,
 			Namespace: akoov1alpha1.AviNamespace,
@@ -112,23 +87,6 @@ func (v *Values) YttYaml() (string, error) {
 		return "", err
 	}
 	return header + string(buf), nil
-}
-
-// ImageInfo describes the image information for the add-on secret
-type ImageInfo struct {
-	ImageRepository string          `yaml:"imageRepository"`
-	ImagePullPolicy string          `yaml:"imagePullPolicy"`
-	Images          ImageInfoImages `yaml:"images"`
-}
-
-type ImageInfoImages struct {
-	LoadBalancerAndIngressServiceImage LoadBalancerAndIngressServiceImage `yaml:"loadBalancerAndIngressServiceImage"`
-}
-
-// LoadBalancerAndIngressServiceImage describes the LoadBalancerAndIngressServiceImage
-type LoadBalancerAndIngressServiceImage struct {
-	ImagePath string `yaml:"imagePath"`
-	Tag       string `yaml:"tag"`
 }
 
 // LoadBalancerAndIngressService describes the load balancer and ingress service

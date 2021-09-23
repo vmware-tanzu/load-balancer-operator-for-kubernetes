@@ -18,13 +18,6 @@ import (
 const expectedSecretYaml = `#@data/values
 #@overlay/match-child-defaults missing_ok=True
 ---
-imageInfo:
-    imageRepository: test
-    imagePullPolicy: IfNotPresent
-    images:
-        loadBalancerAndIngressServiceImage:
-            imagePath: image
-            tag: 1.3.1
 loadBalancerAndIngressService:
     name: ako--test-cluster
     namespace: avi-system
@@ -120,11 +113,6 @@ func unitTestAKODeploymentYaml() {
 							CIDR: "10.0.0.0/24",
 						},
 						ExtraConfigs: akoov1alpha1.ExtraConfigs{
-							Image: akoov1alpha1.AKOImageConfig{
-								Repository: "test/image",
-								PullPolicy: "IfNotPresent",
-								Version:    "1.3.1",
-							},
 							Rbac: akoov1alpha1.AKORbacConfig{
 								PspEnabled:          true,
 								PspPolicyAPIVersion: "test/1.2",

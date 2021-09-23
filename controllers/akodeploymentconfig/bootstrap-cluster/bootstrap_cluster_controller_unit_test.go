@@ -129,7 +129,6 @@ metadata:
   namespace: avi-system
   labels:
     app.kubernetes.io/name: ako-tkg-system-
-    app.kubernetes.io/version: "1.3.1"
 spec:
   replicas: 1
   serviceName: ako
@@ -157,8 +156,6 @@ spec:
           - mountPath: /var/log
             name: ako-pv-storage
           
-          image: "test/image:1.3.1"
-          imagePullPolicy: IfNotPresent
           env:
           - name: CTRL_USERNAME
             valueFrom:
@@ -613,11 +610,6 @@ func unitTestConvertToDeploymentYaml() {
 							CIDR: "10.0.0.0/24",
 						},
 						ExtraConfigs: akoov1alpha1.ExtraConfigs{
-							Image: akoov1alpha1.AKOImageConfig{
-								Repository: "test/image",
-								PullPolicy: "IfNotPresent",
-								Version:    "1.3.1",
-							},
 							Rbac: akoov1alpha1.AKORbacConfig{
 								PspEnabled:          true,
 								PspPolicyAPIVersion: "test/1.2",

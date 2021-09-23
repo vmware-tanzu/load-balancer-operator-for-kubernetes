@@ -150,7 +150,6 @@ metadata:
   namespace: {{ .Values.LoadBalancerAndIngressService.Namespace }}
   labels:
     app.kubernetes.io/name: {{ .Values.LoadBalancerAndIngressService.Name }}
-    app.kubernetes.io/version: "{{ .Values.ImageInfo.Images.LoadBalancerAndIngressServiceImage.Tag }}"
 spec:
   replicas: {{ .Values.LoadBalancerAndIngressService.Config.ReplicaCount }}
   serviceName: ako
@@ -178,8 +177,6 @@ spec:
           - mountPath: {{ .Values.LoadBalancerAndIngressService.Config.MountPath }}
             name: ako-pv-storage
           {{ end }}
-          image: "{{ .Values.ImageInfo.ImageRepository }}/{{ .Values.ImageInfo.Images.LoadBalancerAndIngressServiceImage.ImagePath }}:{{ .Values.ImageInfo.Images.LoadBalancerAndIngressServiceImage.Tag }}"
-          imagePullPolicy: {{ .Values.ImageInfo.ImagePullPolicy }}
           env:
           - name: CTRL_USERNAME
             valueFrom:
