@@ -203,7 +203,7 @@ func NewAKOSettings(clusterName string, obj *akoov1alpha1.AKODeploymentConfig) (
 		settings.LogLevel = obj.Spec.ExtraConfigs.Log.LogLevel
 	}
 	if obj.Spec.ExtraConfigs.FullSyncFrequency != "" {
-		settings.LogLevel = obj.Spec.ExtraConfigs.FullSyncFrequency
+		settings.FullSyncFrequency = obj.Spec.ExtraConfigs.FullSyncFrequency
 	}
 	if obj.Spec.ExtraConfigs.ApiServerPort != nil {
 		settings.ApiServerPort = *obj.Spec.ExtraConfigs.ApiServerPort
