@@ -7,6 +7,7 @@ import (
 	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig"
 	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/cluster"
 	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/machine"
+	akoo "gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako-operator"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -18,12 +19,17 @@ func SetupReconcilers(mgr ctrl.Manager) error {
 	}).SetupWithManager(mgr); err != nil {
 		return err
 	}
-	if err := (&akodeploymentconfig.AKODeploymentConfigReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("AKODeploymentConfig"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		return err
+
+	if !akoo.IsBootStrapCluster() {
+		// Since v1.5.0, the responsibility of deploying AKO/AKO Secret in bootstrap cluster
+		// has been migrated to tanzu-framework
+		if err := (&akodeploymentconfig.AKODeploymentConfigReconciler{
+			Client: mgr.GetClient(),
+			Log:    ctrl.Log.WithName("controllers").WithName("AKODeploymentConfig"),
+			Scheme: mgr.GetScheme(),
+		}).SetupWithManager(mgr); err != nil {
+			return err
+		}
 	}
 	if err := (&cluster.ClusterReconciler{
 		Client: mgr.GetClient(),
