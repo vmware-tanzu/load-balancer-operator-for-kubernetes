@@ -19,6 +19,9 @@ spec:
             - start: 10.161.136.31
               end: 10.161.136.42
               type: V4
+    controlPlaneNetwork:
+        name: "VM Network 2"
+        cidr: 10.192.192.0/19
     extraConfigs:
         apiServerPort: 8080
         fullSyncFrequency: "1800"

@@ -43,6 +43,15 @@ spec:
   dataNetwork:
     name: #@ data.values.AVI_DATA_NETWORK
     cidr: #@ data.values.AVI_DATA_NETWORK_CIDR
+  #@ if data.values.AVI_CONTROL_PLANE_NETWORK != "":
+  controlPlaneNetwork:
+    name: #@ data.values.AVI_CONTROL_PLANE_NETWORK
+    cidr: #@ data.values.AVI_CONTROL_PLANE_NETWORK_CIDR
+  #@ else:
+   controlPlaneNetwork:
+    name: #@ data.values.AVI_DATA_NETWORK
+    cidr: #@ data.values.AVI_DATA_NETWORK_CIDR
+  #@ end
     #@ if has_ippools_section():
     ipPools:
       - start: #@ data.values.AVI_DATA_NETWORK_IP_POOL_START

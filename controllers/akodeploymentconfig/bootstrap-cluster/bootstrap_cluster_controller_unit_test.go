@@ -612,6 +612,10 @@ func unitTestConvertToDeploymentYaml() {
 							Name: "test-akdc",
 							CIDR: "10.0.0.0/24",
 						},
+            ControlPlaneNetwork: akoov1alpha1.ControlPlaneNetwork{
+              Name: "integration-test-8ed12g",
+              CIDR: "10.1.0.0/24",
+            },
 						ExtraConfigs: akoov1alpha1.ExtraConfigs{
 							Image: akoov1alpha1.AKOImageConfig{
 								Repository: "test/image",

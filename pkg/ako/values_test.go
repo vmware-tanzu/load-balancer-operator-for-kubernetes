@@ -49,6 +49,8 @@ var _ = Describe("AKO", func() {
 				controllerSettings.ControllerIP:                                     akoDeploymentConfig.Spec.Controller,
 				controllerSettings.ServiceEngineGroupName:                           akoDeploymentConfig.Spec.ServiceEngineGroup,
 				networkSettings.NetworkName:                                         akoDeploymentConfig.Spec.DataNetwork.Name,
+				networkSettings.ControlPlaneNetworkName:                             akoDeploymentConfig.Spec.ControlPlaneNetwork.Name,
+				networkSettings.ControlPlaneNetworkCIDR:                             akoDeploymentConfig.Spec.ControlPlaneNetwork.CIDR,
 				networkSettings.SubnetIP:                                            "10.0.0.0",
 				networkSettings.SubnetPrefix:                                        "24",
 				config.PersistentVolumeClaim:                                        akoDeploymentConfig.Spec.ExtraConfigs.Log.PersistentVolumeClaim,
@@ -95,6 +97,10 @@ var _ = Describe("AKO", func() {
 						DataNetwork: akoov1alpha1.DataNetwork{
 							Name: "test-akdc",
 							CIDR: "10.0.0.0/24",
+						},
+						ControlPlaneNetwork: akoov1alpha1.ControlPlaneNetwork{
+							Name: "test-akdc-2",
+							CIDR: "10.1.0.0/24",
 						},
 						ExtraConfigs: akoov1alpha1.ExtraConfigs{
 							FullSyncFrequency: "1900",
