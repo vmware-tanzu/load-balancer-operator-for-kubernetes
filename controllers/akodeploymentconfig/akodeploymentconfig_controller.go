@@ -124,8 +124,8 @@ func (r *AKODeploymentConfigReconciler) reconcileNormal(
 		// patcher helper update the object, and then proceed on the next reconciliation.
 		ctrlutil.AddFinalizer(obj, akoov1alpha1.AkoDeploymentConfigFinalizer)
 	}
-	reconcilePhases := []phases.ReconcilePhase{r.reconcileAVI, r.reconcileClusters}
-	return phases.ReconcilePhases(ctx, log, obj, reconcilePhases)
+	return phases.ReconcilePhases(ctx, log, obj,
+		[]phases.ReconcilePhase{r.reconcileAVI, r.reconcileClusters})
 }
 
 func (r *AKODeploymentConfigReconciler) reconcileDelete(
@@ -147,6 +147,6 @@ func (r *AKODeploymentConfigReconciler) reconcileDelete(
 			ctrlutil.RemoveFinalizer(obj, akoov1alpha1.AkoDeploymentConfigFinalizer)
 		}
 	}()
-	reconcilePhases := []phases.ReconcilePhase{r.reconcileClustersDelete, r.reconcileAVIDelete}
-	return phases.ReconcilePhases(ctx, log, obj, reconcilePhases)
+	return phases.ReconcilePhases(ctx, log, obj,
+		[]phases.ReconcilePhase{r.reconcileClustersDelete, r.reconcileAVIDelete})
 }

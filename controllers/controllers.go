@@ -19,10 +19,7 @@ func SetupReconcilers(mgr ctrl.Manager) error {
 	}).SetupWithManager(mgr); err != nil {
 		return err
 	}
-
 	if !akoo.IsBootStrapCluster() {
-		// Since v1.5.0, the responsibility of deploying AKO/AKO Secret in bootstrap cluster
-		// has been migrated to tanzu-framework
 		if err := (&akodeploymentconfig.AKODeploymentConfigReconciler{
 			Client: mgr.GetClient(),
 			Log:    ctrl.Log.WithName("controllers").WithName("AKODeploymentConfig"),
