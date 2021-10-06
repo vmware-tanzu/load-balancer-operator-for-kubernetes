@@ -187,6 +187,25 @@ func unitTestAKODeploymentYaml() {
 				Expect(err).Should(HaveOccurred())
 				akoDeploymentConfig.Spec.DataNetwork.CIDR = "10.0.0.0/24"
 			})
+
+			It("should expose a bug that we cannot update delete_config in this way", func() {
+				values, err := ako.NewValues(akoDeploymentConfig, "namespace-name")
+				Expect(err).ShouldNot(HaveOccurred())
+				akoSetting := values.LoadBalancerAndIngressService.Config.AKOSettings
+				akoSetting.DeleteConfig = "true"
+				secretData, err := values.YttYaml()
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(secretData).Should(ContainSubstring("delete_config: \"false\""))
+			})
+
+			It("should update delete_config in this way", func() {
+				values, err := ako.NewValues(akoDeploymentConfig, "namespace-name")
+				Expect(err).ShouldNot(HaveOccurred())
+				values.LoadBalancerAndIngressService.Config.AKOSettings.DeleteConfig = "true"
+				secretData, err := values.YttYaml()
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(secretData).Should(ContainSubstring("delete_config: \"true\""))
+			})
 		})
 	})
 }
