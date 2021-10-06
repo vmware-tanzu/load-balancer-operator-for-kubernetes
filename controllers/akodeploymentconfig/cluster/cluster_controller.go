@@ -5,8 +5,9 @@ package cluster
 
 import (
 	"context"
-	"k8s.io/client-go/kubernetes/scheme"
 	"time"
+
+	"k8s.io/client-go/kubernetes/scheme"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -132,9 +133,8 @@ func (r *ClusterReconciler) cleanup(
 		return false, err
 	}
 
-	akoSetting := values.LoadBalancerAndIngressService.Config.AKOSettings
-	if akoSetting.DeleteConfig != "true" {
-		akoSetting.DeleteConfig = "true"
+	if values.LoadBalancerAndIngressService.Config.AKOSettings.DeleteConfig != "true" {
+		values.LoadBalancerAndIngressService.Config.AKOSettings.DeleteConfig = "true"
 		secretData, err := values.YttYaml()
 		if err != nil {
 			return false, errors.Errorf("workload cluster %s ako add-on data values marshal error", obj.Name)
