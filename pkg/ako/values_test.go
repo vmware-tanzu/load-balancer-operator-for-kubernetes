@@ -37,10 +37,6 @@ var _ = Describe("AKO", func() {
 			rbac := config.Rbac
 
 			expectedPairs := map[string]string{
-				value.ImageInfo.ImageRepository:                                     "test/image",
-				value.ImageInfo.ImagePullPolicy:                                     akoDeploymentConfig.Spec.ExtraConfigs.Image.PullPolicy,
-				value.ImageInfo.Images.LoadBalancerAndIngressServiceImage.Tag:       akoDeploymentConfig.Spec.ExtraConfigs.Image.Version,
-				value.ImageInfo.Images.LoadBalancerAndIngressServiceImage.ImagePath: "ako",
 				akoSettings.ClusterName:                                             "test",
 				akoSettings.LogLevel:                                                akoDeploymentConfig.Spec.ExtraConfigs.Log.LogLevel,      // use default value if not provided
 				akoSettings.FullSyncFrequency:                                       akoDeploymentConfig.Spec.ExtraConfigs.FullSyncFrequency, // use default value if not provided
@@ -99,11 +95,6 @@ var _ = Describe("AKO", func() {
 						},
 						ExtraConfigs: akoov1alpha1.ExtraConfigs{
 							FullSyncFrequency: "1900",
-							Image: akoov1alpha1.AKOImageConfig{
-								Repository: "test/image/ako",
-								PullPolicy: "IfNotPresent",
-								Version:    "1.3.1",
-							},
 							Rbac: akoov1alpha1.AKORbacConfig{
 								PspEnabled:          true,
 								PspPolicyAPIVersion: "test/1.2",
