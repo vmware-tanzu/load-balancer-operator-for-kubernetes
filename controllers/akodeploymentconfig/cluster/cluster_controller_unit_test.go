@@ -18,13 +18,6 @@ import (
 const expectedSecretYaml = `#@data/values
 #@overlay/match-child-defaults missing_ok=True
 ---
-imageInfo:
-    imageRepository: test
-    imagePullPolicy: IfNotPresent
-    images:
-        loadBalancerAndIngressServiceImage:
-            imagePath: image
-            tag: 1.3.1
 loadBalancerAndIngressService:
     name: ako--test-cluster
     namespace: avi-system
@@ -120,11 +113,6 @@ func unitTestAKODeploymentYaml() {
 							CIDR: "10.0.0.0/24",
 						},
 						ExtraConfigs: akoov1alpha1.ExtraConfigs{
-							Image: akoov1alpha1.AKOImageConfig{
-								Repository: "test/image",
-								PullPolicy: "IfNotPresent",
-								Version:    "1.3.1",
-							},
 							Rbac: akoov1alpha1.AKORbacConfig{
 								PspEnabled:          true,
 								PspPolicyAPIVersion: "test/1.2",
@@ -186,6 +174,25 @@ func unitTestAKODeploymentYaml() {
 				_, err := cluster.AkoAddonSecretDataYaml(capicluster, akoDeploymentConfig, aviUserSecret)
 				Expect(err).Should(HaveOccurred())
 				akoDeploymentConfig.Spec.DataNetwork.CIDR = "10.0.0.0/24"
+			})
+
+			It("should expose a bug that we cannot update delete_config in this way", func() {
+				values, err := ako.NewValues(akoDeploymentConfig, "namespace-name")
+				Expect(err).ShouldNot(HaveOccurred())
+				akoSetting := values.LoadBalancerAndIngressService.Config.AKOSettings
+				akoSetting.DeleteConfig = "true"
+				secretData, err := values.YttYaml()
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(secretData).Should(ContainSubstring("delete_config: \"false\""))
+			})
+
+			It("should update delete_config in this way", func() {
+				values, err := ako.NewValues(akoDeploymentConfig, "namespace-name")
+				Expect(err).ShouldNot(HaveOccurred())
+				values.LoadBalancerAndIngressService.Config.AKOSettings.DeleteConfig = "true"
+				secretData, err := values.YttYaml()
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(secretData).Should(ContainSubstring("delete_config: \"true\""))
 			})
 		})
 	})
