@@ -42,11 +42,12 @@ func (r *clusterForService) Map(o handler.MapObject) []reconcile.Request {
 	if SkipService(service) {
 		return []reconcile.Request{}
 	}
-	// ensure ako deletion before delete service
+	// in bootstrap kind cluster, ensure ako deletion before delete service
 	if akoo.IsBootStrapCluster() && !service.DeletionTimestamp.IsZero() {
 		if err := r.deleteAKOStatefulSet(ctx, v1alpha1.AkoStatefulSetName, v1alpha1.TKGSystemNamespace); err != nil {
-			return []reconcile.Request{}
+			r.log.Error(err, "Fail to delete AKO statefulset before service in bootstrap cluster")
 		}
+		return []reconcile.Request{}
 	}
 	var cluster clusterv1.Cluster
 	if err := r.Client.Get(ctx, client.ObjectKey{
