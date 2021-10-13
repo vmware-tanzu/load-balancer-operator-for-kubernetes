@@ -6,6 +6,9 @@ package handlers
 import (
 	"context"
 	"fmt"
+	akoo "gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako-operator"
+	v1 "k8s.io/api/apps/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"strings"
 
 	"gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
@@ -39,6 +42,13 @@ func (r *clusterForService) Map(o handler.MapObject) []reconcile.Request {
 	if SkipService(service) {
 		return []reconcile.Request{}
 	}
+	// in bootstrap kind cluster, ensure ako deletion before delete service
+	if akoo.IsBootStrapCluster() && !service.DeletionTimestamp.IsZero() {
+		if err := r.deleteAKOStatefulSet(ctx, v1alpha1.AkoStatefulSetName, v1alpha1.TKGSystemNamespace); err != nil {
+			r.log.Error(err, "Fail to delete AKO statefulset before service in bootstrap cluster")
+		}
+		return []reconcile.Request{}
+	}
 	var cluster clusterv1.Cluster
 	if err := r.Client.Get(ctx, client.ObjectKey{
 		Name:      service.Annotations[v1alpha1.TKGClusterNameLabel],
@@ -47,7 +57,7 @@ func (r *clusterForService) Map(o handler.MapObject) []reconcile.Request {
 		return []reconcile.Request{}
 	}
 	// Create a reconcile request for cluster resource.
-	requests := []ctrl.Request{ctrl.Request{
+	requests := []ctrl.Request{{
 		NamespacedName: types.NamespacedName{
 			Namespace: cluster.Namespace,
 			Name:      cluster.Name,
@@ -68,4 +78,20 @@ func ClusterForService(c client.Client, log logr.Logger) handler.Mapper {
 
 func SkipService(service *corev1.Service) bool {
 	return service.Spec.Type != corev1.ServiceTypeLoadBalancer || !strings.Contains(service.Name, v1alpha1.HAServiceName)
+}
+
+// deleteAKOStatefulSet deletes the stateful set with specified name and namespace
+func (r *clusterForService) deleteAKOStatefulSet(ctx context.Context, name string, namespace string) error {
+	akoStatefulSet := &v1.StatefulSet{}
+	if err := r.Get(ctx, client.ObjectKey{
+		Name:      name,
+		Namespace: namespace},
+		akoStatefulSet); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		} else {
+			return err
+		}
+	}
+	return r.Delete(ctx, akoStatefulSet)
 }

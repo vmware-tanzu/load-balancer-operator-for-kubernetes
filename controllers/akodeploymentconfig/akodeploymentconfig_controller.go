@@ -6,7 +6,6 @@ package akodeploymentconfig
 import (
 	"context"
 
-	bootstrap_cluster "gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/bootstrap-cluster"
 	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/cluster"
 	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/phases"
 	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/user"
@@ -27,7 +26,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
-	akoo "gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako-operator"
 	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/aviclient"
 	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime/handlers"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -47,12 +45,11 @@ func (r *AKODeploymentConfigReconciler) SetupWithManager(mgr ctrl.Manager) error
 
 type AKODeploymentConfigReconciler struct {
 	client.Client
-	aviClient                  aviclient.Client
-	Log                        logr.Logger
-	Scheme                     *runtime.Scheme
-	userReconciler             *user.AkoUserReconciler
-	ClusterReconciler          *cluster.ClusterReconciler
-	BootstrapClusterReconciler *bootstrap_cluster.BootstrapClusterReconciler
+	aviClient         aviclient.Client
+	Log               logr.Logger
+	Scheme            *runtime.Scheme
+	userReconciler    *user.AkoUserReconciler
+	ClusterReconciler *cluster.ClusterReconciler
 }
 
 func (r *AKODeploymentConfigReconciler) SetAviClient(client aviclient.Client) {
@@ -127,14 +124,8 @@ func (r *AKODeploymentConfigReconciler) reconcileNormal(
 		// patcher helper update the object, and then proceed on the next reconciliation.
 		ctrlutil.AddFinalizer(obj, akoov1alpha1.AkoDeploymentConfigFinalizer)
 	}
-
-	var reconcilePhases []phases.ReconcilePhase
-	if akoo.IsBootStrapCluster() {
-		reconcilePhases = []phases.ReconcilePhase{r.reconcileBootstrapCluster}
-	} else {
-		reconcilePhases = []phases.ReconcilePhase{r.reconcileAVI, r.reconcileClusters}
-	}
-	return phases.ReconcilePhases(ctx, log, obj, reconcilePhases)
+	return phases.ReconcilePhases(ctx, log, obj,
+		[]phases.ReconcilePhase{r.reconcileAVI, r.reconcileClusters})
 }
 
 func (r *AKODeploymentConfigReconciler) reconcileDelete(
@@ -156,12 +147,6 @@ func (r *AKODeploymentConfigReconciler) reconcileDelete(
 			ctrlutil.RemoveFinalizer(obj, akoov1alpha1.AkoDeploymentConfigFinalizer)
 		}
 	}()
-
-	var reconcilePhases []phases.ReconcilePhase
-	if akoo.IsBootStrapCluster() {
-		reconcilePhases = []phases.ReconcilePhase{r.reconcileBootstrapClusterDelete}
-	} else {
-		reconcilePhases = []phases.ReconcilePhase{r.reconcileClustersDelete, r.reconcileAVIDelete}
-	}
-	return phases.ReconcilePhases(ctx, log, obj, reconcilePhases)
+	return phases.ReconcilePhases(ctx, log, obj,
+		[]phases.ReconcilePhase{r.reconcileClustersDelete, r.reconcileAVIDelete})
 }
