@@ -64,10 +64,6 @@ spec:
     context: #@ data.values.AVI_TENANT_CONTEXT
   #@ end
   extraConfigs:
-    image:
-      repository: #@ data.values.AVI_AKO_IMAGE
-      pullPolicy: #@ data.values.AVI_AKO_IMAGE_PULL_POLICY
-      version: #@ data.values.AVI_AKO_IMAGE_TAG
     #@ if has_log_section():
     log:
       #@ if data.values.AVI_LOG_PERSISTENT_VOLUME_CLAIM != "":

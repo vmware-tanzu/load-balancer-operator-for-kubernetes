@@ -29,6 +29,8 @@ spec:
         disableStaticRouteSync: true
         enableEVH: false
         layer7Only: false
+        istioEnabled: false
+        vipPerNamespace: false
         l4Config:
             advancedL4: false
             autoFQDN: "disabled"
@@ -48,10 +50,7 @@ spec:
             logLevel: "INFO"
         networksConfig:
             enableRHI: false
-        image:
-            repository: tanzu.vmware.com/tkgextensions/tkg-networking/ako
-            pullPolicy: IfNotPresent
-            version: 2.1.1-5100
+            nsxtT1LR: "NSX-T-T1-ROUTER-ID"
 ---
 apiVersion: v1
 kind: Secret

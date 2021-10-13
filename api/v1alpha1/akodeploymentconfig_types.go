@@ -94,10 +94,6 @@ type AKODeploymentConfigSpec struct {
 
 // ExtraConfigs contains extra configurations for AKO Deployment
 type ExtraConfigs struct {
-	// Image specifies the configuration for AKO docker image
-	// +optional
-	Image AKOImageConfig `json:"image,omitempty"`
-
 	// Log specifies the configuration for AKO logging
 	// +optional
 	Log AKOLogConfig `json:"log,omitempty"`
@@ -148,6 +144,16 @@ type ExtraConfigs struct {
 	// +optional
 	ServicesAPI *bool `json:"servicesAPI,omitempty"`
 
+	// This flag indicates to AKO that it should listen on Istio resources.
+	// default value is false
+	// +optional
+	IstioEnabled *bool `json:"istioEnabled,omitempty"`
+
+	// Enabling this flag would tell AKO to create Parent VS per Namespace in EVH mode
+	// default value is false
+	// +optional
+	VIPPerNamespace *bool `json:"vipPerNamespace,omitempty"`
+
 	// NetworksConfig specifies the network configurations for virtual services.
 	// +optional
 	NetworksConfig NetworksConfig `json:"networksConfig,omitempty"`
@@ -184,6 +190,10 @@ type NetworksConfig struct {
 	// BGPPeerLabels specifies BGP peers, this is used for selective VsVip advertisement.
 	// +optional
 	BGPPeerLabels []string `json:"bgpPeerLabels,omitempty"`
+
+	// T1 Logical Segment mapping for backend network. Only applies to NSX-T cloud.
+	// +optional
+	NsxtT1LR string `json:"nsxtT1LR,omitempty"`
 
 	// VipNetworkList specifies Network information of the VIP network.
 	// Multiple networks allowed only for AWS Cloud.
@@ -270,20 +280,6 @@ type NodeNetwork struct {
 	Cidrs []string `json:"cidrs,omitempty"`
 }
 
-type AKOImageConfig struct {
-	// Repository is the AKO Docker image repository
-	// +optional
-	Repository string `json:"repository,omitempty"`
-
-	// Version is the AKO Docker image version
-	// +optional
-	Version string `json:"version,omitempty"`
-
-	// +kubebuilder:validation:Enum=Always;Never;IfNotPresent
-	// +optional
-	PullPolicy string `json:"pullPolicy,omitempty"`
-}
-
 type AKOLogConfig struct {
 	// LogLevel specifies the AKO pod log level
 	// Valid value should be INFO, DEBUG, WARN or ERROR, default value is INFO
@@ -333,8 +329,8 @@ type DataNetwork struct {
 
 // ControlPlaneNetwork describes the ControlPlane Network of the clusters selected by an akoDeploymentConfig
 type ControlPlaneNetwork struct {
-	Name    string   `json:"name"`
-	CIDR    string   `json:"cidr"`
+	Name string `json:"name"`
+	CIDR string `json:"cidr"`
 }
 
 // IPPool defines a contiguous range of IP Addresses

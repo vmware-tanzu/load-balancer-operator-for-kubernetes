@@ -5,14 +5,15 @@ package bootstrap_cluster_test
 
 import (
 	"bytes"
+	"os"
+	"text/template"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako"
 	ako_operator "gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako-operator"
 	"k8s.io/utils/pointer"
-	"os"
-	"text/template"
 )
 
 const expectedYamlUnstructured = `
@@ -129,7 +130,6 @@ metadata:
   namespace: avi-system
   labels:
     app.kubernetes.io/name: ako-tkg-system-
-    app.kubernetes.io/version: "1.3.1"
 spec:
   replicas: 1
   serviceName: ako
@@ -157,8 +157,6 @@ spec:
           - mountPath: /var/log
             name: ako-pv-storage
           
-          image: "test/image:1.3.1"
-          imagePullPolicy: IfNotPresent
           env:
           - name: CTRL_USERNAME
             valueFrom:
@@ -612,16 +610,11 @@ func unitTestConvertToDeploymentYaml() {
 							Name: "test-akdc",
 							CIDR: "10.0.0.0/24",
 						},
-            ControlPlaneNetwork: akoov1alpha1.ControlPlaneNetwork{
-              Name: "integration-test-8ed12g",
-              CIDR: "10.1.0.0/24",
-            },
+						ControlPlaneNetwork: akoov1alpha1.ControlPlaneNetwork{
+							Name: "integration-test-8ed12g",
+							CIDR: "10.1.0.0/24",
+						},
 						ExtraConfigs: akoov1alpha1.ExtraConfigs{
-							Image: akoov1alpha1.AKOImageConfig{
-								Repository: "test/image",
-								PullPolicy: "IfNotPresent",
-								Version:    "1.3.1",
-							},
 							Rbac: akoov1alpha1.AKORbacConfig{
 								PspEnabled:          true,
 								PspPolicyAPIVersion: "test/1.2",

@@ -9,7 +9,6 @@ import (
 	"math/rand"
 	"net"
 	"strconv"
-	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -18,19 +17,9 @@ import (
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 )
 
-// StripLast strips the last token seperated by the separator
-func StripLast(repository, separator string) (string, []string, error) {
-	splits := strings.Split(repository, separator)
-	if len(splits) == 0 {
-		return "", nil, errors.New("cannot strip last, incorrect format")
-	}
-	return strings.Join(splits[:len(splits)-1], separator), splits, nil
-}
-
 // Values defines the structures of an Ako addon secret string data
 // this constructs the payload (string data) of the corev1.Secret
 type Values struct {
-	ImageInfo                     ImageInfo                     `yaml:"imageInfo"`
 	LoadBalancerAndIngressService LoadBalancerAndIngressService `yaml:"loadBalancerAndIngressService"`
 }
 
@@ -39,10 +28,6 @@ type Values struct {
 func NewValues(obj *akoov1alpha1.AKODeploymentConfig, clusterNameSpacedName string) (*Values, error) {
 	if obj == nil {
 		return nil, errors.New("provided AKODeploymentConfig is nil")
-	}
-	repository, repositorySplits, err := StripLast(obj.Spec.ExtraConfigs.Image.Repository, "/")
-	if err != nil {
-		return nil, err
 	}
 	akoSettings := NewAKOSettings(clusterNameSpacedName, obj)
 	networkSettings, err := NewNetworkSettings(obj)
@@ -61,16 +46,6 @@ func NewValues(obj *akoov1alpha1.AKODeploymentConfig, clusterNameSpacedName stri
 	rbac := NewRbac(obj.Spec.ExtraConfigs.Rbac)
 
 	return &Values{
-		ImageInfo: ImageInfo{
-			ImageRepository: repository,
-			ImagePullPolicy: obj.Spec.ExtraConfigs.Image.PullPolicy,
-			Images: ImageInfoImages{
-				LoadBalancerAndIngressServiceImage: LoadBalancerAndIngressServiceImage{
-					ImagePath: repositorySplits[len(repositorySplits)-1],
-					Tag:       obj.Spec.ExtraConfigs.Image.Version,
-				},
-			},
-		},
 		LoadBalancerAndIngressService: LoadBalancerAndIngressService{
 			Name:      "ako-" + clusterNameSpacedName,
 			Namespace: akoov1alpha1.AviNamespace,
@@ -114,23 +89,6 @@ func (v *Values) YttYaml() (string, error) {
 	return header + string(buf), nil
 }
 
-// ImageInfo describes the image information for the add-on secret
-type ImageInfo struct {
-	ImageRepository string          `yaml:"imageRepository"`
-	ImagePullPolicy string          `yaml:"imagePullPolicy"`
-	Images          ImageInfoImages `yaml:"images"`
-}
-
-type ImageInfoImages struct {
-	LoadBalancerAndIngressServiceImage LoadBalancerAndIngressServiceImage `yaml:"loadBalancerAndIngressServiceImage"`
-}
-
-// LoadBalancerAndIngressServiceImage describes the LoadBalancerAndIngressServiceImage
-type LoadBalancerAndIngressServiceImage struct {
-	ImagePath string `yaml:"imagePath"`
-	Tag       string `yaml:"tag"`
-}
-
 // LoadBalancerAndIngressService describes the load balancer and ingress service
 type LoadBalancerAndIngressService struct {
 	Name      string `yaml:"name"`
@@ -141,20 +99,20 @@ type LoadBalancerAndIngressService struct {
 // Config consists of different configurations for Values that includes settings of
 // AKO, networking, L4, L7, Rbac etc
 type Config struct {
-	IsClusterService      string             `yaml:"is_cluster_service"`
-	ReplicaCount          int                `yaml:"replica_count"`
-	AKOSettings           AKOSettings        `yaml:"ako_settings"`
-	NetworkSettings       NetworkSettings    `yaml:"network_settings"`
-	L7Settings            L7Settings         `yaml:"l7_settings"`
-	L4Settings            L4Settings         `yaml:"l4_settings"`
-	ControllerSettings    ControllerSettings `yaml:"controller_settings"`
-	NodePortSelector      NodePortSelector   `yaml:"nodeport_selector"`
-	Resources             Resources          `yaml:"resources"`
-	Rbac                  Rbac               `yaml:"rbac"`
-	PersistentVolumeClaim string             `yaml:"persistent_volume_claim"`
-	MountPath             string             `yaml:"mount_path"`
-	LogFile               string             `yaml:"log_file"`
-	Avicredentials        Avicredentials     `yaml:"avi_credentials"`
+	IsClusterService      string              `yaml:"is_cluster_service"`
+	ReplicaCount          int                 `yaml:"replica_count"`
+	AKOSettings           *AKOSettings        `yaml:"ako_settings"`
+	NetworkSettings       *NetworkSettings    `yaml:"network_settings"`
+	L7Settings            *L7Settings         `yaml:"l7_settings"`
+	L4Settings            *L4Settings         `yaml:"l4_settings"`
+	ControllerSettings    *ControllerSettings `yaml:"controller_settings"`
+	NodePortSelector      *NodePortSelector   `yaml:"nodeport_selector"`
+	Resources             *Resources          `yaml:"resources"`
+	Rbac                  *Rbac               `yaml:"rbac"`
+	PersistentVolumeClaim string              `yaml:"persistent_volume_claim"`
+	MountPath             string              `yaml:"mount_path"`
+	LogFile               string              `yaml:"log_file"`
+	Avicredentials        Avicredentials      `yaml:"avi_credentials"`
 }
 
 // NamespaceSelector contains label key and value used for namespace migration.
@@ -177,12 +135,14 @@ type AKOSettings struct {
 	EnableEVH              string            `yaml:"enable_EVH"`   // This enables the Enhanced Virtual Hosting Model in Avi Controller for the Virtual Services
 	Layer7Only             string            `yaml:"layer_7_only"` // If this flag is switched on, then AKO will only do layer 7 loadbalancing
 	ServicesAPI            string            `yaml:"services_api"` // Flag that enables AKO in services API mode. Currently implemented only for L4.
+	IstioEnabled           string            `yaml:"istio_enabled"`
+	VIPPerNamespace        string            `yaml:"vip_per_namespace"`
 	NamespaceSector        NamespaceSelector `yaml:"namespace_selector"`
 }
 
 // DefaultAKOSettings returns the default AKOSettings
-func DefaultAKOSettings() AKOSettings {
-	return AKOSettings{
+func DefaultAKOSettings() *AKOSettings {
+	return &AKOSettings{
 		LogLevel:               "INFO",
 		ApiServerPort:          8080,
 		DeleteConfig:           "false",
@@ -196,7 +156,7 @@ func DefaultAKOSettings() AKOSettings {
 
 // NewAKOSettings returns a new AKOSettings,
 // allow users to set CniPlugin, ClusterName and DisableStaticRouteSync in runtime
-func NewAKOSettings(clusterName string, obj *akoov1alpha1.AKODeploymentConfig) (settings AKOSettings) {
+func NewAKOSettings(clusterName string, obj *akoov1alpha1.AKODeploymentConfig) (settings *AKOSettings) {
 	settings = DefaultAKOSettings()
 	settings.ClusterName = clusterName
 	if obj.Spec.ExtraConfigs.Log.LogLevel != "" {
@@ -223,6 +183,12 @@ func NewAKOSettings(clusterName string, obj *akoov1alpha1.AKODeploymentConfig) (
 	if obj.Spec.ExtraConfigs.ServicesAPI != nil {
 		settings.ServicesAPI = strconv.FormatBool(*obj.Spec.ExtraConfigs.ServicesAPI)
 	}
+	if obj.Spec.ExtraConfigs.IstioEnabled != nil {
+		settings.IstioEnabled = strconv.FormatBool(*obj.Spec.ExtraConfigs.IstioEnabled)
+	}
+	if obj.Spec.ExtraConfigs.VIPPerNamespace != nil {
+		settings.VIPPerNamespace = strconv.FormatBool(*obj.Spec.ExtraConfigs.VIPPerNamespace)
+	}
 	if obj.Spec.ExtraConfigs.NamespaceSelector.LabelKey != "" {
 		settings.NamespaceSector.LabelKey = obj.Spec.ExtraConfigs.NamespaceSelector.LabelKey
 	}
@@ -244,13 +210,14 @@ type NetworkSettings struct {
 	VIPNetworkList          []map[string]string    `yaml:"-"` // Network information of the VIP network. Multiple networks allowed only for AWS Cloud.
 	VIPNetworkListJson      string                 `yaml:"vip_network_list"`
 	EnableRHI               string                 `yaml:"enable_rhi"` // This is a cluster wide setting for BGP peering.
-	BGPPeerLabels           []string               `yaml:"-"`          // Select BGP peers using bgpPeerLabels, for selective VsVip advertisement.
+	NsxtT1LR                string                 `yaml:"nsxt_t1_lr"`
+	BGPPeerLabels           []string               `yaml:"-"` // Select BGP peers using bgpPeerLabels, for selective VsVip advertisement.
 	BGPPeerLabelsJson       string                 `yaml:"bgp_peer_labels"`
 }
 
 // DefaultNetworkSettings returns default NetworkSettings
-func DefaultNetworkSettings() NetworkSettings {
-	return NetworkSettings{
+func DefaultNetworkSettings() *NetworkSettings {
+	return &NetworkSettings{
 		// SubnetIP: don't set, populate in runtime
 		// SubnetPrefix: don't set, populate in runtime
 		// NetworkName: don't set, populate in runtime
@@ -263,12 +230,12 @@ func DefaultNetworkSettings() NetworkSettings {
 
 // NewNetworkSettings returns a new NetworkSettings
 // allow user to set NetworkName, SubnetIP, SubnetPrefix, NodeNetworkList and VIPNetworkList at runtime
-func NewNetworkSettings(obj *akoov1alpha1.AKODeploymentConfig) (NetworkSettings, error) {
+func NewNetworkSettings(obj *akoov1alpha1.AKODeploymentConfig) (*NetworkSettings, error) {
 	settings := DefaultNetworkSettings()
 	settings.NetworkName = obj.Spec.DataNetwork.Name
 	ip, ipNet, err := net.ParseCIDR(obj.Spec.DataNetwork.CIDR)
 	if err != nil {
-		return NetworkSettings{}, err
+		return &NetworkSettings{}, err
 	}
 	settings.SubnetIP = ip.String()
 	ones, _ := ipNet.Mask.Size()
@@ -280,14 +247,14 @@ func NewNetworkSettings(obj *akoov1alpha1.AKODeploymentConfig) (NetworkSettings,
 	if len(settings.NodeNetworkList) != 0 {
 		jsonBytes, err := json.Marshal(settings.NodeNetworkList)
 		if err != nil {
-			return NetworkSettings{}, err
+			return &NetworkSettings{}, err
 		}
 		settings.NodeNetworkListJson = string(jsonBytes)
 	}
 	if len(settings.VIPNetworkList) != 0 {
 		jsonBytes, err := json.Marshal(settings.VIPNetworkList)
 		if err != nil {
-			return NetworkSettings{}, err
+			return &NetworkSettings{}, err
 		}
 		settings.VIPNetworkListJson = string(jsonBytes)
 	}
@@ -303,11 +270,12 @@ func NewNetworkSettings(obj *akoov1alpha1.AKODeploymentConfig) (NetworkSettings,
 	if obj.Spec.ExtraConfigs.NetworksConfig.EnableRHI != nil {
 		settings.EnableRHI = strconv.FormatBool(*obj.Spec.ExtraConfigs.NetworksConfig.EnableRHI)
 	}
+	settings.NsxtT1LR = obj.Spec.ExtraConfigs.NetworksConfig.NsxtT1LR
 	settings.BGPPeerLabels = obj.Spec.ExtraConfigs.NetworksConfig.BGPPeerLabels
 	if len(settings.BGPPeerLabels) != 0 {
 		jsonBytes, err := json.Marshal(settings.BGPPeerLabels)
 		if err != nil {
-			return NetworkSettings{}, err
+			return &NetworkSettings{}, err
 		}
 		settings.BGPPeerLabelsJson = string(jsonBytes)
 	}
@@ -326,8 +294,8 @@ type L7Settings struct {
 }
 
 // DefaultL7Settings returns the default L7Settings
-func DefaultL7Settings() L7Settings {
-	return L7Settings{
+func DefaultL7Settings() *L7Settings {
+	return &L7Settings{
 		DefaultIngController: false,
 		ServiceType:          "NodePort",
 		ShardVSSize:          "SMALL",
@@ -338,7 +306,7 @@ func DefaultL7Settings() L7Settings {
 
 // NewL7Settings returns a customized L7Settings after parsing the v1alpha1.AKOIngressConfig
 // it only modifies ServiceType and ShardVSSize when instructed by the ingressConfig
-func NewL7Settings(config *akoov1alpha1.AKOIngressConfig) L7Settings {
+func NewL7Settings(config *akoov1alpha1.AKOIngressConfig) *L7Settings {
 	settings := DefaultL7Settings()
 	settings.DisableIngressClass = config.DisableIngressClass
 	settings.DefaultIngController = config.DefaultIngressController
@@ -365,14 +333,14 @@ type L4Settings struct {
 }
 
 // DefaultL4Settings returns the default L4Settings
-func DefaultL4Settings() L4Settings {
-	return L4Settings{
+func DefaultL4Settings() *L4Settings {
+	return &L4Settings{
 		// DefaultDomain: don't set, use default value in AKO
 	}
 }
 
 // NewL4Settings returns a customized L4Settings after parsing the v1alpha1.AKOL4Config
-func NewL4Settings(config *akoov1alpha1.AKOL4Config) L4Settings {
+func NewL4Settings(config *akoov1alpha1.AKOL4Config) *L4Settings {
 	settings := DefaultL4Settings()
 	if config.AdvancedL4 != nil {
 		settings.AdvancedL4 = strconv.FormatBool(*config.AdvancedL4)
@@ -395,8 +363,8 @@ type ControllerSettings struct {
 }
 
 // DefaultControllerSettings return the default ControllerSettings
-func DefaultControllerSettings() ControllerSettings {
-	return ControllerSettings{
+func DefaultControllerSettings() *ControllerSettings {
+	return &ControllerSettings{
 		// ServiceEngineGroupName: populate in runtime
 		// CloudName: populate in runtime
 		// ControllerIP: populate in runtime
@@ -407,7 +375,7 @@ func DefaultControllerSettings() ControllerSettings {
 
 // NewControllerSettings returns a ControllerSettings from default,
 // allow setting CloudName, ControllerIP and ServiceEngineGroupName
-func NewControllerSettings(cloudName, controllerIP, serviceEngineGroup string) (setting ControllerSettings) {
+func NewControllerSettings(cloudName, controllerIP, serviceEngineGroup string) (setting *ControllerSettings) {
 	setting = DefaultControllerSettings()
 	setting.CloudName = cloudName
 	setting.ControllerIP = controllerIP
@@ -422,15 +390,15 @@ type NodePortSelector struct {
 }
 
 // DefaultNodePortSelector returns the default NodePortSelector
-func DefaultNodePortSelector() NodePortSelector {
-	return NodePortSelector{
+func DefaultNodePortSelector() *NodePortSelector {
+	return &NodePortSelector{
 		// Key: don't set, use default value in AKO
 		// Value: don't set, use default value in AKO
 	}
 }
 
 // NewNodePortSelector returns the NodePortSelector defined in AKODeploymentConfig
-func NewNodePortSelector(nodePortSelector *akoov1alpha1.NodePortSelector) NodePortSelector {
+func NewNodePortSelector(nodePortSelector *akoov1alpha1.NodePortSelector) *NodePortSelector {
 	selector := DefaultNodePortSelector()
 	if nodePortSelector.Key != "" {
 		selector.Key = nodePortSelector.Key
@@ -447,8 +415,8 @@ type Resources struct {
 }
 
 // DefaultResources returns the default configuration for Resources
-func DefaultResources() Resources {
-	return Resources{
+func DefaultResources() *Resources {
+	return &Resources{
 		Limits: Limits{
 			Cpu:    "250m",
 			Memory: "300Mi",
@@ -477,8 +445,8 @@ type Rbac struct {
 }
 
 // NewRbac creates a Rbac from the v1alpha1.AKORbacConfig
-func NewRbac(config v1alpha1.AKORbacConfig) Rbac {
-	return Rbac{
+func NewRbac(config v1alpha1.AKORbacConfig) *Rbac {
+	return &Rbac{
 		PspEnabled:          config.PspEnabled,
 		PspPolicyApiVersion: config.PspPolicyAPIVersion,
 	}
