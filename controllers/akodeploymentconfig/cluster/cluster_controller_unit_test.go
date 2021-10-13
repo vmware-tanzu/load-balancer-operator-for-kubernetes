@@ -36,6 +36,8 @@ loadBalancerAndIngressService:
             enable_EVH: ""
             layer_7_only: ""
             services_api: ""
+            istio_enabled: ""
+            vip_per_namespace: ""
             namespace_selector:
                 label_key: ""
                 label_value: ""
@@ -46,6 +48,7 @@ loadBalancerAndIngressService:
             node_network_list: '[{"networkName":"test-node-network-1","cidrs":["10.0.0.0/24","192.168.0.0/24"]}]'
             vip_network_list: '[{"networkName":"test-akdc"}]'
             enable_rhi: ""
+            nsxt_t1_lr: ""
             bgp_peer_labels: ""
         l7_settings:
             disable_ingress_class: true
@@ -174,16 +177,6 @@ func unitTestAKODeploymentYaml() {
 				_, err := cluster.AkoAddonSecretDataYaml(capicluster, akoDeploymentConfig, aviUserSecret)
 				Expect(err).Should(HaveOccurred())
 				akoDeploymentConfig.Spec.DataNetwork.CIDR = "10.0.0.0/24"
-			})
-
-			It("should expose a bug that we cannot update delete_config in this way", func() {
-				values, err := ako.NewValues(akoDeploymentConfig, "namespace-name")
-				Expect(err).ShouldNot(HaveOccurred())
-				akoSetting := values.LoadBalancerAndIngressService.Config.AKOSettings
-				akoSetting.DeleteConfig = "true"
-				secretData, err := values.YttYaml()
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(secretData).Should(ContainSubstring("delete_config: \"false\""))
 			})
 
 			It("should update delete_config in this way", func() {

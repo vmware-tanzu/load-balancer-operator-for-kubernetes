@@ -139,6 +139,16 @@ type ExtraConfigs struct {
 	// +optional
 	ServicesAPI *bool `json:"servicesAPI,omitempty"`
 
+	// This flag indicates to AKO that it should listen on Istio resources.
+	// default value is false
+	// +optional
+	IstioEnabled *bool `json:"istioEnabled,omitempty"`
+
+	// Enabling this flag would tell AKO to create Parent VS per Namespace in EVH mode
+	// default value is false
+	// +optional
+	VIPPerNamespace *bool `json:"vipPerNamespace,omitempty"`
+
 	// NetworksConfig specifies the network configurations for virtual services.
 	// +optional
 	NetworksConfig NetworksConfig `json:"networksConfig,omitempty"`
@@ -175,6 +185,10 @@ type NetworksConfig struct {
 	// BGPPeerLabels specifies BGP peers, this is used for selective VsVip advertisement.
 	// +optional
 	BGPPeerLabels []string `json:"bgpPeerLabels,omitempty"`
+
+	// T1 Logical Segment mapping for backend network. Only applies to NSX-T cloud.
+	// +optional
+	NsxtT1LR string `json:"nsxtT1LR,omitempty"`
 
 	// VipNetworkList specifies Network information of the VIP network.
 	// Multiple networks allowed only for AWS Cloud.
