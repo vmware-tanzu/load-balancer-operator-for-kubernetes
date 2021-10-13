@@ -269,6 +269,16 @@ func (in *ExtraConfigs) DeepCopyInto(out *ExtraConfigs) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.IstioEnabled != nil {
+		in, out := &in.IstioEnabled, &out.IstioEnabled
+		*out = new(bool)
+		**out = **in
+	}
+	if in.VIPPerNamespace != nil {
+		in, out := &in.VIPPerNamespace, &out.VIPPerNamespace
+		*out = new(bool)
+		**out = **in
+	}
 	in.NetworksConfig.DeepCopyInto(&out.NetworksConfig)
 	in.IngressConfigs.DeepCopyInto(&out.IngressConfigs)
 	in.L4Configs.DeepCopyInto(&out.L4Configs)

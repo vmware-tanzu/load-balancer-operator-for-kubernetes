@@ -26,6 +26,8 @@ spec:
         disableStaticRouteSync: true
         enableEVH: false
         layer7Only: false
+        istioEnabled: false
+        vipPerNamespace: false
         l4Config:
             advancedL4: false
             autoFQDN: "disabled"
@@ -45,6 +47,7 @@ spec:
             logLevel: "INFO"
         networksConfig:
             enableRHI: false
+            nsxtT1LR: "NSX-T-T1-ROUTER-ID"
 ---
 apiVersion: v1
 kind: Secret

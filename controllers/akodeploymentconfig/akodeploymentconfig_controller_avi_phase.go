@@ -6,6 +6,7 @@ package akodeploymentconfig
 import (
 	"bytes"
 	"context"
+	"github.com/pkg/errors"
 	"net"
 	"sort"
 	"time"
@@ -151,7 +152,7 @@ func (r *AKODeploymentConfigReconciler) reconcileNetworkSubnets(
 
 	network, err := r.aviClient.NetworkGetByName(obj.Spec.DataNetwork.Name)
 	if err != nil {
-		log.Error(err, "Failed to get the Data Network from AVI Controller")
+		log.Info("[WARN] Failed to get the Data Network from AVI Controller")
 		return res, nil
 	}
 
@@ -204,7 +205,7 @@ func (r *AKODeploymentConfigReconciler) reconcileCloudUsableNetwork(
 
 	network, err := r.aviClient.NetworkGetByName(obj.Spec.DataNetwork.Name)
 	if err != nil {
-		log.Error(err, "Failed to get the Data Network from AVI Controller")
+		log.Error(errors.Errorf("[WARN]Failed to get the Data Network %s from AVI Controller", obj.Spec.DataNetwork.Name),"")
 		return requeueAfter, nil
 	}
 
