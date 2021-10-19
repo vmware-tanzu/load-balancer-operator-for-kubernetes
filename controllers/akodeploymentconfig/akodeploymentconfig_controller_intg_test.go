@@ -18,9 +18,8 @@ import (
 	kcfg "sigs.k8s.io/cluster-api/util/kubeconfig"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -65,7 +64,7 @@ func intgTestAkoDeploymentConfigController() {
 				Name: "integration-test-8ed12g",
 				CIDR: "10.0.0.0/24",
 				IPPools: []akoov1alpha1.IPPool{
-					akoov1alpha1.IPPool{
+					{
 						Start: "10.0.0.1",
 						End:   "10.0.0.10",
 						Type:  "V4",
@@ -106,19 +105,19 @@ func intgTestAkoDeploymentConfigController() {
 		},
 	}
 
-	createObjects := func(objs ...runtime.Object) {
+	createObjects := func(objs ...client.Object) {
 		for _, o := range objs {
 			err = ctx.Client.Create(ctx.Context, o)
 			Expect(err).To(BeNil())
 		}
 	}
-	updateObjects := func(objs ...runtime.Object) {
+	updateObjects := func(objs ...client.Object) {
 		for _, o := range objs {
 			err = ctx.Client.Update(ctx.Context, o)
 			Expect(err).To(BeNil())
 		}
 	}
-	deleteObjects := func(objs ...runtime.Object) {
+	deleteObjects := func(objs ...client.Object) {
 		for _, o := range objs {
 			// ignore error
 			_ = ctx.Client.Delete(ctx.Context, o)
@@ -164,7 +163,7 @@ func intgTestAkoDeploymentConfigController() {
 			return controllerruntime.ContainsFinalizer(obj, finalizer) == expect
 		}).Should(BeTrue())
 	}
-	ensureRuntimeObjectMatchExpectation := func(key client.ObjectKey, obj runtime.Object, expect bool) {
+	ensureRuntimeObjectMatchExpectation := func(key client.ObjectKey, obj client.Object, expect bool) {
 		Eventually(func() bool {
 			var res bool
 			if err := ctx.Client.Get(ctx.Context, key, obj); err != nil {

@@ -63,7 +63,7 @@ type TestSuite struct {
 
 	manager             manager.Manager
 	addToScheme         AddToSchemeFunc
-	managerDone         chan struct{}
+	managerDone         context.Context
 	managerRunning      bool
 	managerRunningMutex sync.Mutex
 }
@@ -185,7 +185,7 @@ func (s *TestSuite) beforeSuiteForIntegrationTesting() {
 // Create a new Manager with default values
 func (s *TestSuite) createManager() {
 	var err error
-	s.managerDone = make(chan struct{})
+	s.managerDone = context.Background()
 
 	// Create a new Scheme for each controller. Don't use a global scheme otherwise manager reset
 	// will try to reinitialize the global scheme which causes errors
@@ -254,8 +254,8 @@ func (s *TestSuite) afterSuiteForIntegrationTesting() {
 }
 
 func (s *TestSuite) stopManager() {
-	close(s.managerDone)
-	Eventually(s.getManagerRunning).Should((BeFalse()))
+	s.managerDone.Done()
+	Eventually(s.getManagerRunning).Should(BeFalse())
 }
 
 var FakeAvi *aviclient.FakeAviClient

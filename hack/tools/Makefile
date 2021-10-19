@@ -29,7 +29,8 @@ KUBECTL_VERSION=1.16.4
 
 # Host information.
 HOST_OS=$(shell go env GOOS)
-HOST_ARCH=$(shell go env GOARCH)
+#HOST_ARCH=$(shell go env GOARCH)
+HOST_ARCH=amd64
 
 # Binaries.
 CONTROLLER_GEN  := $(BIN_DIR)/controller-gen
@@ -68,7 +69,7 @@ $(GOLANGCI_LINT):
 kustomize: $(KUSTOMIZE) $(SRCS)
 kustomize: ## Build kustomize
 $(KUSTOMIZE):
-	go build -tags=tools -o $@ sigs.k8s.io/kustomize/kustomize/v3
+	go build -tags=tools -o $@ sigs.k8s.io/kustomize/kustomize/v4
 
 conversion-gen: $(CONVERSION_GEN) $(SRCS)
 conversion-gen: ## Build conversion-gen

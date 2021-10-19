@@ -5,18 +5,20 @@ package main
 
 import (
 	"flag"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/rest"
 	"net/http"
 	"net/http/pprof"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
-	controllerruntime "gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	clustereaddonv1alpha3 "sigs.k8s.io/cluster-api/exp/addons/api/v1alpha3"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	"gitlab.eng.vmware.com/core-build/ako-operator/controllers"
@@ -59,17 +61,26 @@ func main() {
 			"profiler-addr", profilerAddress)
 		go runProfiler(profilerAddress)
 	}
-
 	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: metricsAddr,
 		LeaderElection:     enableLeaderElection,
 		Port:               9443,
-		NewClient: controllerruntime.NewClientBuilder().WithUncached(
-			&corev1.Secret{},
-			&clustereaddonv1alpha3.ClusterResourceSet{},
-			&corev1.ConfigMap{},
-		).Build,
+		NewClient: func(cache cache.Cache, config *rest.Config, options client.Options, uncachedObjects ...client.Object) (client.Client, error) {
+			c, err := client.New(config, options)
+			if err != nil {
+				return nil, err
+			}
+
+			return client.NewDelegatingClient(client.NewDelegatingClientInput{
+				CacheReader: cache,
+				Client:      c,
+				UncachedObjects: []client.Object{
+					&corev1.Secret{},
+					&clustereaddonv1alpha3.ClusterResourceSet{},
+					&corev1.ConfigMap{}},
+			})
+		},
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

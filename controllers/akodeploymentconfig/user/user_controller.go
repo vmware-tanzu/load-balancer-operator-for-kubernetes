@@ -17,7 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,7 +31,7 @@ type AkoUserReconciler struct {
 	Scheme    *runtime.Scheme
 }
 
-// NewReconciler returns AKOUserReconciler object.
+// NewProvider returns AKOUserReconciler object.
 func NewProvider(client client.Client,
 	aviClient aviclient.Client,
 	logger logr.Logger,
@@ -42,7 +42,7 @@ func NewProvider(client client.Client,
 		Scheme:    scheme}
 }
 
-// ReconcileAviUser: reconcile akodeploymentconfig clusters' avi user
+// ReconcileAviUser reconcile akodeploymentconfig clusters' avi user
 func (r *AkoUserReconciler) ReconcileAviUser(
 	ctx context.Context,
 	log logr.Logger,
