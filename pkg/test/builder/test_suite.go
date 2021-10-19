@@ -61,9 +61,14 @@ type TestSuite struct {
 	integrationTestClient client.Client
 	config                *rest.Config
 
+	// Cancel function that will be called to close the Done channel of the
+	// Context, which will then stop the manager.
+	cancelFuncMutex sync.Mutex
+	cancelFunc      context.CancelFunc
+
+	// Controller specific fields
 	manager             manager.Manager
 	addToScheme         AddToSchemeFunc
-	managerDone         chan struct{}
 	managerRunning      bool
 	managerRunningMutex sync.Mutex
 }
@@ -185,7 +190,6 @@ func (s *TestSuite) beforeSuiteForIntegrationTesting() {
 // Create a new Manager with default values
 func (s *TestSuite) createManager() {
 	var err error
-	s.managerDone = make(chan struct{})
 
 	// Create a new Scheme for each controller. Don't use a global scheme otherwise manager reset
 	// will try to reinitialize the global scheme which causes errors
@@ -218,7 +222,11 @@ func (s *TestSuite) startManager() {
 		defer GinkgoRecover()
 
 		s.setManagerRunning(true)
-		Expect(s.manager.Start(s.managerDone)).ToNot(HaveOccurred())
+		ctx, cancel := context.WithCancel(s.Context)
+		s.cancelFuncMutex.Lock()
+		s.cancelFunc = cancel
+		s.cancelFuncMutex.Unlock()
+		Expect(s.manager.Start(ctx)).ToNot(HaveOccurred())
 		s.setManagerRunning(false)
 	}()
 }
@@ -254,7 +262,9 @@ func (s *TestSuite) afterSuiteForIntegrationTesting() {
 }
 
 func (s *TestSuite) stopManager() {
-	close(s.managerDone)
+	s.cancelFuncMutex.Lock()
+	s.cancelFunc()
+	s.cancelFuncMutex.Unlock()
 	Eventually(s.getManagerRunning).Should((BeFalse()))
 }
 

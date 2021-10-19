@@ -15,12 +15,14 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
 )
 
 type HAProvider struct {
@@ -47,6 +49,8 @@ func (r *HAProvider) getHAServiceName(cluster *clusterv1.Cluster) string {
 }
 
 func (r *HAProvider) CreateOrUpdateHAService(ctx context.Context, cluster *clusterv1.Cluster) error {
+	aviinfasetting := akov1alpha1.AviInfraSetting{}
+	r.log.Info("sample avi infra setting", aviinfasetting)
 	serviceName := r.getHAServiceName(cluster)
 	service := &corev1.Service{}
 	if err := r.Client.Get(ctx, client.ObjectKey{

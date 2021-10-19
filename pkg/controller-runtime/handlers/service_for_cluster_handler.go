@@ -17,7 +17,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -29,13 +29,13 @@ type clusterForService struct {
 	log logr.Logger
 }
 
-func (r *clusterForService) Map(o handler.MapObject) []reconcile.Request {
+func (r *clusterForService) ClusterForService(o client.Object) []reconcile.Request {
 	ctx := context.Background()
-	service, ok := o.Object.(*corev1.Service)
+	service, ok := o.(*corev1.Service)
 	if !ok {
 		r.log.Error(errors.New("invalid type"),
 			"Expected to receive service resource",
-			"actualType", fmt.Sprintf("%T", o.Object))
+			"actualType", fmt.Sprintf("%T", o.(client.Object)))
 		return nil
 	}
 	logger := r.log.WithValues("service", service.Namespace+"/"+service.Name)
@@ -67,13 +67,14 @@ func (r *clusterForService) Map(o handler.MapObject) []reconcile.Request {
 	return requests
 }
 
-// ClusterForService returns a handler.Mapper for mapping Service
+// ClusterForServiceMapperFunc returns a handler.MapFunc for mapping Service
 // resources to the cluster
-func ClusterForService(c client.Client, log logr.Logger) handler.Mapper {
-	return &clusterForService{
+func ClusterForServiceMapperFunc(c client.Client, log logr.Logger) handler.MapFunc {
+	clusterForServiceMapper := &clusterForService{
 		Client: c,
 		log:    log,
 	}
+	return clusterForServiceMapper.ClusterForService
 }
 
 func SkipService(service *corev1.Service) bool {

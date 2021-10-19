@@ -5,7 +5,7 @@ package handlers
 
 import (
 	ako_operator "gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako-operator"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 	"sigs.k8s.io/cluster-api/util/conditions"
 )
 

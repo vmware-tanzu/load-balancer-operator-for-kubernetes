@@ -8,14 +8,14 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
-	controllerruntime "gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
-	clustereaddonv1alpha3 "sigs.k8s.io/cluster-api/exp/addons/api/v1alpha3"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
+	clustereaddonv1alpha4 "sigs.k8s.io/cluster-api/exp/addons/api/v1alpha4"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
@@ -37,7 +37,7 @@ func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 	_ = clusterv1.AddToScheme(scheme)
 	_ = akoov1alpha1.AddToScheme(scheme)
-	_ = clustereaddonv1alpha3.AddToScheme(scheme)
+	_ = clustereaddonv1alpha4.AddToScheme(scheme)
 }
 
 func main() {
@@ -65,11 +65,11 @@ func main() {
 		MetricsBindAddress: metricsAddr,
 		LeaderElection:     enableLeaderElection,
 		Port:               9443,
-		NewClient: controllerruntime.NewClientBuilder().WithUncached(
-			&corev1.Secret{},
-			&clustereaddonv1alpha3.ClusterResourceSet{},
+		ClientDisableCacheFor: []client.Object{
 			&corev1.ConfigMap{},
-		).Build,
+			&corev1.Secret{},
+			&clustereaddonv1alpha4.ClusterResourceSet{},
+		},
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

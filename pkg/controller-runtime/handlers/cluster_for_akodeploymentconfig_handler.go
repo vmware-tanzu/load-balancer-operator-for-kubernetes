@@ -13,7 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -25,14 +25,14 @@ type akoDeploymentConfigForCluster struct {
 	log logr.Logger
 }
 
-func (r *akoDeploymentConfigForCluster) Map(o handler.MapObject) []reconcile.Request {
+func (r *akoDeploymentConfigForCluster) AkoDeploymentConfigForCluster(o client.Object) []reconcile.Request {
 	ctx := context.Background()
 
-	cluster, ok := o.Object.(*clusterv1.Cluster)
+	cluster, ok := o.(*clusterv1.Cluster)
 	if !ok {
 		r.log.Error(errors.New("invalid type"),
 			"Expected to receive Cluster resource",
-			"actualType", fmt.Sprintf("%T", o.Object))
+			"actualType", fmt.Sprintf("%T", o.(client.Object)))
 		return nil
 	}
 
@@ -75,11 +75,12 @@ func (r *akoDeploymentConfigForCluster) Map(o handler.MapObject) []reconcile.Req
 	return requests
 }
 
-// AkoDeploymentConfigForCluster returns a handler.Mapper for mapping Cluster
+// AkoDeploymentConfigForClusterMapFunc returns a handler.Mapper for mapping Cluster
 // resources to the AkoDeploymentConfig of this cluster
-func AkoDeploymentConfigForCluster(c client.Client, log logr.Logger) handler.Mapper {
-	return &akoDeploymentConfigForCluster{
+func AkoDeploymentConfigForClusterMapFunc(c client.Client, log logr.Logger) handler.MapFunc {
+	akoDeploymentConfigForClusterMapper := &akoDeploymentConfigForCluster{
 		Client: c,
 		log:    log,
 	}
+	return akoDeploymentConfigForClusterMapper.AkoDeploymentConfigForCluster
 }

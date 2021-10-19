@@ -15,7 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/runtime"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeClient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -27,9 +27,9 @@ import (
 
 var _ = Describe("Machine Cluster Handler", func() {
 	var (
-		machineClusterHandler handler.Mapper
+		machineClusterHandler handler.MapFunc
 		requests              []reconcile.Request
-		input                 handler.MapObject
+		input                 client.Object
 		ctx                   context.Context
 		fclient               client.Client
 		logger                logr.Logger
@@ -52,15 +52,13 @@ var _ = Describe("Machine Cluster Handler", func() {
 	})
 
 	JustBeforeEach(func() {
-		machineClusterHandler = MachinesForCluster(fclient, logger)
-		requests = machineClusterHandler.Map(input)
+		machineClusterHandler = MachinesForClusterMapperFunc(fclient, logger)
+		requests = machineClusterHandler(input)
 	})
 	When("the cluster is from the system namespace", func() {
 		BeforeEach(func() {
 			cluster.Namespace = akoov1alpha1.TKGSystemNamespace
-			input = handler.MapObject{
-				Object: cluster,
-			}
+			input = cluster
 		})
 		It("should not create any request", func() {
 			Expect(len(requests)).To(Equal(0))
@@ -96,9 +94,7 @@ var _ = Describe("Machine Cluster Handler", func() {
 		When("cluster is not being deleted", func() {
 			BeforeEach(func() {
 				conditions.MarkFalse(cluster, clusterv1.ReadyCondition, "test-reason", clusterv1.ConditionSeverityInfo, "test-msg")
-				input = handler.MapObject{
-					Object: cluster,
-				}
+				input = cluster
 			})
 			It("should not create any request", func() {
 				Expect(len(requests)).To(Equal(0))
@@ -109,9 +105,7 @@ var _ = Describe("Machine Cluster Handler", func() {
 				conditions.MarkFalse(cluster, clusterv1.ReadyCondition, clusterv1.DeletingReason, clusterv1.ConditionSeverityInfo, "")
 				deletionTime := metav1.NewTime(time.Now())
 				cluster.SetDeletionTimestamp(&deletionTime)
-				input = handler.MapObject{
-					Object: cluster,
-				}
+				input = cluster
 			})
 			It("should create 2 requests", func() {
 				Expect(len(requests)).To(Equal(2))
@@ -144,9 +138,7 @@ var _ = Describe("Machine Cluster Handler", func() {
 			Expect(fclient.Create(ctx, machine2)).NotTo(HaveOccurred())
 
 			cluster.Namespace = "test"
-			input = handler.MapObject{
-				Object: cluster,
-			}
+			input = cluster
 		})
 		It("should create two request", func() {
 			Expect(len(requests)).To(Equal(2))

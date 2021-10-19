@@ -17,8 +17,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	networkv1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
-	clustereaddonv1alpha3 "sigs.k8s.io/cluster-api/exp/addons/api/v1alpha3"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
+	clustereaddonv1alpha4 "sigs.k8s.io/cluster-api/exp/addons/api/v1alpha4"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/cluster"
@@ -62,7 +62,7 @@ var suite = builder.NewTestSuiteForController(
 		if err != nil {
 			return err
 		}
-		err = clustereaddonv1alpha3.AddToScheme(scheme)
+		err = clustereaddonv1alpha4.AddToScheme(scheme)
 		if err != nil {
 			return err
 		}

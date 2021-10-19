@@ -205,7 +205,7 @@ func (r *AKODeploymentConfigReconciler) reconcileCloudUsableNetwork(
 
 	network, err := r.aviClient.NetworkGetByName(obj.Spec.DataNetwork.Name)
 	if err != nil {
-		log.Error(errors.Errorf("[WARN]Failed to get the Data Network %s from AVI Controller", obj.Spec.DataNetwork.Name),"")
+		log.Error(errors.Errorf("[WARN]Failed to get the Data Network %s from AVI Controller", obj.Spec.DataNetwork.Name), "")
 		return requeueAfter, nil
 	}
 

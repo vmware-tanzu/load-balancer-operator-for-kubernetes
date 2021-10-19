@@ -10,11 +10,10 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	capi "sigs.k8s.io/cluster-api/api/v1alpha3"
+	capi "sigs.k8s.io/cluster-api/api/v1alpha4"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/test/builder"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog"
 )
 
@@ -42,7 +41,7 @@ func FindModuleDir(module string) string {
 	return info.Dir
 }
 
-func CreateObjects(ctx *builder.IntegrationTestContext, objs ...runtime.Object) {
+func CreateObjects(ctx *builder.IntegrationTestContext, objs ...client.Object) {
 	for _, o := range objs {
 		err := ctx.Client.Create(ctx.Context, o)
 		Expect(err).ShouldNot(HaveOccurred())
@@ -50,7 +49,7 @@ func CreateObjects(ctx *builder.IntegrationTestContext, objs ...runtime.Object) 
 	}
 }
 
-func UpdateObjects(ctx *builder.IntegrationTestContext, objs ...runtime.Object) {
+func UpdateObjects(ctx *builder.IntegrationTestContext, objs ...client.Object) {
 	for _, o := range objs {
 		err := ctx.Client.Update(ctx.Context, o)
 		Expect(err).ShouldNot(HaveOccurred())
@@ -58,21 +57,21 @@ func UpdateObjects(ctx *builder.IntegrationTestContext, objs ...runtime.Object) 
 	}
 }
 
-func UpdateObjectsStatus(ctx *builder.IntegrationTestContext, objs ...runtime.Object) {
+func UpdateObjectsStatus(ctx *builder.IntegrationTestContext, objs ...client.Object) {
 	for _, o := range objs {
 		err := ctx.Client.Status().Update(ctx.Context, o)
 		Expect(err).ShouldNot(HaveOccurred())
 	}
 }
 
-func DeleteObjects(ctx *builder.IntegrationTestContext, objs ...runtime.Object) {
+func DeleteObjects(ctx *builder.IntegrationTestContext, objs ...client.Object) {
 	for _, o := range objs {
 		// ignore error
 		_ = ctx.Client.Delete(ctx.Context, o)
 	}
 }
 
-func ensureRuntimeObjectCreated(ctx *builder.IntegrationTestContext, o runtime.Object) {
+func ensureRuntimeObjectCreated(ctx *builder.IntegrationTestContext, o client.Object) {
 	switch obj := o.(type) {
 	case *corev1.Namespace:
 		obj = o.(*corev1.Namespace)
@@ -88,7 +87,7 @@ func ensureRuntimeObjectCreated(ctx *builder.IntegrationTestContext, o runtime.O
 	}
 }
 
-func EnsureRuntimeObjectMatchExpectation(ctx *builder.IntegrationTestContext, objKey client.ObjectKey, obj runtime.Object, expectResult ExpectResult) {
+func EnsureRuntimeObjectMatchExpectation(ctx *builder.IntegrationTestContext, objKey client.ObjectKey, obj client.Object, expectResult ExpectResult) {
 	Eventually(func() bool {
 		res := EXIST
 		if err := ctx.Client.Get(ctx.Context, objKey, obj); err != nil {

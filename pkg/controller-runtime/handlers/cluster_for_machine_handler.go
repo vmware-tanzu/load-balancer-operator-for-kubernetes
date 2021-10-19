@@ -10,7 +10,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -22,14 +22,14 @@ type machinesForCluster struct {
 	log logr.Logger
 }
 
-func (r *machinesForCluster) Map(o handler.MapObject) []reconcile.Request {
+func (r *machinesForCluster) MachinesForCluster(o client.Object) []reconcile.Request {
 	ctx := context.Background()
 
-	cluster, ok := o.Object.(*clusterv1.Cluster)
+	cluster, ok := o.(*clusterv1.Cluster)
 	if !ok {
 		r.log.Error(errors.New("invalid type"),
 			"Expected to receive Cluster resource",
-			"actualType", fmt.Sprintf("%T", o.Object))
+			"actualType", fmt.Sprintf("%T", o.(client.Object)))
 		return nil
 	}
 
@@ -71,11 +71,12 @@ func (r *machinesForCluster) Map(o handler.MapObject) []reconcile.Request {
 	return requests
 }
 
-// MachinesForCluster returns a handler.Mapper for mapping Cluster
+// MachinesForClusterMapperFunc returns a handler.MapFunc for mapping Cluster
 // resources to the Machines of this cluster
-func MachinesForCluster(c client.Client, log logr.Logger) handler.Mapper {
-	return &machinesForCluster{
+func MachinesForClusterMapperFunc(c client.Client, log logr.Logger) handler.MapFunc {
+	machinesForClusterMapper := &machinesForCluster{
 		Client: c,
 		log:    log,
 	}
+	return machinesForClusterMapper.MachinesForCluster
 }
