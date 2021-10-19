@@ -161,7 +161,7 @@ func (r *ClusterReconciler) cleanup(
 
 func GetFakeRemoteClient(_ context.Context, _ string, _ client.Client, _ client.ObjectKey) (client.Client, error) {
 	// return fake client
-	return fake.NewFakeClientWithScheme(scheme.Scheme), nil
+	return fake.NewClientBuilder().WithScheme(scheme.Scheme).Build(), nil
 }
 
 func (r *ClusterReconciler) akoAddonDataValueName() string {

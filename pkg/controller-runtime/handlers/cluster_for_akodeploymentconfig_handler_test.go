@@ -39,7 +39,7 @@ var _ = Describe("AKODeploymentConfig Cluster Handler", func() {
 		ctx = context.Background()
 		scheme := runtime.NewScheme()
 		Expect(akoov1alpha1.AddToScheme(scheme)).NotTo(HaveOccurred())
-		fclient = fakeClient.NewFakeClientWithScheme(scheme)
+		fclient = fakeClient.NewClientBuilder().WithScheme(scheme).Build()
 		logger = log.Log
 		log.SetLogger(zap.New())
 		cluster = &clusterv1.Cluster{

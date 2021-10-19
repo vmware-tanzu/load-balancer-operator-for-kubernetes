@@ -39,7 +39,7 @@ var _ = Describe("Machine Cluster Handler", func() {
 		ctx = context.Background()
 		scheme := runtime.NewScheme()
 		Expect(clusterv1.AddToScheme(scheme)).NotTo(HaveOccurred())
-		fclient = fakeClient.NewFakeClientWithScheme(scheme)
+		fclient = fakeClient.NewClientBuilder().WithScheme(scheme).Build()
 		logger = log.Log
 		log.SetLogger(zap.New())
 		cluster = &clusterv1.Cluster{
