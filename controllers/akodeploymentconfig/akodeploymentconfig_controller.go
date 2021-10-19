@@ -5,6 +5,7 @@ package akodeploymentconfig
 
 import (
 	"context"
+
 	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/cluster"
 	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/phases"
 	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/user"
@@ -16,7 +17,7 @@ import (
 
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"

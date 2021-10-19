@@ -6,10 +6,11 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	akoo "gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako-operator"
 	v1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"strings"
 
 	"gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -17,7 +18,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"

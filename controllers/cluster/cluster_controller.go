@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+
 	"github.com/pkg/errors"
 	ako_operator "gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako-operator"
 	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime/handlers"
@@ -20,7 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha4"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"

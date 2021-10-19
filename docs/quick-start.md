@@ -155,7 +155,7 @@ avi-k8s-config   23     77s
 
 # Making sure finalizer is added on the cluster
 ➜  ako-operator git:(update-readme) ✗ kk get cluster workload-cls -o yaml  | head
-apiVersion: cluster.x-k8s.io/v1alpha4
+apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
 metadata:
 ...
