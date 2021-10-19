@@ -9,7 +9,9 @@ import (
 	"net"
 	"sync"
 
+	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig"
 	ako_operator "gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako-operator"
+	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime/handlers"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/go-logr/logr"
@@ -18,6 +20,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -77,19 +80,44 @@ func (r *HAProvider) createService(
 	cluster *clusterv1.Cluster,
 ) (*corev1.Service, error) {
 	serviceName := r.getHAServiceName(cluster)
+
+	serviceAnnotation := map[string]string{
+		akoov1alpha1.HAServiceAnnotationsKey:  "true",
+		akoov1alpha1.TKGClusterNameLabel:      cluster.Name,
+		akoov1alpha1.TKGClusterNameSpaceLabel: cluster.Namespace,
+	}
+
+	aviInfraSetting := &akov1alpha1.AviInfraSetting{}
+
+	// TODO: check a cluster should be managed by only one adc
+	adcs := handlers.GetADCForCluster(ctx, cluster, r.log, r.Client)
+
+	aviInfraSettingName := akodeploymentconfig.GetAviInfraSettingName(&adcs.Items[0])
+	if err := r.Client.Get(ctx, client.ObjectKey{
+		Name: aviInfraSettingName,
+	}, aviInfraSetting); err != nil {
+		if apierrors.IsNotFound(err) {
+			r.log.Info(aviInfraSettingName + " not found, skip adding annotation to HA service...")
+		} else {
+			r.log.Error(err, "Failed to get AVIInfraSetting, requeue")
+			return nil, err
+		}
+	} else {
+		// add AVIInfraSetting annotation when creating HA svc
+		if !ako_operator.IsBootStrapCluster() {
+			serviceAnnotation[akoov1alpha1.HAAVIInfraSettingAnnotationsKey] = aviInfraSettingName
+		}
+	}
+
 	service := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Service",
 			APIVersion: "core/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      serviceName,
-			Namespace: cluster.Namespace,
-			Annotations: map[string]string{
-				akoov1alpha1.HAServiceAnnotationsKey:  "true",
-				akoov1alpha1.TKGClusterNameLabel:      cluster.Name,
-				akoov1alpha1.TKGClusterNameSpaceLabel: cluster.Namespace,
-			},
+			Name:        serviceName,
+			Namespace:   cluster.Namespace,
+			Annotations: serviceAnnotation,
 		},
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceTypeLoadBalancer,
