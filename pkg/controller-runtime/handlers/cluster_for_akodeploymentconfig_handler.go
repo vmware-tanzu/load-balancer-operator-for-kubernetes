@@ -42,16 +42,39 @@ func (r *akoDeploymentConfigForCluster) Map(o handler.MapObject) []reconcile.Req
 		logger.Info("Skipping cluster in handler")
 		return []reconcile.Request{}
 	}
-	// is cluster selected by non-default akodeploymentconfig
+
+	akoDeploymentConfigs := GetADCForCluster(ctx, cluster, logger, r.Client)
+	requests := []ctrl.Request{}
+	for _, akoDeploymentConfig := range akoDeploymentConfigs.Items {
+		requests = append(requests, ctrl.Request{
+			NamespacedName: types.NamespacedName{
+				Namespace: akoDeploymentConfig.Namespace,
+				Name:      akoDeploymentConfig.Name,
+			},
+		})
+	}
+
+	logger.V(3).Info("Generating requests", "requests", requests)
+
+	// Return reconcile requests for the AKODeploymentConfig resources.
+	return requests
+}
+
+func GetADCForCluster(
+	ctx context.Context,
+	cluster *clusterv1.Cluster,
+	logger logr.Logger,
+	c client.Client,
+) akoov1alpha1.AKODeploymentConfigList {
 	_, selected := cluster.Labels[akoov1alpha1.AviClusterSelectedLabel]
 
 	logger.V(3).Info("Getting all akodeploymentconfig")
 	var akoDeploymentConfigs akoov1alpha1.AKODeploymentConfigList
-	if err := r.Client.List(ctx, &akoDeploymentConfigs, []client.ListOption{}...); err != nil {
-		return []reconcile.Request{}
+
+	if err := c.List(ctx, &akoDeploymentConfigs, []client.ListOption{}...); err != nil {
+		return akoDeploymentConfigs
 	}
-	// Create a reconcile request for every label matched akodeploymentconfig
-	requests := []ctrl.Request{}
+
 	for _, akoDeploymentConfig := range akoDeploymentConfigs.Items {
 		if selector, err := metav1.LabelSelectorAsSelector(&akoDeploymentConfig.Spec.ClusterSelector); err != nil {
 			logger.Error(err, "Failed to convert label sector to selector")
@@ -61,18 +84,10 @@ func (r *akoDeploymentConfigForCluster) Map(o handler.MapObject) []reconcile.Req
 			continue
 		} else if selector.Matches(labels.Set(cluster.GetLabels())) {
 			logger.V(3).Info("Found matching AKODeploymentConfig", akoDeploymentConfig.Namespace+"/"+akoDeploymentConfig.Name)
-			requests = append(requests, ctrl.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: akoDeploymentConfig.Namespace,
-					Name:      akoDeploymentConfig.Name,
-				},
-			})
+			akoDeploymentConfigs.Items = append(akoDeploymentConfigs.Items, akoDeploymentConfig)
 		}
 	}
-	logger.V(3).Info("Generating requests", "requests", requests)
-
-	// Return reconcile requests for the AKODeploymentConfig resources.
-	return requests
+	return akoDeploymentConfigs
 }
 
 // AkoDeploymentConfigForCluster returns a handler.Mapper for mapping Cluster
