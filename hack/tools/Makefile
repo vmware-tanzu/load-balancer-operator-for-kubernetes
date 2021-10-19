@@ -29,8 +29,7 @@ KUBECTL_VERSION=1.16.4
 
 # Host information.
 HOST_OS=$(shell go env GOOS)
-#HOST_ARCH=$(shell go env GOARCH)
-HOST_ARCH=amd64
+HOST_ARCH=$(shell go env GOARCH)
 
 # Binaries.
 CONTROLLER_GEN  := $(BIN_DIR)/controller-gen
