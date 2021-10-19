@@ -1,6 +1,6 @@
 module gitlab.eng.vmware.com/core-build/ako-operator
 
-go 1.15
+go 1.16
 
 require (
 	github.com/avinetworks/sdk v0.0.0-20201123134013-c157ef55b6f7

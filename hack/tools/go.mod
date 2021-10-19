@@ -1,6 +1,6 @@
 module gitlab.eng.vmware.com/core-build/tkg-connectivity/hack/tools
 
-go 1.15
+go 1.16
 
 require (
 	github.com/k14s/ytt v0.28.0
