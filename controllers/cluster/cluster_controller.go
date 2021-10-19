@@ -35,7 +35,7 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&clusterv1.Cluster{}).
 		Watches(
 			&source.Kind{Type: &corev1.Service{}},
-			handler.EnqueueRequestsFromMapFunc(handlers.ClusterForServiceMapperFunc(r.Client, r.Log)),
+			handler.EnqueueRequestsFromMapFunc(handlers.ClusterForService(r.Client, r.Log)),
 		).
 		Complete(r)
 }

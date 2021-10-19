@@ -35,7 +35,7 @@ func (r *MachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&clusterv1.Machine{}).
 		Watches(
 			&source.Kind{Type: &clusterv1.Cluster{}},
-			handler.EnqueueRequestsFromMapFunc(handlers.MachinesForClusterMapperFunc(r.Client, r.Log)),
+			handler.EnqueueRequestsFromMapFunc(handlers.MachinesForCluster(r.Client, r.Log)),
 		).
 		Complete(r)
 }

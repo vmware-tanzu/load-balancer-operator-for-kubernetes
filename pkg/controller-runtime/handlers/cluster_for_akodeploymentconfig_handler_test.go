@@ -27,7 +27,7 @@ import (
 
 var _ = Describe("AKODeploymentConfig Cluster Handler", func() {
 	var (
-		akoDeploymentConfighandler handler.MapFunc
+		akoDeploymentConfigMapFunc handler.MapFunc
 		requests                   []reconcile.Request
 		input                      client.Object
 		ctx                        context.Context
@@ -39,7 +39,7 @@ var _ = Describe("AKODeploymentConfig Cluster Handler", func() {
 		ctx = context.Background()
 		scheme := runtime.NewScheme()
 		Expect(akoov1alpha1.AddToScheme(scheme)).NotTo(HaveOccurred())
-		fclient = fakeClient.NewFakeClientWithScheme(scheme)
+		fclient = fakeClient.NewClientBuilder().WithScheme(scheme).Build()
 		logger = log.Log
 		log.SetLogger(zap.New())
 		cluster = &clusterv1.Cluster{
@@ -52,8 +52,8 @@ var _ = Describe("AKODeploymentConfig Cluster Handler", func() {
 	})
 
 	JustBeforeEach(func() {
-		akoDeploymentConfighandler = AkoDeploymentConfigForClusterMapFunc(fclient, logger)
-		requests = akoDeploymentConfighandler(input)
+		akoDeploymentConfigMapFunc = AkoDeploymentConfigForCluster(fclient, logger)
+		requests = akoDeploymentConfigMapFunc(input)
 	})
 	When("no AKODeploymentConfig exists", func() {
 		BeforeEach(func() {

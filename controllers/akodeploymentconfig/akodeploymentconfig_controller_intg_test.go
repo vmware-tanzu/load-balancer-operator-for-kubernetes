@@ -64,7 +64,7 @@ func intgTestAkoDeploymentConfigController() {
 				Name: "integration-test-8ed12g",
 				CIDR: "10.0.0.0/24",
 				IPPools: []akoov1alpha1.IPPool{
-					akoov1alpha1.IPPool{
+					{
 						Start: "10.0.0.1",
 						End:   "10.0.0.10",
 						Type:  "V4",

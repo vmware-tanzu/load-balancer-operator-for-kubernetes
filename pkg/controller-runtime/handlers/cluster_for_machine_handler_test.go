@@ -39,7 +39,7 @@ var _ = Describe("Machine Cluster Handler", func() {
 		ctx = context.Background()
 		scheme := runtime.NewScheme()
 		Expect(clusterv1.AddToScheme(scheme)).NotTo(HaveOccurred())
-		fclient = fakeClient.NewFakeClientWithScheme(scheme)
+		fclient = fakeClient.NewClientBuilder().WithScheme(scheme).Build()
 		logger = log.Log
 		log.SetLogger(zap.New())
 		cluster = &clusterv1.Cluster{
@@ -52,7 +52,7 @@ var _ = Describe("Machine Cluster Handler", func() {
 	})
 
 	JustBeforeEach(func() {
-		machineClusterHandler = MachinesForClusterMapperFunc(fclient, logger)
+		machineClusterHandler = MachinesForCluster(fclient, logger)
 		requests = machineClusterHandler(input)
 	})
 	When("the cluster is from the system namespace", func() {

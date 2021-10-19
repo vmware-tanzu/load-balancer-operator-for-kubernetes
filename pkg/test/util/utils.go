@@ -49,14 +49,6 @@ func CreateObjects(ctx *builder.IntegrationTestContext, objs ...client.Object) {
 	}
 }
 
-func UpdateObjects(ctx *builder.IntegrationTestContext, objs ...client.Object) {
-	for _, o := range objs {
-		err := ctx.Client.Update(ctx.Context, o)
-		Expect(err).ShouldNot(HaveOccurred())
-		ensureRuntimeObjectCreated(ctx, o)
-	}
-}
-
 func UpdateObjectsStatus(ctx *builder.IntegrationTestContext, objs ...client.Object) {
 	for _, o := range objs {
 		err := ctx.Client.Status().Update(ctx.Context, o)

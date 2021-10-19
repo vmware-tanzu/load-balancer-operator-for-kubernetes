@@ -94,7 +94,7 @@ func NewTestSuiteForController(addToManagerFn AddToManagerFunc, addToSchemeFn Ad
 	return testSuite
 }
 
-// NewTestSuiteForController returns a new test suite used for integration test
+// NewTestSuiteForReconciler returns a new test suite used for integration test
 func NewTestSuiteForReconciler(addToManagerFn AddToManagerFunc, addToSchemeFn AddToSchemeFunc, crdpaths ...string) *TestSuite {
 
 	testSuite := &TestSuite{
@@ -116,15 +116,18 @@ func (s *TestSuite) init(crdpaths []string, additionalAPIServerFlags ...string) 
 			panic("addToManagerFn is nil")
 		}
 
-		apiServerFlags := append([]string{"--allow-privileged=true"}, envtest.DefaultKubeAPIServerFlags...)
-		if len(additionalAPIServerFlags) > 0 {
-			apiServerFlags = append(apiServerFlags, additionalAPIServerFlags...)
+		apiServer := s.envTest.ControlPlane.GetAPIServer()
+		args := apiServer.Configure()
+		args = args.Append("allow-privileged", "true")
+
+		// Pass in additional name-only flags
+		for _, flag := range additionalAPIServerFlags {
+			args.Enable(flag)
 		}
 
 		crdpaths = append(crdpaths, filepath.Join(s.flags.RootDir, "config", "crd", "bases"))
 		s.envTest = envtest.Environment{
-			CRDDirectoryPaths:  crdpaths,
-			KubeAPIServerFlags: apiServerFlags,
+			CRDDirectoryPaths: crdpaths,
 		}
 	}
 }
@@ -265,7 +268,7 @@ func (s *TestSuite) stopManager() {
 	s.cancelFuncMutex.Lock()
 	s.cancelFunc()
 	s.cancelFuncMutex.Unlock()
-	Eventually(s.getManagerRunning).Should((BeFalse()))
+	Eventually(s.getManagerRunning).Should(BeFalse())
 }
 
 var FakeAvi *aviclient.FakeAviClient

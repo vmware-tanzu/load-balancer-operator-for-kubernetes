@@ -5,19 +5,17 @@ package main
 
 import (
 	"flag"
-	"net/http"
-	"net/http/pprof"
-	"os"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"net/http"
+	"net/http/pprof"
+	"os"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	clustereaddonv1alpha4 "sigs.k8s.io/cluster-api/exp/addons/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	"gitlab.eng.vmware.com/core-build/ako-operator/controllers"
@@ -60,7 +58,6 @@ func main() {
 			"profiler-addr", profilerAddress)
 		go runProfiler(profilerAddress)
 	}
-
 	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: metricsAddr,

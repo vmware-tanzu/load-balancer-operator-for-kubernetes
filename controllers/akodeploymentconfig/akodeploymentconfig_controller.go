@@ -36,7 +36,7 @@ func (r *AKODeploymentConfigReconciler) SetupWithManager(mgr ctrl.Manager) error
 		For(&akoov1alpha1.AKODeploymentConfig{}).
 		Watches(
 			&source.Kind{Type: &clusterv1.Cluster{}},
-			handler.EnqueueRequestsFromMapFunc(handlers.AkoDeploymentConfigForClusterMapFunc(r.Client, r.Log)),
+			handler.EnqueueRequestsFromMapFunc(handlers.AkoDeploymentConfigForCluster(r.Client, r.Log)),
 		).
 		Complete(r)
 }

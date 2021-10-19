@@ -37,11 +37,9 @@ func NewReconciler(c client.Client, log logr.Logger, scheme *runtime.Scheme) *Cl
 		Client:          c,
 		Log:             log,
 		Scheme:          scheme,
-		GetRemoteClient: GetRemoteClient,
+		GetRemoteClient: remote.NewClusterClient,
 	}
 }
-
-type RemoteClientGetter func(ctx context.Context, sourceName string, c client.Client, cluster client.ObjectKey, scheme *runtime.Scheme) (client.Client, error)
 
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters;clusters/status,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines;machines/status,verbs=get;list;watch;create;update;patch;delete
@@ -52,7 +50,7 @@ type ClusterReconciler struct {
 	client.Client
 	Log             logr.Logger
 	Scheme          *runtime.Scheme
-	GetRemoteClient RemoteClientGetter
+	GetRemoteClient remote.ClusterClientGetter
 }
 
 // ReconcileDelete removes the finalizer on Cluster once AKO finishes its
@@ -107,7 +105,7 @@ func (r *ClusterReconciler) cleanup(
 	remoteClient, err := r.GetRemoteClient(ctx, akoov1alpha1.AKODeploymentConfigControllerName, r.Client, client.ObjectKey{
 		Name:      obj.Name,
 		Namespace: obj.Namespace,
-	}, r.Scheme)
+	})
 	if err != nil {
 		log.Info("Failed to create remote client for cluster, requeue the request")
 		return false, err
@@ -161,13 +159,9 @@ func (r *ClusterReconciler) cleanup(
 	return false, nil
 }
 
-func GetFakeRemoteClient(_ context.Context, sourceName string, _ client.Client, _ client.ObjectKey, _ *runtime.Scheme) (client.Client, error) {
+func GetFakeRemoteClient(_ context.Context, _ string, _ client.Client, _ client.ObjectKey) (client.Client, error) {
 	// return fake client
 	return fake.NewClientBuilder().WithScheme(scheme.Scheme).Build(), nil
-}
-
-func GetRemoteClient(ctx context.Context, sourceName string, client client.Client, key client.ObjectKey, _ *runtime.Scheme) (client.Client, error) {
-	return remote.NewClusterClient(ctx, sourceName, client, key)
 }
 
 func (r *ClusterReconciler) akoAddonDataValueName() string {

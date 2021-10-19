@@ -31,7 +31,7 @@ type AkoUserReconciler struct {
 	Scheme    *runtime.Scheme
 }
 
-// NewReconciler returns AKOUserReconciler object.
+// NewProvider returns AKOUserReconciler object.
 func NewProvider(client client.Client,
 	aviClient aviclient.Client,
 	logger logr.Logger,
@@ -42,7 +42,7 @@ func NewProvider(client client.Client,
 		Scheme:    scheme}
 }
 
-// ReconcileAviUser: reconcile akodeploymentconfig clusters' avi user
+// ReconcileAviUser reconcile akodeploymentconfig clusters' avi user
 func (r *AkoUserReconciler) ReconcileAviUser(
 	ctx context.Context,
 	log logr.Logger,

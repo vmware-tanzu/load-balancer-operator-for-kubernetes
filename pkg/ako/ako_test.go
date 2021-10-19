@@ -36,7 +36,7 @@ var _ = Describe("AKO", func() {
 		ctx = context.Background()
 		scheme := runtime.NewScheme()
 		Expect(appv1.AddToScheme(scheme)).NotTo(HaveOccurred())
-		fclient = fakeClient.NewFakeClientWithScheme(scheme)
+		fclient = fakeClient.NewClientBuilder().WithScheme(scheme).Build()
 		logger = log.Log
 		log.SetLogger(zap.New())
 		ss = &appv1.StatefulSet{
@@ -75,7 +75,7 @@ var _ = Describe("AKO", func() {
 		BeforeEach(func() {
 			ss.Status = appv1.StatefulSetStatus{
 				Conditions: []appv1.StatefulSetCondition{
-					appv1.StatefulSetCondition{
+					{
 						Type:   akoConditionType,
 						Status: corev1.ConditionTrue,
 					},
@@ -91,7 +91,7 @@ var _ = Describe("AKO", func() {
 		BeforeEach(func() {
 			ss.Status = appv1.StatefulSetStatus{
 				Conditions: []appv1.StatefulSetCondition{
-					appv1.StatefulSetCondition{
+					{
 						Type:   akoConditionType,
 						Status: corev1.ConditionFalse,
 					},
