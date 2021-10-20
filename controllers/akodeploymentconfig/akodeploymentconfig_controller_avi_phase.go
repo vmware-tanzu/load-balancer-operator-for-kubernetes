@@ -6,10 +6,11 @@ package akodeploymentconfig
 import (
 	"bytes"
 	"context"
-	"github.com/pkg/errors"
 	"net"
 	"sort"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/phases"
 	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/user"
@@ -18,9 +19,12 @@ import (
 	"github.com/go-logr/logr"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/aviclient"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -99,6 +103,7 @@ func (r *AKODeploymentConfigReconciler) reconcileAVI(
 	return phases.ReconcilePhases(ctx, log, obj, []phases.ReconcilePhase{
 		r.reconcileNetworkSubnets,
 		r.reconcileCloudUsableNetwork,
+		r.reconcileAviInfraSetting,
 		func(ctx context.Context, log logr.Logger, obj *akoov1alpha1.AKODeploymentConfig) (ctrl.Result, error) {
 			return phases.ReconcileClustersPhases(ctx, r.Client, log, obj,
 				[]phases.ReconcileClusterPhase{
@@ -129,11 +134,13 @@ func (r *AKODeploymentConfigReconciler) reconcileAVIDelete(
 		// When AKODeploymentConfig is being deleted, reconcile avi user
 		// deletion no matter cluster is being deleted or not
 		[]phases.ReconcileClusterPhase{
+			r.reconcileAviInfraSettingDelete,
 			r.userReconciler.ReconcileAviUserDelete,
 		},
 		[]phases.ReconcileClusterPhase{
 			// TODO(fangyuanl): handle the data network configuration
 			// deletion
+			r.reconcileAviInfraSettingDelete,
 			r.userReconciler.ReconcileAviUserDelete,
 		},
 	)
@@ -254,6 +261,91 @@ func (r *AKODeploymentConfigReconciler) reconcileCloudUsableNetwork(
 	}
 
 	return res, nil
+}
+
+func (r *AKODeploymentConfigReconciler) reconcileAviInfraSetting(
+	ctx context.Context,
+	log logr.Logger,
+	adc *akoov1alpha1.AKODeploymentConfig,
+) (ctrl.Result, error) {
+	res := ctrl.Result{}
+
+	log.Info("Start reconciling AVIInfraSetting")
+
+	newAviInfraSetting := r.createAviInfraSetting(adc)
+
+	if err := r.Get(ctx, client.ObjectKey{
+		Name: GetAviInfraSettingName(adc),
+	}, newAviInfraSetting); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Info("AVIInfraSetting doesn't exist, start creating it")
+			return res, r.Create(ctx, newAviInfraSetting)
+		}
+		log.Error(err, "Failed to get AVIInfraSetting, requeue")
+		return res, err
+	}
+	aviInfraSetting := newAviInfraSetting.DeepCopy()
+	return res, r.Update(ctx, aviInfraSetting)
+}
+
+func GetAviInfraSettingName(adc *akoov1alpha1.AKODeploymentConfig) string {
+	return adc.Name + "-HA"
+}
+
+func (r *AKODeploymentConfigReconciler) createAviInfraSetting(adc *akoov1alpha1.AKODeploymentConfig) *akov1alpha1.AviInfraSetting {
+
+	return &akov1alpha1.AviInfraSetting{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: GetAviInfraSettingName(adc),
+		},
+		Spec: akov1alpha1.AviInfraSettingSpec{
+			SeGroup: akov1alpha1.AviInfraSettingSeGroup{
+				Name: adc.Spec.ServiceEngineGroup,
+			},
+			Network: akov1alpha1.AviInfraSettingNetwork{
+				VipNetworks: []akov1alpha1.AviInfraSettingVipNetwork{{
+					NetworkName: adc.Spec.ControlPlaneNetwork.Name,
+					Cidr:        adc.Spec.ControlPlaneNetwork.CIDR,
+				}},
+			},
+		},
+	}
+}
+
+func (r *AKODeploymentConfigReconciler) reconcileAviInfraSettingDelete(
+	ctx context.Context,
+	log logr.Logger,
+	_ *clusterv1.Cluster,
+	adc *akoov1alpha1.AKODeploymentConfig,
+) (ctrl.Result, error) {
+	res := ctrl.Result{}
+
+	log.Info("Start reconciling AVIInfraSetting Delete")
+
+	// Get the list of clusters managed by the AKODeploymentConfig
+	clusters, err := phases.ListAkoDeplymentConfigDeployedClusters(ctx, r.Client, adc)
+	if err != nil {
+		log.Error(err, "Fail to list clusters deployed by current AKODeploymentConfig")
+		return res, err
+	}
+
+	if len(clusters.Items) != 0 {
+		log.Info("There are clusters managed by current AKODeploymentConfig, skip AviInfraSetting deletion")
+		return res, nil
+	}
+
+	aviInfraSetting := &akov1alpha1.AviInfraSetting{}
+	if err := r.Get(ctx, client.ObjectKey{
+		Name: GetAviInfraSettingName(adc),
+	}, aviInfraSetting); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Info("AVIInfraSetting doesn't exist, skip deletion")
+			return res, nil
+		}
+		log.Error(err, "Failed to get AVIInfraSetting, requeue")
+		return res, err
+	}
+	return res, r.Delete(ctx, aviInfraSetting)
 }
 
 // EnsureAviNetwork brings network to the intented state by ensuring there is
