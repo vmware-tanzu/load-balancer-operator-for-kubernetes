@@ -14,7 +14,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/go-logr/logr"
-	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/aviclient"
+	"gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/aviclient"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"

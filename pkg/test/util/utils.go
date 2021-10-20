@@ -13,7 +13,7 @@ import (
 	capi "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/test/builder"
+	"gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/builder"
 	"k8s.io/klog"
 )
 

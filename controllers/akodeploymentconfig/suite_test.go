@@ -8,20 +8,20 @@ import (
 	"testing"
 
 	. "github.com/onsi/ginkgo"
-	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
-	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig"
-	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/aviclient"
-	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/test/builder"
-	testutil "gitlab.eng.vmware.com/core-build/ako-operator/pkg/test/util"
+	akoov1alpha1 "gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig"
+	"gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/aviclient"
+	"gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/builder"
+	testutil "gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	networkv1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
+	networkv1alpha1 "gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	clustereaddonv1alpha4 "sigs.k8s.io/cluster-api/exp/addons/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/cluster"
+	"gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/cluster"
 	ctrlmgr "sigs.k8s.io/controller-runtime/pkg/manager"
 )
 

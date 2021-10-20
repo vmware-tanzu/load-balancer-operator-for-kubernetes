@@ -8,12 +8,12 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	ako_operator "gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako-operator"
-	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/test/builder"
+	ako_operator "gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
+	"gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/builder"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	testutil "gitlab.eng.vmware.com/core-build/ako-operator/pkg/test/util"
+	testutil "gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/util"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"

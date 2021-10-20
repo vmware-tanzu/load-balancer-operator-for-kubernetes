@@ -6,15 +6,15 @@ package machine
 import (
 	"context"
 
-	ako_operator "gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako-operator"
+	ako_operator "gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
-	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
-	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/haprovider"
+	akoov1alpha1 "gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/haprovider"
 
-	controllerruntime "gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime"
-	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime/handlers"
+	controllerruntime "gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/controller-runtime"
+	"gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/controller-runtime/handlers"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"

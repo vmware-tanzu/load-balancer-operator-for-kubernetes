@@ -6,9 +6,9 @@ package akodeploymentconfig
 import (
 	"context"
 
-	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/cluster"
-	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/phases"
-	controllerruntime "gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime"
+	"gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/cluster"
+	"gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/phases"
+	controllerruntime "gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/controller-runtime"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
@@ -17,7 +17,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
+	akoov1alpha1 "gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
 )
 
 func (r *AKODeploymentConfigReconciler) initCluster(log logr.Logger) {
