@@ -41,9 +41,12 @@ func AkoDeploymentConfigForCluster(c client.Client, log logr.Logger) handler.Map
 			return []reconcile.Request{}
 		}
 
-		akoDeploymentConfigs := GetADCForCluster(ctx, cluster, logger, c)
+		adcForCluster, err := GetADCForCluster(ctx, cluster, logger, c)
+		if err != nil {
+			return []reconcile.Request{}
+		}
 		var requests []ctrl.Request
-		for _, akoDeploymentConfig := range akoDeploymentConfigs.Items {
+		for _, akoDeploymentConfig := range adcForCluster {
 			requests = append(requests, ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: akoDeploymentConfig.Namespace,
@@ -64,14 +67,16 @@ func GetADCForCluster(
 	cluster *clusterv1.Cluster,
 	logger logr.Logger,
 	c client.Client,
-) akoov1alpha1.AKODeploymentConfigList {
+) ([]akoov1alpha1.AKODeploymentConfig, error) {
+	var adcForCluster []akoov1alpha1.AKODeploymentConfig
+	var akoDeploymentConfigs akoov1alpha1.AKODeploymentConfigList
+
 	_, selected := cluster.Labels[akoov1alpha1.AviClusterSelectedLabel]
 
 	logger.V(3).Info("Getting all akodeploymentconfig")
-	var akoDeploymentConfigs akoov1alpha1.AKODeploymentConfigList
 
 	if err := c.List(ctx, &akoDeploymentConfigs, []client.ListOption{}...); err != nil {
-		return akoDeploymentConfigs
+		return adcForCluster, err
 	}
 
 	for _, akoDeploymentConfig := range akoDeploymentConfigs.Items {
@@ -83,8 +88,8 @@ func GetADCForCluster(
 			continue
 		} else if selector.Matches(labels.Set(cluster.GetLabels())) {
 			logger.V(3).Info("Found matching AKODeploymentConfig", akoDeploymentConfig.Namespace+"/"+akoDeploymentConfig.Name)
-			akoDeploymentConfigs.Items = append(akoDeploymentConfigs.Items, akoDeploymentConfig)
+			adcForCluster = append(adcForCluster, akoDeploymentConfig)
 		}
 	}
-	return akoDeploymentConfigs
+	return adcForCluster, nil
 }

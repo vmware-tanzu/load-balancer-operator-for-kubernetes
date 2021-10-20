@@ -92,9 +92,12 @@ func (r *HAProvider) createService(
 	aviInfraSetting := &akov1alpha1.AviInfraSetting{}
 
 	// TODO: check a cluster should be managed by only one adc
-	adcs := handlers.GetADCForCluster(ctx, cluster, r.log, r.Client)
+	adcForCluster, err := handlers.GetADCForCluster(ctx, cluster, r.log, r.Client)
+	if err != nil {
+		return nil, err
+	}
 
-	aviInfraSettingName := akodeploymentconfig.GetAviInfraSettingName(&adcs.Items[0])
+	aviInfraSettingName := akodeploymentconfig.GetAviInfraSettingName(&adcForCluster[0])
 	if err := r.Client.Get(ctx, client.ObjectKey{
 		Name: aviInfraSettingName,
 	}, aviInfraSetting); err != nil {
@@ -149,7 +152,7 @@ func (r *HAProvider) createService(
 		service.Spec.LoadBalancerIP = ip
 	}
 	r.log.Info("Creating " + serviceName + " Service")
-	err := r.Create(ctx, service)
+	err = r.Create(ctx, service)
 	return service, err
 }
 
