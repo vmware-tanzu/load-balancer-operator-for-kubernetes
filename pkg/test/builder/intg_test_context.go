@@ -62,9 +62,10 @@ func (s *TestSuite) NewIntegrationTestContext() *IntegrationTestContext {
 	}
 
 	By("Creating a temporary namespace", func() {
+		nonce := uuid.NewV4().String()[0:6]
 		namespace := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: uuid.NewV4().String(),
+				Name: "ns-" + nonce, // do not start with digits nor too long, otherwise dns will complain
 			},
 		}
 		Expect(ctx.Client.Create(s, namespace)).To(Succeed())

@@ -49,8 +49,8 @@ func (r *HAProvider) getHAServiceName(cluster *clusterv1.Cluster) string {
 }
 
 func (r *HAProvider) CreateOrUpdateHAService(ctx context.Context, cluster *clusterv1.Cluster) error {
-	aviinfasetting := akov1alpha1.AviInfraSetting{}
-	r.log.Info("sample avi infra setting", aviinfasetting)
+	var aviInfraSetting akov1alpha1.AviInfraSetting
+	r.log.Info("sample avi infra setting", aviInfraSetting.Name, aviInfraSetting)
 	serviceName := r.getHAServiceName(cluster)
 	service := &corev1.Service{}
 	if err := r.Client.Get(ctx, client.ObjectKey{

@@ -69,37 +69,42 @@ func intgTestEnsureClusterHAProvider() {
 			})
 		})
 
-		//When("Avi is HA provider", func() {
-		//	When("HA service and endpoint not exist", func() {
-		//		BeforeEach(func() {
-		//			err := os.Setenv(ako_operator.IsControlPlaneHAProvider, "True")
-		//			Expect(err).ShouldNot(HaveOccurred())
-		//			// add an ip to service since ako is absent
-		//			service := &corev1.Service{}
-		//			testutil.EnsureRuntimeObjectMatchExpectation(ctx, client.ObjectKey{
-		//				Name:      serviceName,
-		//				Namespace: ctx.Namespace,
-		//			}, &corev1.Service{}, testutil.EXIST)
-		//
-		//			err = ctx.Client.Get(ctx, client.ObjectKey{Name: serviceName, Namespace: ctx.Namespace}, service)
-		//			Expect(err).ShouldNot(HaveOccurred())
-		//
-		//			service.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{{
-		//				IP:       "10.0.0.1",
-		//				Hostname: "intg-test",
-		//			}}
-		//			err = ctx.Client.Status().Update(ctx, service)
-		//			Expect(err).To(BeNil())
-		//		})
-		//
-		//		It("should create service and endpoint", func() {
-		//			testutil.EnsureRuntimeObjectMatchExpectation(ctx, client.ObjectKey{
-		//				Name:      serviceName,
-		//				Namespace: ctx.Namespace,
-		//			}, &corev1.Endpoints{}, testutil.EXIST)
-		//
-		//		})
-		//	})
-		//})
+		When("Avi is HA provider", func() {
+			When("HA service and endpoint not exist", func() {
+				BeforeEach(func() {
+					err := os.Setenv(ako_operator.IsControlPlaneHAProvider, "True")
+					Expect(err).ShouldNot(HaveOccurred())
+					testutil.CreateObjects(ctx, cluster)
+
+					// add an ip to service since ako is absent
+					service := &corev1.Service{}
+					testutil.EnsureRuntimeObjectMatchExpectation(ctx, client.ObjectKey{
+						Name:      serviceName,
+						Namespace: ctx.Namespace,
+					}, &corev1.Service{}, testutil.EXIST)
+
+					err = ctx.Client.Get(ctx, client.ObjectKey{Name: serviceName, Namespace: ctx.Namespace}, service)
+					Expect(err).ShouldNot(HaveOccurred())
+
+					service.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{{
+						IP:       "10.0.0.1",
+						Hostname: "intg-test",
+					}}
+					err = ctx.Client.Status().Update(ctx, service)
+					Expect(err).To(BeNil())
+				})
+				AfterEach(func() {
+					testutil.DeleteObjects(ctx, cluster)
+				})
+
+				It("should create service and endpoint", func() {
+					testutil.EnsureRuntimeObjectMatchExpectation(ctx, client.ObjectKey{
+						Name:      serviceName,
+						Namespace: ctx.Namespace,
+					}, &corev1.Endpoints{}, testutil.EXIST)
+
+				})
+			})
+		})
 	})
 }
