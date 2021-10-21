@@ -13,7 +13,6 @@ import (
 	"net/http/pprof"
 	"os"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	clustereaddonv1alpha4 "sigs.k8s.io/cluster-api/exp/addons/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -36,7 +35,6 @@ func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 	_ = clusterv1.AddToScheme(scheme)
 	_ = akoov1alpha1.AddToScheme(scheme)
-	_ = clustereaddonv1alpha4.AddToScheme(scheme)
 }
 
 func main() {
@@ -66,7 +64,6 @@ func main() {
 		ClientDisableCacheFor: []client.Object{
 			&corev1.ConfigMap{},
 			&corev1.Secret{},
-			&clustereaddonv1alpha4.ClusterResourceSet{},
 		},
 	})
 	if err != nil {

@@ -18,7 +18,6 @@ import (
 
 	networkv1alpha1 "gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	clustereaddonv1alpha4 "sigs.k8s.io/cluster-api/exp/addons/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/cluster"
@@ -59,10 +58,6 @@ var suite = builder.NewTestSuiteForController(
 			return err
 		}
 		err = clusterv1.AddToScheme(scheme)
-		if err != nil {
-			return err
-		}
-		err = clustereaddonv1alpha4.AddToScheme(scheme)
 		if err != nil {
 			return err
 		}

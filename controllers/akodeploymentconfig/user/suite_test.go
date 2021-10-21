@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	clustereaddonv1alpha4 "sigs.k8s.io/cluster-api/exp/addons/api/v1beta1"
 	ctrlmgr "sigs.k8s.io/controller-runtime/pkg/manager"
 
 	. "github.com/onsi/ginkgo"
@@ -34,10 +33,6 @@ var suite = builder.NewTestSuiteForReconciler(
 			return err
 		}
 		err = clusterv1.AddToScheme(scheme)
-		if err != nil {
-			return err
-		}
-		err = clustereaddonv1alpha4.AddToScheme(scheme)
 		if err != nil {
 			return err
 		}

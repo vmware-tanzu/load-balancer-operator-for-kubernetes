@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	clustereaddonv1alpha4 "sigs.k8s.io/cluster-api/exp/addons/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	ctrlmgr "sigs.k8s.io/controller-runtime/pkg/manager"
@@ -43,10 +42,6 @@ var suite = builder.NewTestSuiteForController(
 			return err
 		}
 		err = clusterv1.AddToScheme(scheme)
-		if err != nil {
-			return err
-		}
-		err = clustereaddonv1alpha4.AddToScheme(scheme)
 		if err != nil {
 			return err
 		}
