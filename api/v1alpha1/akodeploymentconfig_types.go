@@ -26,6 +26,10 @@ type AKODeploymentConfigSpec struct {
 	//                              the corresponding scheme
 	Controller string `json:"controller"`
 
+	// ControllerVersion is the AVI Controller version which AKO Operator and AKO talks to.
+	// If not set, default version is 20.1.3
+	ControllerVersion string `json:"controllerVersion,omitempty"`
+
 	// ServiceEngineGroup is the group name of Service Engine that's to be used by the set
 	// of AKO Deployments
 	ServiceEngineGroup string `json:"serviceEngineGroup"`

@@ -37,6 +37,7 @@ func NewValues(obj *akoov1alpha1.AKODeploymentConfig, clusterNameSpacedName stri
 	controllerSettings := NewControllerSettings(
 		obj.Spec.CloudName,
 		obj.Spec.Controller,
+		obj.Spec.ControllerVersion,
 		obj.Spec.ServiceEngineGroup,
 	)
 	l7Settings := NewL7Settings(&obj.Spec.ExtraConfigs.IngressConfigs)
@@ -361,12 +362,15 @@ func DefaultControllerSettings() *ControllerSettings {
 }
 
 // NewControllerSettings returns a ControllerSettings from default,
-// allow setting CloudName, ControllerIP and ServiceEngineGroupName
-func NewControllerSettings(cloudName, controllerIP, serviceEngineGroup string) (setting *ControllerSettings) {
+// allow setting CloudName, ControllerIP, ControllerVersion and ServiceEngineGroupName
+func NewControllerSettings(cloudName, controllerIP, controllerVersion, serviceEngineGroup string) (setting *ControllerSettings) {
 	setting = DefaultControllerSettings()
 	setting.CloudName = cloudName
 	setting.ControllerIP = controllerIP
 	setting.ServiceEngineGroupName = serviceEngineGroup
+	if controllerVersion != "" {
+		setting.ControllerVersion = controllerVersion
+	}
 	return
 }
 

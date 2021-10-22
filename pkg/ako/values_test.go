@@ -37,25 +37,25 @@ var _ = Describe("AKO", func() {
 			rbac := config.Rbac
 
 			expectedPairs := map[string]string{
-				akoSettings.ClusterName:                                             "test",
-				akoSettings.LogLevel:                                                akoDeploymentConfig.Spec.ExtraConfigs.Log.LogLevel,      // use default value if not provided
-				akoSettings.FullSyncFrequency:                                       akoDeploymentConfig.Spec.ExtraConfigs.FullSyncFrequency, // use default value if not provided
-				akoSettings.CniPlugin:                                               akoDeploymentConfig.Spec.ExtraConfigs.CniPlugin,
-				akoSettings.DisableStaticRouteSync:                                  strconv.FormatBool(*akoDeploymentConfig.Spec.ExtraConfigs.DisableStaticRouteSync),
-				controllerSettings.CloudName:                                        akoDeploymentConfig.Spec.CloudName,
-				controllerSettings.ControllerIP:                                     akoDeploymentConfig.Spec.Controller,
-				controllerSettings.ServiceEngineGroupName:                           akoDeploymentConfig.Spec.ServiceEngineGroup,
-				networkSettings.NetworkName:                                         akoDeploymentConfig.Spec.DataNetwork.Name,
-				networkSettings.SubnetIP:                                            "10.0.0.0",
-				networkSettings.SubnetPrefix:                                        "24",
-				config.PersistentVolumeClaim:                                        akoDeploymentConfig.Spec.ExtraConfigs.Log.PersistentVolumeClaim,
-				config.MountPath:                                                    akoDeploymentConfig.Spec.ExtraConfigs.Log.MountPath,
-				config.LogFile:                                                      akoDeploymentConfig.Spec.ExtraConfigs.Log.LogFile,
-				value.LoadBalancerAndIngressService.Name:                            "ako-test",
-				rbac.PspPolicyApiVersion:                                            akoDeploymentConfig.Spec.ExtraConfigs.Rbac.PspPolicyAPIVersion,
-				rbac.PspPolicyApiVersion:                                            "test/1.2",
-				l7Settings.ShardVSSize:                                              akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.ShardVSSize,
-				l7Settings.ServiceType:                                              akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.ServiceType,
+				akoSettings.ClusterName:                   "test",
+				akoSettings.LogLevel:                      akoDeploymentConfig.Spec.ExtraConfigs.Log.LogLevel,      // use default value if not provided
+				akoSettings.FullSyncFrequency:             akoDeploymentConfig.Spec.ExtraConfigs.FullSyncFrequency, // use default value if not provided
+				akoSettings.CniPlugin:                     akoDeploymentConfig.Spec.ExtraConfigs.CniPlugin,
+				akoSettings.DisableStaticRouteSync:        strconv.FormatBool(*akoDeploymentConfig.Spec.ExtraConfigs.DisableStaticRouteSync),
+				controllerSettings.CloudName:              akoDeploymentConfig.Spec.CloudName,
+				controllerSettings.ControllerIP:           akoDeploymentConfig.Spec.Controller,
+				controllerSettings.ServiceEngineGroupName: akoDeploymentConfig.Spec.ServiceEngineGroup,
+				networkSettings.NetworkName:               akoDeploymentConfig.Spec.DataNetwork.Name,
+				networkSettings.SubnetIP:                  "10.0.0.0",
+				networkSettings.SubnetPrefix:              "24",
+				config.PersistentVolumeClaim:              akoDeploymentConfig.Spec.ExtraConfigs.Log.PersistentVolumeClaim,
+				config.MountPath:                          akoDeploymentConfig.Spec.ExtraConfigs.Log.MountPath,
+				config.LogFile:                            akoDeploymentConfig.Spec.ExtraConfigs.Log.LogFile,
+				value.LoadBalancerAndIngressService.Name:  "ako-test",
+				rbac.PspPolicyApiVersion:                  akoDeploymentConfig.Spec.ExtraConfigs.Rbac.PspPolicyAPIVersion,
+				rbac.PspPolicyApiVersion:                  "test/1.2",
+				l7Settings.ShardVSSize:                    akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.ShardVSSize,
+				l7Settings.ServiceType:                    akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.ServiceType,
 			}
 			for k, v := range expectedPairs {
 				Expect(k).To(Equal(v))

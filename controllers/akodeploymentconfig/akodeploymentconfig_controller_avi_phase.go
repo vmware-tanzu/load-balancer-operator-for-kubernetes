@@ -6,10 +6,11 @@ package akodeploymentconfig
 import (
 	"bytes"
 	"context"
-	"github.com/pkg/errors"
 	"net"
 	"sort"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/phases"
 	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/user"
@@ -22,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
+	ako_operator "gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako-operator"
 	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/aviclient"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
@@ -65,7 +67,7 @@ func (r *AKODeploymentConfigReconciler) initAVI(
 			Username: string(adminCredential.Data["username"][:]),
 			Password: string(adminCredential.Data["password"][:]),
 			CA:       string(aviControllerCA.Data["certificateAuthorityData"][:]),
-		}, akoov1alpha1.AVI_VERSION)
+		}, ako_operator.GetAVIControllerVersion())
 		if err != nil {
 			log.Error(err, "Failed to initialize AVI Controller Client, requeue the request")
 			return res, err
@@ -205,7 +207,7 @@ func (r *AKODeploymentConfigReconciler) reconcileCloudUsableNetwork(
 
 	network, err := r.aviClient.NetworkGetByName(obj.Spec.DataNetwork.Name)
 	if err != nil {
-		log.Error(errors.Errorf("[WARN]Failed to get the Data Network %s from AVI Controller", obj.Spec.DataNetwork.Name),"")
+		log.Error(errors.Errorf("[WARN]Failed to get the Data Network %s from AVI Controller", obj.Spec.DataNetwork.Name), "")
 		return requeueAfter, nil
 	}
 
