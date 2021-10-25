@@ -1,7 +1,9 @@
 name: "React to commands in comments"
 on:
-  issue_comment:
-    types: [created]
+
+#  will uncomment this after having the admin access
+#  issue_comment:
+#    types: [created]
 
 jobs:
   execute:

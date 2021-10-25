@@ -1,6 +1,8 @@
 name: "Label PRs from globs"
 on:
-  - pull_request_target
+
+#  will uncomment this after having the admin access
+#  - pull_request_target
 
 jobs:
   triage:
