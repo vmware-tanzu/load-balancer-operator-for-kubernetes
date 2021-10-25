@@ -8,7 +8,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
+	ako_operator "gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako-operator"
+
 	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/aviclient"
 )
 
@@ -19,7 +20,7 @@ func NewAviRunner(runner *KubectlRunner) aviclient.Client {
 		Username: GetAviObject(runner, "secret", "controller-credentials", "data", "username"),
 		Password: GetAviObject(runner, "secret", "controller-credentials", "data", "password"),
 		CA:       GetAviObject(runner, "secret", "controller-ca", "data", "certificateAuthorityData"),
-	}, akoov1alpha1.AVI_VERSION)
+	}, ako_operator.GetAVIControllerVersion())
 
 	return aviClient
 }

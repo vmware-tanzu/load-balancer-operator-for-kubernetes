@@ -6,6 +6,7 @@ spec:
     cloudName: Default-Cloud
     serviceEngineGroup: Default-Group
     controller: 10.161.150.145
+    controllerVersion: 20.1.6
     adminCredentialRef:
         name: avi-controller-credentials
         namespace: default
