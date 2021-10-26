@@ -326,6 +326,12 @@ type DataNetwork struct {
 	IPPools []IPPool `json:"ipPools,omitempty"`
 }
 
+// VIPNetwork describes a VIPNetwork in the adc file
+type VIPNetwork struct {
+	NetworkName string `json:"networkName"`
+	CIDR        string `json:"cidr"`
+}
+
 // IPPool defines a contiguous range of IP Addresses
 type IPPool struct {
 	// Start represents the starting IP address of the pool.
