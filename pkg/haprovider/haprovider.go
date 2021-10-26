@@ -21,8 +21,6 @@ import (
 	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/intstr"
-
-	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
 )
 
 type HAProvider struct {
@@ -49,8 +47,6 @@ func (r *HAProvider) getHAServiceName(cluster *clusterv1.Cluster) string {
 }
 
 func (r *HAProvider) CreateOrUpdateHAService(ctx context.Context, cluster *clusterv1.Cluster) error {
-	var aviInfraSetting akov1alpha1.AviInfraSetting
-	r.log.Info("sample avi infra setting", aviInfraSetting.Name, aviInfraSetting)
 	serviceName := r.getHAServiceName(cluster)
 	service := &corev1.Service{}
 	if err := r.Client.Get(ctx, client.ObjectKey{
