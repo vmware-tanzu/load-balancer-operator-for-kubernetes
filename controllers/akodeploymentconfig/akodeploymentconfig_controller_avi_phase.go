@@ -6,7 +6,6 @@ package akodeploymentconfig
 import (
 	"bytes"
 	"context"
-	"github.com/pkg/errors"
 	"net"
 	"sort"
 	"time"
@@ -65,7 +64,7 @@ func (r *AKODeploymentConfigReconciler) initAVI(
 			Username: string(adminCredential.Data["username"][:]),
 			Password: string(adminCredential.Data["password"][:]),
 			CA:       string(aviControllerCA.Data["certificateAuthorityData"][:]),
-		}, akoov1alpha1.AVI_VERSION)
+		}, ako_operator.GetAVIControllerVersion())
 		if err != nil {
 			log.Error(err, "Failed to initialize AVI Controller Client, requeue the request")
 			return res, err

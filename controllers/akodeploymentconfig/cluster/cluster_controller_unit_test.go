@@ -46,7 +46,7 @@ loadBalancerAndIngressService:
             subnet_prefix: "24"
             network_name: test-akdc
             node_network_list: '[{"networkName":"test-node-network-1","cidrs":["10.0.0.0/24","192.168.0.0/24"]}]'
-            vip_network_list: '[{"networkName":"test-akdc"}]'
+            vip_network_list: '[{"networkName":"test-akdc","cidr":"10.0.0.0/24"}]'
             enable_rhi: ""
             nsxt_t1_lr: ""
             bgp_peer_labels: ""

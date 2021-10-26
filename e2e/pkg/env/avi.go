@@ -19,7 +19,7 @@ func NewAviRunner(runner *KubectlRunner) aviclient.Client {
 		Username: GetAviObject(runner, "secret", "controller-credentials", "data", "username"),
 		Password: GetAviObject(runner, "secret", "controller-credentials", "data", "password"),
 		CA:       GetAviObject(runner, "secret", "controller-ca", "data", "certificateAuthorityData"),
-	}, akoov1alpha1.AVI_VERSION)
+	}, ako_operator.GetAVIControllerVersion())
 
 	return aviClient
 }

@@ -37,6 +37,7 @@ func NewValues(obj *akoov1alpha1.AKODeploymentConfig, clusterNameSpacedName stri
 	controllerSettings := NewControllerSettings(
 		obj.Spec.CloudName,
 		obj.Spec.Controller,
+		obj.Spec.ControllerVersion,
 		obj.Spec.ServiceEngineGroup,
 	)
 	l7Settings := NewL7Settings(&obj.Spec.ExtraConfigs.IngressConfigs)
@@ -205,7 +206,7 @@ type NetworkSettings struct {
 	NetworkName         string                 `yaml:"network_name"`  // Network Name of the vip network
 	NodeNetworkList     []v1alpha1.NodeNetwork `yaml:"-"`             // This list of network and cidrs are used in pool placement network for vcenter cloud.
 	NodeNetworkListJson string                 `yaml:"node_network_list"`
-	VIPNetworkList      []map[string]string    `yaml:"-"` // Network information of the VIP network. Multiple networks allowed only for AWS Cloud.
+	VIPNetworkList      []v1alpha1.VIPNetwork  `yaml:"-"` // Network information of the VIP network. Multiple networks allowed only for AWS Cloud.
 	VIPNetworkListJson  string                 `yaml:"vip_network_list"`
 	EnableRHI           string                 `yaml:"enable_rhi"` // This is a cluster wide setting for BGP peering.
 	NsxtT1LR            string                 `yaml:"nsxt_t1_lr"`
@@ -238,7 +239,7 @@ func NewNetworkSettings(obj *akoov1alpha1.AKODeploymentConfig) (*NetworkSettings
 	settings.SubnetPrefix = strconv.Itoa(ones)
 
 	settings.NodeNetworkList = obj.Spec.ExtraConfigs.IngressConfigs.NodeNetworkList
-	settings.VIPNetworkList = []map[string]string{{"networkName": obj.Spec.DataNetwork.Name}}
+	settings.VIPNetworkList = []v1alpha1.VIPNetwork{{NetworkName: obj.Spec.DataNetwork.Name, CIDR: obj.Spec.DataNetwork.CIDR}}
 
 	if len(settings.NodeNetworkList) != 0 {
 		jsonBytes, err := json.Marshal(settings.NodeNetworkList)
@@ -361,12 +362,15 @@ func DefaultControllerSettings() *ControllerSettings {
 }
 
 // NewControllerSettings returns a ControllerSettings from default,
-// allow setting CloudName, ControllerIP and ServiceEngineGroupName
-func NewControllerSettings(cloudName, controllerIP, serviceEngineGroup string) (setting *ControllerSettings) {
+// allow setting CloudName, ControllerIP, ControllerVersion and ServiceEngineGroupName
+func NewControllerSettings(cloudName, controllerIP, controllerVersion, serviceEngineGroup string) (setting *ControllerSettings) {
 	setting = DefaultControllerSettings()
 	setting.CloudName = cloudName
 	setting.ControllerIP = controllerIP
 	setting.ServiceEngineGroupName = serviceEngineGroup
+	if controllerVersion != "" {
+		setting.ControllerVersion = controllerVersion
+	}
 	return
 }
 
