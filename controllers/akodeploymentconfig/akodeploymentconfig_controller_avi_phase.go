@@ -12,8 +12,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/phases"
-	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/user"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/phases"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/user"
 
 	"github.com/avinetworks/sdk/go/models"
 	"github.com/go-logr/logr"
@@ -22,10 +22,11 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
-	ako_operator "gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako-operator"
-	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/aviclient"
+	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/aviclient"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+
+	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 )
 
 func (r *AKODeploymentConfigReconciler) initAVI(

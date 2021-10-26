@@ -6,7 +6,7 @@ CACHE_IMAGE_REGISTRY ?= harbor-repo.vmware.com/dockerhub-proxy-cache
 # Image URL to use all building/pushing image targets
 IMG ?= $(IMAGE_REGISTRY)/tkg-networking/tanzu-ako-operator:$(IMAGE_TAG)
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS ?= "crd:trivialVersions=true"
+CRD_OPTIONS ?= "crd"
 
 # Gobuild
 PUBLISH?=publish
@@ -90,6 +90,8 @@ docker-push:
 	docker push ${IMG}
 
 .PHONY: integration-test
+# TODO:(xudongl) This is used to silence the ginkgo complain, can be removed once upgrade ginkgo to v2
+export ACK_GINKGO_DEPRECATIONS=1.16.4
 integration-test: $(GINKGO) $(ETCD)
 	$(GINKGO) -v controllers/akodeploymentconfig/phases -- -enable-integration-tests -enable-unit-tests=false -root-dir="../../.."
 	$(GINKGO) -v controllers/akodeploymentconfig/user -- -enable-integration-tests -enable-unit-tests=false -root-dir="../../.."

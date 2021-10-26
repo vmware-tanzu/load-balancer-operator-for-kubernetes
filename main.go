@@ -5,21 +5,19 @@ package main
 
 import (
 	"flag"
-	"net/http"
-	"net/http/pprof"
-	"os"
-
-	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
-	controllerruntime "gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime"
+	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
-	clustereaddonv1alpha3 "sigs.k8s.io/cluster-api/exp/addons/api/v1alpha3"
+	"net/http"
+	"net/http/pprof"
+	"os"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	"gitlab.eng.vmware.com/core-build/ako-operator/controllers"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers"
 
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -37,7 +35,6 @@ func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 	_ = clusterv1.AddToScheme(scheme)
 	_ = akoov1alpha1.AddToScheme(scheme)
-	_ = clustereaddonv1alpha3.AddToScheme(scheme)
 }
 
 func main() {
@@ -59,17 +56,15 @@ func main() {
 			"profiler-addr", profilerAddress)
 		go runProfiler(profilerAddress)
 	}
-
 	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: metricsAddr,
 		LeaderElection:     enableLeaderElection,
 		Port:               9443,
-		NewClient: controllerruntime.NewClientBuilder().WithUncached(
-			&corev1.Secret{},
-			&clustereaddonv1alpha3.ClusterResourceSet{},
+		ClientDisableCacheFor: []client.Object{
 			&corev1.ConfigMap{},
-		).Build,
+			&corev1.Secret{},
+		},
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

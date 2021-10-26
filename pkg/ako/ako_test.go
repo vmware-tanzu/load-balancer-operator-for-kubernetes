@@ -12,7 +12,7 @@ import (
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
+	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -36,7 +36,7 @@ var _ = Describe("AKO", func() {
 		ctx = context.Background()
 		scheme := runtime.NewScheme()
 		Expect(appv1.AddToScheme(scheme)).NotTo(HaveOccurred())
-		fclient = fakeClient.NewFakeClientWithScheme(scheme)
+		fclient = fakeClient.NewClientBuilder().WithScheme(scheme).Build()
 		logger = log.Log
 		log.SetLogger(zap.New())
 		ss = &appv1.StatefulSet{
@@ -75,7 +75,7 @@ var _ = Describe("AKO", func() {
 		BeforeEach(func() {
 			ss.Status = appv1.StatefulSetStatus{
 				Conditions: []appv1.StatefulSetCondition{
-					appv1.StatefulSetCondition{
+					{
 						Type:   akoConditionType,
 						Status: corev1.ConditionTrue,
 					},
@@ -91,7 +91,7 @@ var _ = Describe("AKO", func() {
 		BeforeEach(func() {
 			ss.Status = appv1.StatefulSetStatus{
 				Conditions: []appv1.StatefulSetCondition{
-					appv1.StatefulSetCondition{
+					{
 						Type:   akoConditionType,
 						Status: corev1.ConditionFalse,
 					},

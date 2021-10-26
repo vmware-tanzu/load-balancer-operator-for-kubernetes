@@ -6,18 +6,18 @@ package akodeploymentconfig
 import (
 	"context"
 
-	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/cluster"
-	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/phases"
-	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/user"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/cluster"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/phases"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/user"
 
-	controllerruntime "gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime"
+	controllerruntime "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/controller-runtime"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/go-logr/logr"
 
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -25,9 +25,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
-	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/aviclient"
-	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime/handlers"
+	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/aviclient"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/controller-runtime/handlers"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
@@ -36,9 +36,7 @@ func (r *AKODeploymentConfigReconciler) SetupWithManager(mgr ctrl.Manager) error
 		For(&akoov1alpha1.AKODeploymentConfig{}).
 		Watches(
 			&source.Kind{Type: &clusterv1.Cluster{}},
-			&handler.EnqueueRequestsFromMapFunc{
-				ToRequests: handlers.AkoDeploymentConfigForCluster(r.Client, r.Log),
-			},
+			handler.EnqueueRequestsFromMapFunc(handlers.AkoDeploymentConfigForCluster(r.Client, r.Log)),
 		).
 		Complete(r)
 }
@@ -62,8 +60,7 @@ func (r *AKODeploymentConfigReconciler) SetAviClient(client aviclient.Client) {
 // +kubebuilder:rbac:groups=networking.tkg.tanzu.vmware.com,resources=akodeploymentconfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;create;list;watch;update;delete
 
-func (r *AKODeploymentConfigReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, reterr error) {
-	ctx := context.Background()
+func (r *AKODeploymentConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	log := r.Log.WithValues("AKODeploymentConfig", req.NamespacedName)
 	res := ctrl.Result{}
 	var err error

@@ -11,16 +11,16 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
-	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
+	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako"
-	controllerruntime "gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako"
+	controllerruntime "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/controller-runtime"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/controllers/remote"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -41,8 +41,6 @@ func NewReconciler(c client.Client, log logr.Logger, scheme *runtime.Scheme) *Cl
 	}
 }
 
-type RemoteClientGetter func(ctx context.Context, c client.Client, cluster client.ObjectKey, scheme *runtime.Scheme) (client.Client, error)
-
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters;clusters/status,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines;machines/status,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;create;list;watch
@@ -52,7 +50,7 @@ type ClusterReconciler struct {
 	client.Client
 	Log             logr.Logger
 	Scheme          *runtime.Scheme
-	GetRemoteClient RemoteClientGetter
+	GetRemoteClient remote.ClusterClientGetter
 }
 
 // ReconcileDelete removes the finalizer on Cluster once AKO finishes its
@@ -104,10 +102,10 @@ func (r *ClusterReconciler) cleanup(
 		return true, nil
 	}
 
-	remoteClient, err := r.GetRemoteClient(ctx, r.Client, client.ObjectKey{
+	remoteClient, err := r.GetRemoteClient(ctx, akoov1alpha1.AKODeploymentConfigControllerName, r.Client, client.ObjectKey{
 		Name:      obj.Name,
 		Namespace: obj.Namespace,
-	}, r.Scheme)
+	})
 	if err != nil {
 		log.Info("Failed to create remote client for cluster, requeue the request")
 		return false, err
@@ -161,9 +159,9 @@ func (r *ClusterReconciler) cleanup(
 	return false, nil
 }
 
-func GetFakeRemoteClient(_ context.Context, _ client.Client, _ client.ObjectKey, _ *runtime.Scheme) (client.Client, error) {
+func GetFakeRemoteClient(_ context.Context, _ string, _ client.Client, _ client.ObjectKey) (client.Client, error) {
 	// return fake client
-	return fake.NewFakeClientWithScheme(scheme.Scheme), nil
+	return fake.NewClientBuilder().WithScheme(scheme.Scheme).Build(), nil
 }
 
 func (r *ClusterReconciler) akoAddonDataValueName() string {

@@ -6,7 +6,7 @@ package utils_test
 import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/utils"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/utils"
 	"strings"
 )
 

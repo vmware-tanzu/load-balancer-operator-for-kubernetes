@@ -68,7 +68,7 @@ $(GOLANGCI_LINT):
 kustomize: $(KUSTOMIZE) $(SRCS)
 kustomize: ## Build kustomize
 $(KUSTOMIZE):
-	go build -tags=tools -o $@ sigs.k8s.io/kustomize/kustomize/v3
+	go build -tags=tools -o $@ sigs.k8s.io/kustomize/kustomize/v4
 
 conversion-gen: $(CONVERSION_GEN) $(SRCS)
 conversion-gen: ## Build conversion-gen

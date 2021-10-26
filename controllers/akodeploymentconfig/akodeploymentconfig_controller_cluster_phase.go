@@ -6,18 +6,18 @@ package akodeploymentconfig
 import (
 	"context"
 
-	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/cluster"
-	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/phases"
-	controllerruntime "gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/cluster"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/phases"
+	controllerruntime "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/controller-runtime"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
 
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
+	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
 )
 
 func (r *AKODeploymentConfigReconciler) initCluster(log logr.Logger) {
@@ -80,7 +80,7 @@ func (r *AKODeploymentConfigReconciler) reconcileClustersDelete(
 // applyClusterLabel is a reconcileClusterPhase. It applies the AVI label to a
 // Cluster
 func (r *AKODeploymentConfigReconciler) applyClusterLabel(
-	ctx context.Context,
+	_ context.Context,
 	log logr.Logger,
 	cluster *clusterv1.Cluster,
 	obj *akoov1alpha1.AKODeploymentConfig,
@@ -109,10 +109,10 @@ func (r *AKODeploymentConfigReconciler) applyClusterLabel(
 // removeClusterLabel is a reconcileClusterPhase. It removes the AVI label from a
 // Cluster
 func (r *AKODeploymentConfigReconciler) removeClusterLabel(
-	ctx context.Context,
+	_ context.Context,
 	log logr.Logger,
 	cluster *clusterv1.Cluster,
-	obj *akoov1alpha1.AKODeploymentConfig,
+	_ *akoov1alpha1.AKODeploymentConfig,
 ) (ctrl.Result, error) {
 	if _, exists := cluster.Labels[akoov1alpha1.AviClusterLabel]; exists {
 		log.Info("Removing label from cluster", "label", akoov1alpha1.AviClusterLabel)
@@ -126,10 +126,10 @@ func (r *AKODeploymentConfigReconciler) removeClusterLabel(
 // addClusterFinalizer is a reconcileClusterPhase. It adds the AVI
 // finalizer to a Cluster.
 func (r *AKODeploymentConfigReconciler) addClusterFinalizer(
-	ctx context.Context,
+	_ context.Context,
 	log logr.Logger,
 	cluster *clusterv1.Cluster,
-	obj *akoov1alpha1.AKODeploymentConfig,
+	_ *akoov1alpha1.AKODeploymentConfig,
 ) (ctrl.Result, error) {
 	if !controllerruntime.ContainsFinalizer(cluster, akoov1alpha1.ClusterFinalizer) &&
 		cluster.Namespace != akoov1alpha1.TKGSystemNamespace {
@@ -143,10 +143,10 @@ func (r *AKODeploymentConfigReconciler) addClusterFinalizer(
 // finalizer from a Cluster. This can only be called when the cluster is not in
 // deletion state and AKODeploymentConfig is being deleted.
 func (r *AKODeploymentConfigReconciler) removeClusterFinalizer(
-	ctx context.Context,
+	_ context.Context,
 	log logr.Logger,
 	cluster *clusterv1.Cluster,
-	obj *akoov1alpha1.AKODeploymentConfig,
+	_ *akoov1alpha1.AKODeploymentConfig,
 ) (ctrl.Result, error) {
 	if controllerruntime.ContainsFinalizer(cluster, akoov1alpha1.ClusterFinalizer) {
 		log.Info("Removing finalizer from cluster", "finalizer", akoov1alpha1.ClusterFinalizer)

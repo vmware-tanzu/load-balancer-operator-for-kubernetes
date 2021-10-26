@@ -9,15 +9,15 @@ import (
 	"github.com/avinetworks/sdk/go/models"
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
-	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
-	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/aviclient"
-	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/utils"
+	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/aviclient"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,7 +31,7 @@ type AkoUserReconciler struct {
 	Scheme    *runtime.Scheme
 }
 
-// NewReconciler returns AKOUserReconciler object.
+// NewProvider returns AKOUserReconciler object.
 func NewProvider(client client.Client,
 	aviClient aviclient.Client,
 	logger logr.Logger,
@@ -42,7 +42,7 @@ func NewProvider(client client.Client,
 		Scheme:    scheme}
 }
 
-// ReconcileAviUser: reconcile akodeploymentconfig clusters' avi user
+// ReconcileAviUser reconcile akodeploymentconfig clusters' avi user
 func (r *AkoUserReconciler) ReconcileAviUser(
 	ctx context.Context,
 	log logr.Logger,

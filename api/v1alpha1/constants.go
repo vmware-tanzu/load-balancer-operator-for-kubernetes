@@ -4,7 +4,7 @@
 package v1alpha1
 
 import (
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
 const (
@@ -44,4 +44,6 @@ const (
 	HAServiceBootstrapClusterFinalizer = "ako-operator.networking.tkg.tanzu.vmware.com/ha"
 	HAServiceAnnotationsKey            = "skipnodeport.ako.vmware.com/enabled"
 	ClusterControlPlaneAnnotations     = "tkg.tanzu.vmware.com/cluster-controlplane-endpoint"
+
+	AKODeploymentConfigControllerName = "akodeploymentconfig-controller"
 )

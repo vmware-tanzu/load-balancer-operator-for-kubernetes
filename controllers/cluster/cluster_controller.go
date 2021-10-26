@@ -5,22 +5,23 @@ package cluster
 
 import (
 	"context"
+
 	"github.com/pkg/errors"
-	ako_operator "gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako-operator"
-	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime/handlers"
+	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/controller-runtime/handlers"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/go-logr/logr"
-	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
-	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/haprovider"
+	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/haprovider"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -34,9 +35,8 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&clusterv1.Cluster{}).
 		Watches(
 			&source.Kind{Type: &corev1.Service{}},
-			&handler.EnqueueRequestsFromMapFunc{
-				ToRequests: handlers.ClusterForService(r.Client, r.Log),
-			}).
+			handler.EnqueueRequestsFromMapFunc(handlers.ClusterForService(r.Client, r.Log)),
+		).
 		Complete(r)
 }
 
@@ -47,8 +47,7 @@ type ClusterReconciler struct {
 	Haprovider *haprovider.HAProvider
 }
 
-func (r *ClusterReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, reterr error) {
-	ctx := context.Background()
+func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	log := r.Log.WithValues("Cluster", req.NamespacedName)
 
 	res := ctrl.Result{}

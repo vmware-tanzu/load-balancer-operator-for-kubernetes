@@ -6,18 +6,18 @@ package machine
 import (
 	"context"
 
-	ako_operator "gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako-operator"
+	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
-	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
-	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/haprovider"
+	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/haprovider"
 
-	controllerruntime "gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime"
-	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime/handlers"
+	controllerruntime "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/controller-runtime"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/controller-runtime/handlers"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -35,9 +35,7 @@ func (r *MachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&clusterv1.Machine{}).
 		Watches(
 			&source.Kind{Type: &clusterv1.Cluster{}},
-			&handler.EnqueueRequestsFromMapFunc{
-				ToRequests: handlers.MachinesForCluster(r.Client, r.Log),
-			},
+			handler.EnqueueRequestsFromMapFunc(handlers.MachinesForCluster(r.Client, r.Log)),
 		).
 		Complete(r)
 }
@@ -49,8 +47,7 @@ type MachineReconciler struct {
 	Haprovider *haprovider.HAProvider
 }
 
-func (r *MachineReconciler) Reconcile(req ctrl.Request) (_ ctrl.Result, reterr error) {
-	ctx := context.Background()
+func (r *MachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	log := r.Log.WithValues("Machine", req.NamespacedName)
 
 	res := ctrl.Result{}
