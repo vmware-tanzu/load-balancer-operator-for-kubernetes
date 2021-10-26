@@ -8,10 +8,10 @@ import (
 	"testing"
 
 	. "github.com/onsi/ginkgo"
-	"gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/machine"
-	"gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/aviclient"
-	"gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/builder"
-	testutil "gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/util"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/machine"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/aviclient"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/builder"
+	testutil "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 

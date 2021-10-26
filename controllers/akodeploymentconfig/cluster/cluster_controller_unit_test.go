@@ -6,9 +6,9 @@ package cluster_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	akoov1alpha1 "gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
-	"gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/cluster"
-	"gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako"
+	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/cluster"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"

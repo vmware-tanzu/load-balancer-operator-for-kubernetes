@@ -1,4 +1,4 @@
-module gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes
+module github.com/vmware-samples/load-balancer-operator-for-kubernetes
 
 go 1.16
 

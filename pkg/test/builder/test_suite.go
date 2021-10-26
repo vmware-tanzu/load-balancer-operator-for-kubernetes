@@ -16,7 +16,7 @@ import (
 	//nolint
 	. "github.com/onsi/gomega"
 
-	"gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/aviclient"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/aviclient"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog"

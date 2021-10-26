@@ -4,10 +4,10 @@
 package controllers
 
 import (
-	"gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig"
-	"gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/cluster"
-	"gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/machine"
-	akoo "gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/cluster"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/machine"
+	akoo "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 

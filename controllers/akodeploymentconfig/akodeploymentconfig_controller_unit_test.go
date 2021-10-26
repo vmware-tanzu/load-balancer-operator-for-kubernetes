@@ -11,8 +11,8 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	akoov1alpha1 "gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
-	"gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig"
+	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )

@@ -6,12 +6,12 @@ package handlers
 import (
 	"context"
 	"fmt"
-	akoo "gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
+	akoo "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 	v1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"strings"
 
-	"gitlab.eng.vmware.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/go-logr/logr"
