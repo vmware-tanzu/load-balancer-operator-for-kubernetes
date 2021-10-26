@@ -10,6 +10,8 @@ import (
 	"sort"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/phases"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/user"
 
@@ -23,6 +25,8 @@ import (
 	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/aviclient"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+
+	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 )
 
 func (r *AKODeploymentConfigReconciler) initAVI(

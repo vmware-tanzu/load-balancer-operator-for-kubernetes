@@ -8,8 +8,9 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/aviclient"
+
+	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 )
 
 func NewAviRunner(runner *KubectlRunner) aviclient.Client {

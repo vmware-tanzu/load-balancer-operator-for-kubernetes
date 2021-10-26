@@ -4,10 +4,10 @@
 package ako_operator
 
 import (
+	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
+
 	"os"
 	"strconv"
-
-	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 )
 
 // Environment variables
