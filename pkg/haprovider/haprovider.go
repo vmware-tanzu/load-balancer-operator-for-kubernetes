@@ -9,9 +9,8 @@ import (
 	"net"
 	"sync"
 
-	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig"
-	ako_operator "gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako-operator"
-	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime/handlers"
+	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/controller-runtime/handlers"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/go-logr/logr"
@@ -20,8 +19,8 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
-	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -50,8 +49,6 @@ func (r *HAProvider) getHAServiceName(cluster *clusterv1.Cluster) string {
 }
 
 func (r *HAProvider) CreateOrUpdateHAService(ctx context.Context, cluster *clusterv1.Cluster) error {
-	aviinfasetting := akov1alpha1.AviInfraSetting{}
-	r.log.Info("sample avi infra setting", aviinfasetting)
 	serviceName := r.getHAServiceName(cluster)
 	service := &corev1.Service{}
 	if err := r.Client.Get(ctx, client.ObjectKey{
@@ -83,37 +80,6 @@ func (r *HAProvider) createService(
 ) (*corev1.Service, error) {
 	serviceName := r.getHAServiceName(cluster)
 
-	serviceAnnotation := map[string]string{
-		akoov1alpha1.HAServiceAnnotationsKey:  "true",
-		akoov1alpha1.TKGClusterNameLabel:      cluster.Name,
-		akoov1alpha1.TKGClusterNameSpaceLabel: cluster.Namespace,
-	}
-
-	aviInfraSetting := &akov1alpha1.AviInfraSetting{}
-
-	// TODO: check a cluster should be managed by only one adc
-	adcForCluster, err := handlers.GetADCForCluster(ctx, cluster, r.log, r.Client)
-	if err != nil {
-		return nil, err
-	}
-
-	aviInfraSettingName := akodeploymentconfig.GetAviInfraSettingName(&adcForCluster[0])
-	if err := r.Client.Get(ctx, client.ObjectKey{
-		Name: aviInfraSettingName,
-	}, aviInfraSetting); err != nil {
-		if apierrors.IsNotFound(err) {
-			r.log.Info(aviInfraSettingName + " not found, skip adding annotation to HA service...")
-		} else {
-			r.log.Error(err, "Failed to get AVIInfraSetting, requeue")
-			return nil, err
-		}
-	} else {
-		// add AVIInfraSetting annotation when creating HA svc
-		if !ako_operator.IsBootStrapCluster() {
-			serviceAnnotation[akoov1alpha1.HAAVIInfraSettingAnnotationsKey] = aviInfraSettingName
-		}
-	}
-
 	service := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Service",
@@ -122,7 +88,7 @@ func (r *HAProvider) createService(
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        serviceName,
 			Namespace:   cluster.Namespace,
-			Annotations: serviceAnnotation,
+			Annotations: r.getServiceAnnotation(ctx, cluster),
 		},
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceTypeLoadBalancer,
@@ -152,8 +118,47 @@ func (r *HAProvider) createService(
 		service.Spec.LoadBalancerIP = ip
 	}
 	r.log.Info("Creating " + serviceName + " Service")
-	err = r.Create(ctx, service)
+	err := r.Create(ctx, service)
 	return service, err
+}
+
+func (r *HAProvider) getServiceAnnotation(ctx context.Context, cluster *clusterv1.Cluster) map[string]string {
+	serviceAnnotation := map[string]string{
+		akoov1alpha1.HAServiceAnnotationsKey:  "true",
+		akoov1alpha1.TKGClusterNameLabel:      cluster.Name,
+		akoov1alpha1.TKGClusterNameSpaceLabel: cluster.Namespace,
+	}
+
+	aviInfraSetting := &akov1alpha1.AviInfraSetting{}
+
+	// TODO: check a cluster should be managed by only one adc
+	adcForCluster, err := handlers.GetADCForCluster(ctx, cluster, r.log, r.Client)
+	if err != nil {
+		return serviceAnnotation
+	}
+
+	if len(adcForCluster) == 0 {
+		r.log.Error(err, "Failed to get akoDeploymentConfig for current cluster")
+		return serviceAnnotation
+	}
+
+	aviInfraSettingName := GetAviInfraSettingName(&adcForCluster[0])
+	if err := r.Client.Get(ctx, client.ObjectKey{
+		Name: aviInfraSettingName,
+	}, aviInfraSetting); err != nil {
+		if apierrors.IsNotFound(err) {
+			r.log.Info(aviInfraSettingName + " not found, skip adding annotation to HA service...")
+		} else {
+			r.log.Error(err, "Failed to get AVIInfraSetting, requeue")
+			return serviceAnnotation
+		}
+	} else {
+		// add AVIInfraSetting annotation when creating HA svc
+		if !ako_operator.IsBootStrapCluster() {
+			serviceAnnotation[akoov1alpha1.HAAVIInfraSettingAnnotationsKey] = aviInfraSettingName
+		}
+	}
+	return serviceAnnotation
 }
 
 func (r *HAProvider) updateClusterControlPlaneEndpoint(cluster *clusterv1.Cluster, service *corev1.Service) error {
@@ -290,4 +295,8 @@ func (r *HAProvider) ensureEndpoints(ctx context.Context, serviceName, serviceNa
 		}
 	}
 	return endpoints, nil
+}
+
+func GetAviInfraSettingName(adc *akoov1alpha1.AKODeploymentConfig) string {
+	return adc.Name + "-ha"
 }

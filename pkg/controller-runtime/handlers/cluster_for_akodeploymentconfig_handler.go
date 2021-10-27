@@ -9,7 +9,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
-	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
+	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -33,9 +33,7 @@ func AkoDeploymentConfigForCluster(c client.Client, log logr.Logger) handler.Map
 				"actualType", fmt.Sprintf("%T", o))
 			return nil
 		}
-
 		logger := log.WithValues("cluster", cluster.Namespace+"/"+cluster.Name)
-
 		if SkipCluster(cluster) {
 			logger.Info("Skipping cluster in handler")
 			return []reconcile.Request{}

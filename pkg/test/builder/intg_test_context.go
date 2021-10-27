@@ -14,7 +14,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/go-logr/logr"
-	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/aviclient"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/aviclient"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -62,9 +62,10 @@ func (s *TestSuite) NewIntegrationTestContext() *IntegrationTestContext {
 	}
 
 	By("Creating a temporary namespace", func() {
+		nonce := uuid.NewV4().String()[0:6]
 		namespace := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: uuid.NewV4().String(),
+				Name: "ns-" + nonce, // do not start with digits nor too long, otherwise dns will complain
 			},
 		}
 		Expect(ctx.Client.Create(s, namespace)).To(Succeed())

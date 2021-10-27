@@ -8,20 +8,20 @@ import (
 	"testing"
 
 	. "github.com/onsi/ginkgo"
-	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
-	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig"
-	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/aviclient"
-	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/test/builder"
-	testutil "gitlab.eng.vmware.com/core-build/ako-operator/pkg/test/util"
+	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/aviclient"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/builder"
+	testutil "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/util"
+	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	networkv1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
+	networkv1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	clustereaddonv1alpha4 "sigs.k8s.io/cluster-api/exp/addons/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/cluster"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/cluster"
 	ctrlmgr "sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
@@ -54,6 +54,10 @@ var suite = builder.NewTestSuiteForController(
 		if err != nil {
 			return err
 		}
+		err = akov1alpha1.AddToScheme(scheme)
+		if err != nil {
+			return err
+		}
 		err = corev1.AddToScheme(scheme)
 		if err != nil {
 			return err
@@ -62,13 +66,10 @@ var suite = builder.NewTestSuiteForController(
 		if err != nil {
 			return err
 		}
-		err = clustereaddonv1alpha4.AddToScheme(scheme)
-		if err != nil {
-			return err
-		}
 		return nil
 	},
 	filepath.Join(testutil.FindModuleDir("sigs.k8s.io/cluster-api"), "config", "crd", "bases"),
+	filepath.Join(testutil.FindModuleDir("github.com/vmware/load-balancer-and-ingress-services-for-kubernetes"), "helm", "ako", "crds"),
 )
 
 func TestController(t *testing.T) {

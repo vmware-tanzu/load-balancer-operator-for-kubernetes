@@ -6,9 +6,9 @@ package cluster_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
-	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/cluster"
-	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/ako"
+	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/cluster"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -48,7 +48,7 @@ loadBalancerAndIngressService:
             control_plane_network_name: test-akdc-cp
             control_plane_network_cidr: 10.1.0.0/24
             node_network_list: '[{"networkName":"test-node-network-1","cidrs":["10.0.0.0/24","192.168.0.0/24"]}]'
-            vip_network_list: '[{"networkName":"test-akdc"}]'
+            vip_network_list: '[{"networkName":"test-akdc","cidr":"10.0.0.0/24"}]'
             enable_rhi: ""
             nsxt_t1_lr: ""
             bgp_peer_labels: ""

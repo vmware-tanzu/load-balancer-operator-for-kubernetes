@@ -17,8 +17,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
-	handlers "gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime/handlers"
+	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	handlers "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/controller-runtime/handlers"
 )
 
 // ReconcilePhase defines a function that reconciles one aspect of
@@ -75,6 +75,7 @@ func ReconcileClustersPhases(
 
 	if len(clusters.Items) == 0 {
 		log.Info("No cluster matches the selector, skip")
+
 	}
 
 	var allErrs []error

@@ -8,7 +8,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 
-	testenv "gitlab.eng.vmware.com/core-build/ako-operator/e2e/pkg/env"
+	testenv "github.com/vmware-samples/load-balancer-operator-for-kubernetes/e2e/pkg/env"
 )
 
 var _ = Describe("AKODeploymentConfig with selector", func() {

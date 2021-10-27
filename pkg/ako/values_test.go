@@ -11,7 +11,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
+	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
 )
 
 var _ = Describe("AKO", func() {
@@ -79,7 +79,12 @@ var _ = Describe("AKO", func() {
 			} else {
 				Expect(networkSettings.NodeNetworkListJson).Should(BeNil())
 			}
-			vipNetworkListJson, jsonerr := json.Marshal([]map[string]string{{"networkName": akoDeploymentConfig.Spec.DataNetwork.Name}})
+			vipNetworkListJson, jsonerr := json.Marshal(
+				[]akoov1alpha1.VIPNetwork{{
+					NetworkName: akoDeploymentConfig.Spec.DataNetwork.Name,
+					CIDR:        "10.0.0.0/24",
+				}},
+			)
 			Expect(jsonerr).ShouldNot(HaveOccurred())
 			Expect(networkSettings.VIPNetworkListJson).To(Equal(string(vipNetworkListJson)))
 		}

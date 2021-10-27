@@ -9,9 +9,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
-	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
-	controllerruntime "gitlab.eng.vmware.com/core-build/ako-operator/pkg/controller-runtime"
-	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/test/builder"
+	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	controllerruntime "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/controller-runtime"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/builder"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -75,11 +75,11 @@ func intgTestAkoDeploymentConfigController() {
 				Name: "integration-test-8ed12g",
 				CIDR: "10.1.0.0/24",
 			},
+			ServiceEngineGroup: "ha-test",
 			AdminCredentialRef: &akoov1alpha1.SecretRef{
 				Name:      "controller-credentials",
 				Namespace: "default",
 			},
-
 			CertificateAuthorityRef: &akoov1alpha1.SecretRef{
 				Name:      "controller-ca",
 				Namespace: "default",

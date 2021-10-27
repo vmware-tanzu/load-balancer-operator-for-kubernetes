@@ -147,6 +147,10 @@ spec:
                   * port                       if not specified, use default port
                   for                              the corresponding scheme
                 type: string
+              controllerVersion:
+                description: ControllerVersion is the AVI Controller version which
+                  AKO Operator and AKO talks to. If not set, default version is 20.1.3
+                type: string
               dataNetwork:
                 description: DataNetworks describes the Data Networks the AKO will
                   be deployed with. This field is immutable.
@@ -635,6 +639,18 @@ kind: ClusterRole
 metadata:
   labels:
     app: tanzu-ako-operator
+  name: ako-operator-metrics-reader
+rules:
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app: tanzu-ako-operator
   name: ako-operator-proxy-role
 rules:
 - apiGroups:
@@ -649,18 +665,6 @@ rules:
   - subjectaccessreviews
   verbs:
   - create
----
-apiVersion: rbac.authorization.k8s.io/v1beta1
-kind: ClusterRole
-metadata:
-  labels:
-    app: tanzu-ako-operator
-  name: ako-operator-metrics-reader
-rules:
-- nonResourceURLs:
-  - /metrics
-  verbs:
-  - get
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

@@ -4,6 +4,8 @@
 package ako_operator
 
 import (
+	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
+
 	"os"
 	"strconv"
 )
@@ -21,6 +23,9 @@ const (
 
 	// ControlPlaneEndpointPort - defines the control plane endpoint port
 	ControlPlaneEndpointPort = "control_plane_endpoint_port"
+
+	// AVIControllerVersion - defines the AVI controller version load balancer operator will talk to
+	AVIControllerVersion = "avi_controller_version"
 )
 
 func IsBootStrapCluster() bool {
@@ -37,4 +42,12 @@ func GetControlPlaneEndpointPort() int32 {
 		return 6443
 	}
 	return int32(port)
+}
+
+func GetAVIControllerVersion() string {
+	version, set := os.LookupEnv(AVIControllerVersion)
+	if set {
+		return version
+	}
+	return akoov1alpha1.AVI_VERSION
 }

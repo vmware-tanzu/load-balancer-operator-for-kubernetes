@@ -26,6 +26,10 @@ type AKODeploymentConfigSpec struct {
 	//                              the corresponding scheme
 	Controller string `json:"controller"`
 
+	// ControllerVersion is the AVI Controller version which AKO Operator and AKO talks to.
+	// If not set, default version is 20.1.3
+	ControllerVersion string `json:"controllerVersion,omitempty"`
+
 	// ServiceEngineGroup is the group name of Service Engine that's to be used by the set
 	// of AKO Deployments
 	ServiceEngineGroup string `json:"serviceEngineGroup"`
@@ -84,7 +88,7 @@ type AKODeploymentConfigSpec struct {
 	// ControlPlaneNetwork describes the control plane network of the clusters selected by an akoDeploymentConfig
 	//
 	// +optional
-	ControlPlaneNetwork ControlPlaneNetwork `json:"controlPlaneNetwork"`
+	ControlPlaneNetwork ControlPlaneNetwork `json:"controlPlaneNetwork,omitempty"`
 
 	// ExtraConfigs contains extra configurations for AKO Deployment
 	//
@@ -331,6 +335,12 @@ type DataNetwork struct {
 type ControlPlaneNetwork struct {
 	Name string `json:"name"`
 	CIDR string `json:"cidr"`
+}
+
+// VIPNetwork describes a VIPNetwork in the adc file
+type VIPNetwork struct {
+	NetworkName string `json:"networkName"`
+	CIDR        string `json:"cidr"`
 }
 
 // IPPool defines a contiguous range of IP Addresses

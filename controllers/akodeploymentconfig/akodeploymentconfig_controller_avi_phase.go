@@ -12,22 +12,24 @@ import (
 
 	"github.com/pkg/errors"
 
-	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/phases"
-	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/user"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/phases"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/user"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/haprovider"
 
 	"github.com/avinetworks/sdk/go/models"
 	"github.com/go-logr/logr"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/aviclient"
 	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
-	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
-	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/aviclient"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+
+	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 )
 
 func (r *AKODeploymentConfigReconciler) initAVI(
@@ -69,7 +71,7 @@ func (r *AKODeploymentConfigReconciler) initAVI(
 			Username: string(adminCredential.Data["username"][:]),
 			Password: string(adminCredential.Data["password"][:]),
 			CA:       string(aviControllerCA.Data["certificateAuthorityData"][:]),
-		}, akoov1alpha1.AVI_VERSION)
+		}, ako_operator.GetAVIControllerVersion())
 		if err != nil {
 			log.Error(err, "Failed to initialize AVI Controller Client, requeue the request")
 			return res, err
@@ -130,20 +132,22 @@ func (r *AKODeploymentConfigReconciler) reconcileAVIDelete(
 		return res, err
 	}
 
-	return phases.ReconcileClustersPhases(ctx, r.Client, log, obj,
-		// When AKODeploymentConfig is being deleted, reconcile avi user
-		// deletion no matter cluster is being deleted or not
-		[]phases.ReconcileClusterPhase{
-			r.reconcileAviInfraSettingDelete,
-			r.userReconciler.ReconcileAviUserDelete,
+	return phases.ReconcilePhases(ctx, log, obj, []phases.ReconcilePhase{
+		r.reconcileAviInfraSettingDelete,
+		func(ctx context.Context, log logr.Logger, obj *akoov1alpha1.AKODeploymentConfig) (ctrl.Result, error) {
+			return phases.ReconcileClustersPhases(ctx, r.Client, log, obj,
+				[]phases.ReconcileClusterPhase{
+					r.userReconciler.ReconcileAviUserDelete,
+				},
+				[]phases.ReconcileClusterPhase{
+					// TODO(fangyuanl): handle the data network configuration
+					// deletion
+					r.userReconciler.ReconcileAviUserDelete,
+				},
+			)
 		},
-		[]phases.ReconcileClusterPhase{
-			// TODO(fangyuanl): handle the data network configuration
-			// deletion
-			r.reconcileAviInfraSettingDelete,
-			r.userReconciler.ReconcileAviUserDelete,
-		},
-	)
+	})
+
 }
 
 // reconcileNetworkSubnets ensures the Datanetwork configuration is in sync with
@@ -272,10 +276,15 @@ func (r *AKODeploymentConfigReconciler) reconcileAviInfraSetting(
 
 	log.Info("Start reconciling AVIInfraSetting")
 
+	if adc.Spec.ControlPlaneNetwork.Name == "" {
+		log.Info("ControlPlaneNetwork is empty in akoDeploymentConfig, skip creating AVIInfraSetting")
+		return res, nil
+	}
+
 	newAviInfraSetting := r.createAviInfraSetting(adc)
 
 	if err := r.Get(ctx, client.ObjectKey{
-		Name: GetAviInfraSettingName(adc),
+		Name: haprovider.GetAviInfraSettingName(adc),
 	}, newAviInfraSetting); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("AVIInfraSetting doesn't exist, start creating it")
@@ -288,15 +297,15 @@ func (r *AKODeploymentConfigReconciler) reconcileAviInfraSetting(
 	return res, r.Update(ctx, aviInfraSetting)
 }
 
-func GetAviInfraSettingName(adc *akoov1alpha1.AKODeploymentConfig) string {
-	return adc.Name + "-HA"
-}
-
 func (r *AKODeploymentConfigReconciler) createAviInfraSetting(adc *akoov1alpha1.AKODeploymentConfig) *akov1alpha1.AviInfraSetting {
 
 	return &akov1alpha1.AviInfraSetting{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "AviInfraSetting",
+			APIVersion: "ako.vmware.com/v1alpha1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: GetAviInfraSettingName(adc),
+			Name: haprovider.GetAviInfraSettingName(adc),
 		},
 		Spec: akov1alpha1.AviInfraSettingSpec{
 			SeGroup: akov1alpha1.AviInfraSettingSeGroup{
@@ -308,6 +317,10 @@ func (r *AKODeploymentConfigReconciler) createAviInfraSetting(adc *akoov1alpha1.
 					Cidr:        adc.Spec.ControlPlaneNetwork.CIDR,
 				}},
 			},
+			// TODO: expose ShardSize in akoDeploymentConfig
+			L7Settings: akov1alpha1.AviInfraL7Settings{
+				ShardSize: "MEDIUM",
+			},
 		},
 	}
 }
@@ -315,7 +328,6 @@ func (r *AKODeploymentConfigReconciler) createAviInfraSetting(adc *akoov1alpha1.
 func (r *AKODeploymentConfigReconciler) reconcileAviInfraSettingDelete(
 	ctx context.Context,
 	log logr.Logger,
-	_ *clusterv1.Cluster,
 	adc *akoov1alpha1.AKODeploymentConfig,
 ) (ctrl.Result, error) {
 	res := ctrl.Result{}
@@ -336,7 +348,7 @@ func (r *AKODeploymentConfigReconciler) reconcileAviInfraSettingDelete(
 
 	aviInfraSetting := &akov1alpha1.AviInfraSetting{}
 	if err := r.Get(ctx, client.ObjectKey{
-		Name: GetAviInfraSettingName(adc),
+		Name: haprovider.GetAviInfraSettingName(adc),
 	}, aviInfraSetting); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("AVIInfraSetting doesn't exist, skip deletion")

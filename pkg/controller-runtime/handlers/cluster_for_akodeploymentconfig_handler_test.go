@@ -5,13 +5,14 @@ package handlers
 
 import (
 	"context"
+	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/go-logr/logr"
-	akoov1alpha1 "gitlab.eng.vmware.com/core-build/ako-operator/api/v1alpha1"
+	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -39,6 +40,7 @@ var _ = Describe("AKODeploymentConfig Cluster Handler", func() {
 		ctx = context.Background()
 		scheme := runtime.NewScheme()
 		Expect(akoov1alpha1.AddToScheme(scheme)).NotTo(HaveOccurred())
+		Expect(akov1alpha1.AddToScheme(scheme)).NotTo(HaveOccurred())
 		fclient = fakeClient.NewClientBuilder().WithScheme(scheme).Build()
 		logger = log.Log
 		log.SetLogger(zap.New())

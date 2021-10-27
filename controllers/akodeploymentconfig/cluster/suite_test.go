@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	. "github.com/onsi/ginkgo"
-	"gitlab.eng.vmware.com/core-build/ako-operator/pkg/test/builder"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/builder"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	ctrlmgr "sigs.k8s.io/controller-runtime/pkg/manager"

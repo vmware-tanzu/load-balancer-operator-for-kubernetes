@@ -169,7 +169,7 @@ GOLANGCI_LINT_FLAGS ?= --fast=true
 .PHONY: lint-go
 lint-go: | $(GOLANGCI_LINT) ## Lint codebase
 ifdef GITHUB_ACTIONS
-	$(GOLANGCI_LINT) run -v $(GOLANGCI_LINT_FLAGS) --timeout 3m ## Allow more time for Github Action, otherwise timeout errors is likely to occur
+	$(GOLANGCI_LINT) run -v $(GOLANGCI_LINT_FLAGS) --timeout 30m ## Allow more time for Github Action, otherwise timeout errors is likely to occur
 else
 	$(GOLANGCI_LINT) run -v $(GOLANGCI_LINT_FLAGS)
 endif
