@@ -117,7 +117,7 @@ func unitTestAKODeploymentYaml() {
 						},
 						ExtraConfigs: akoov1alpha1.ExtraConfigs{
 							Rbac: akoov1alpha1.AKORbacConfig{
-								PspEnabled:          true,
+								PspEnabled:          pointer.Bool(true),
 								PspPolicyAPIVersion: "test/1.2",
 							},
 							Log: akoov1alpha1.AKOLogConfig{
@@ -126,8 +126,8 @@ func unitTestAKODeploymentYaml() {
 								LogFile:               "test-avi.log",
 							},
 							IngressConfigs: akoov1alpha1.AKOIngressConfig{
-								DisableIngressClass:      true,
-								DefaultIngressController: false,
+								DisableIngressClass:      pointer.Bool(true),
+								DefaultIngressController: pointer.Bool(false),
 								ShardVSSize:              "MEDIUM",
 								ServiceType:              "NodePort",
 								NodeNetworkList: []akoov1alpha1.NodeNetwork{

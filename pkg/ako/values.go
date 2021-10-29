@@ -296,8 +296,8 @@ func DefaultL7Settings() *L7Settings {
 // it only modifies ServiceType and ShardVSSize when instructed by the ingressConfig
 func NewL7Settings(config *akoov1alpha1.AKOIngressConfig) *L7Settings {
 	settings := DefaultL7Settings()
-	settings.DisableIngressClass = config.DisableIngressClass
-	settings.DefaultIngController = config.DefaultIngressController
+	settings.DisableIngressClass = *config.DisableIngressClass
+	settings.DefaultIngController = *config.DefaultIngressController
 	if config.ShardVSSize != "" {
 		settings.ShardVSSize = config.ShardVSSize
 	}
@@ -438,7 +438,7 @@ type Rbac struct {
 // NewRbac creates a Rbac from the v1alpha1.AKORbacConfig
 func NewRbac(config v1alpha1.AKORbacConfig) *Rbac {
 	return &Rbac{
-		PspEnabled:          config.PspEnabled,
+		PspEnabled:          *config.PspEnabled,
 		PspPolicyApiVersion: config.PspPolicyAPIVersion,
 	}
 }
