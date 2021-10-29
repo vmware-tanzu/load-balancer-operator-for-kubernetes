@@ -207,13 +207,13 @@ type AKOIngressConfig struct {
 	// IngressClass into workload clusters for old version of K8s
 	//
 	// +optional
-	DisableIngressClass bool `json:"disableIngressClass,omitempty"`
+	DisableIngressClass *bool `json:"disableIngressClass,omitempty"`
 
 	// DefaultIngressController bool describes ako is the default
 	// ingress controller to use
 	//
 	// +optional
-	DefaultIngressController bool `json:"defaultIngressController,omitempty"`
+	DefaultIngressController *bool `json:"defaultIngressController,omitempty"`
 
 	// ServiceType string describes ingress methods for a service
 	// Valid value should be NodePort, ClusterIP and NodePortLocal
@@ -306,7 +306,7 @@ type AKORbacConfig struct {
 	// PspEnabled enables the deployment of a PodSecurityPolicy that grants
 	// AKO the proper role
 	// +optional
-	PspEnabled bool `json:"pspEnabled,omitempty"`
+	PspEnabled *bool `json:"pspEnabled,omitempty"`
 }
 
 // AVITenant describes settings for an AVI Tenant object

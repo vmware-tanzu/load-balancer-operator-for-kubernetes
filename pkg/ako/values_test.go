@@ -62,9 +62,9 @@ var _ = Describe("AKO", func() {
 			}
 
 			expectedBoolPairs := map[bool]bool{
-				l7Settings.DisableIngressClass:  akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.DisableIngressClass,
-				l7Settings.DefaultIngController: akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.DefaultIngressController,
-				rbac.PspEnabled:                 akoDeploymentConfig.Spec.ExtraConfigs.Rbac.PspEnabled,
+				l7Settings.DisableIngressClass:  *akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.DisableIngressClass,
+				l7Settings.DefaultIngController: *akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.DefaultIngressController,
+				rbac.PspEnabled:                 *akoDeploymentConfig.Spec.ExtraConfigs.Rbac.PspEnabled,
 			}
 			for k, v := range expectedBoolPairs {
 				Expect(k).To(Equal(v))
@@ -101,7 +101,7 @@ var _ = Describe("AKO", func() {
 						ExtraConfigs: akoov1alpha1.ExtraConfigs{
 							FullSyncFrequency: "1900",
 							Rbac: akoov1alpha1.AKORbacConfig{
-								PspEnabled:          true,
+								PspEnabled:          pointer.Bool(true),
 								PspPolicyAPIVersion: "test/1.2",
 							},
 							Log: akoov1alpha1.AKOLogConfig{
@@ -111,8 +111,8 @@ var _ = Describe("AKO", func() {
 								LogFile:               "test-avi.log",
 							},
 							IngressConfigs: akoov1alpha1.AKOIngressConfig{
-								DisableIngressClass:      true,
-								DefaultIngressController: true,
+								DisableIngressClass:      pointer.Bool(true),
+								DefaultIngressController: pointer.Bool(true),
 								ShardVSSize:              "MEDIUM",
 								ServiceType:              "NodePort",
 								NodeNetworkList: []akoov1alpha1.NodeNetwork{
