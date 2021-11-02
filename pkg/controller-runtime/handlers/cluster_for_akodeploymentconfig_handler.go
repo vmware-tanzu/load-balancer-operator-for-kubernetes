@@ -25,7 +25,6 @@ import (
 func AkoDeploymentConfigForCluster(c client.Client, log logr.Logger) handler.MapFunc {
 	return func(o client.Object) []reconcile.Request {
 		ctx := context.Background()
-
 		cluster, ok := o.(*clusterv1.Cluster)
 		if !ok {
 			log.Error(errors.New("invalid type"),
@@ -39,7 +38,7 @@ func AkoDeploymentConfigForCluster(c client.Client, log logr.Logger) handler.Map
 			return []reconcile.Request{}
 		}
 
-		adcForCluster, err := GetADCForCluster(ctx, cluster, logger, c)
+		adcForCluster, err := ListADCsForCluster(ctx, cluster, logger, c)
 		if err != nil {
 			return []reconcile.Request{}
 		}
@@ -54,13 +53,12 @@ func AkoDeploymentConfigForCluster(c client.Client, log logr.Logger) handler.Map
 		}
 
 		logger.V(3).Info("Generating requests", "requests", requests)
-
 		// Return reconcile requests for the AKODeploymentConfig resources.
 		return requests
 	}
 }
 
-func GetADCForCluster(
+func ListADCsForCluster(
 	ctx context.Context,
 	cluster *clusterv1.Cluster,
 	logger logr.Logger,

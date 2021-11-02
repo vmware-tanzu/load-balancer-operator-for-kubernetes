@@ -75,7 +75,6 @@ func ReconcileClustersPhases(
 
 	if len(clusters.Items) == 0 {
 		log.Info("No cluster matches the selector, skip")
-
 	}
 
 	var allErrs []error

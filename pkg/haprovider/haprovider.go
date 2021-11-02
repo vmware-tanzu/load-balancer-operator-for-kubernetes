@@ -80,6 +80,11 @@ func (r *HAProvider) createService(
 ) (*corev1.Service, error) {
 	serviceName := r.getHAServiceName(cluster)
 
+	serviceAnnotations, err := r.annotateService(ctx, cluster)
+	if err != nil {
+		return nil, err
+	}
+
 	service := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Service",
@@ -88,7 +93,7 @@ func (r *HAProvider) createService(
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        serviceName,
 			Namespace:   cluster.Namespace,
-			Annotations: r.getServiceAnnotation(ctx, cluster),
+			Annotations: serviceAnnotations,
 		},
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceTypeLoadBalancer,
@@ -118,28 +123,40 @@ func (r *HAProvider) createService(
 		service.Spec.LoadBalancerIP = ip
 	}
 	r.log.Info("Creating " + serviceName + " Service")
-	err := r.Create(ctx, service)
+	err = r.Create(ctx, service)
 	return service, err
 }
 
-func (r *HAProvider) getServiceAnnotation(ctx context.Context, cluster *clusterv1.Cluster) map[string]string {
+func (r *HAProvider) annotateService(ctx context.Context, cluster *clusterv1.Cluster) (map[string]string, error) {
 	serviceAnnotation := map[string]string{
 		akoov1alpha1.HAServiceAnnotationsKey:  "true",
 		akoov1alpha1.TKGClusterNameLabel:      cluster.Name,
 		akoov1alpha1.TKGClusterNameSpaceLabel: cluster.Namespace,
 	}
 
+	aviInfraSetting, err := r.getAviInfraSettingFromCluster(ctx, cluster)
+	if err != nil {
+		return serviceAnnotation, err
+	}
+	if aviInfraSetting != nil && !ako_operator.IsBootStrapCluster() {
+		// add AVIInfraSetting annotation when creating HA svc
+		serviceAnnotation[akoov1alpha1.HAAVIInfraSettingAnnotationsKey] = aviInfraSetting.Name
+	}
+	return serviceAnnotation, nil
+}
+
+func (r *HAProvider) getAviInfraSettingFromCluster(ctx context.Context, cluster *clusterv1.Cluster) (*akov1alpha1.AviInfraSetting, error) {
 	aviInfraSetting := &akov1alpha1.AviInfraSetting{}
 
-	// TODO: check a cluster should be managed by only one adc
-	adcForCluster, err := handlers.GetADCForCluster(ctx, cluster, r.log, r.Client)
+	// TODO(iXinqi): check a cluster should be managed by only one adc
+	adcForCluster, err := handlers.ListADCsForCluster(ctx, cluster, r.log, r.Client)
 	if err != nil {
-		return serviceAnnotation
+		return nil, err
 	}
 
 	if len(adcForCluster) == 0 {
-		r.log.Error(err, "Failed to get akoDeploymentConfig for current cluster")
-		return serviceAnnotation
+		r.log.Info("Current cluster is not selected by any akoDeploymentConfig, skip adding AviInfraSetting annotation")
+		return nil, nil
 	}
 
 	aviInfraSettingName := GetAviInfraSettingName(&adcForCluster[0])
@@ -148,17 +165,14 @@ func (r *HAProvider) getServiceAnnotation(ctx context.Context, cluster *clusterv
 	}, aviInfraSetting); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.log.Info(aviInfraSettingName + " not found, skip adding annotation to HA service...")
+			return nil, nil
 		} else {
 			r.log.Error(err, "Failed to get AVIInfraSetting, requeue")
-			return serviceAnnotation
+			return nil, err
 		}
 	} else {
-		// add AVIInfraSetting annotation when creating HA svc
-		if !ako_operator.IsBootStrapCluster() {
-			serviceAnnotation[akoov1alpha1.HAAVIInfraSettingAnnotationsKey] = aviInfraSettingName
-		}
+		return aviInfraSetting, nil
 	}
-	return serviceAnnotation
 }
 
 func (r *HAProvider) updateClusterControlPlaneEndpoint(cluster *clusterv1.Cluster, service *corev1.Service) error {
@@ -298,5 +312,5 @@ func (r *HAProvider) ensureEndpoints(ctx context.Context, serviceName, serviceNa
 }
 
 func GetAviInfraSettingName(adc *akoov1alpha1.AKODeploymentConfig) string {
-	return adc.Name + "-ha"
+	return adc.Name + "-ais"
 }

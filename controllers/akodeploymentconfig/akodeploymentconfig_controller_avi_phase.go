@@ -282,10 +282,11 @@ func (r *AKODeploymentConfigReconciler) reconcileAviInfraSetting(
 	}
 
 	newAviInfraSetting := r.createAviInfraSetting(adc)
+	aviInfraSetting := &akov1alpha1.AviInfraSetting{}
 
 	if err := r.Get(ctx, client.ObjectKey{
 		Name: haprovider.GetAviInfraSettingName(adc),
-	}, newAviInfraSetting); err != nil {
+	}, aviInfraSetting); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("AVIInfraSetting doesn't exist, start creating it")
 			return res, r.Create(ctx, newAviInfraSetting)
@@ -293,17 +294,18 @@ func (r *AKODeploymentConfigReconciler) reconcileAviInfraSetting(
 		log.Error(err, "Failed to get AVIInfraSetting, requeue")
 		return res, err
 	}
-	aviInfraSetting := newAviInfraSetting.DeepCopy()
+	newAviInfraSetting.Spec.DeepCopyInto(&aviInfraSetting.Spec)
 	return res, r.Update(ctx, aviInfraSetting)
 }
 
 func (r *AKODeploymentConfigReconciler) createAviInfraSetting(adc *akoov1alpha1.AKODeploymentConfig) *akov1alpha1.AviInfraSetting {
+	// ShardVSSize describes ingress shared virtual service size, default value is SMALL
+	shardSize := "SMALL"
+	if adc.Spec.ExtraConfigs.IngressConfigs.ShardVSSize != "" {
+		shardSize = adc.Spec.ExtraConfigs.IngressConfigs.ShardVSSize
+	}
 
 	return &akov1alpha1.AviInfraSetting{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "AviInfraSetting",
-			APIVersion: "ako.vmware.com/v1alpha1",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: haprovider.GetAviInfraSettingName(adc),
 		},
@@ -317,9 +319,8 @@ func (r *AKODeploymentConfigReconciler) createAviInfraSetting(adc *akoov1alpha1.
 					Cidr:        adc.Spec.ControlPlaneNetwork.CIDR,
 				}},
 			},
-			// TODO: expose ShardSize in akoDeploymentConfig
 			L7Settings: akov1alpha1.AviInfraL7Settings{
-				ShardSize: "MEDIUM",
+				ShardSize: shardSize,
 			},
 		},
 	}
