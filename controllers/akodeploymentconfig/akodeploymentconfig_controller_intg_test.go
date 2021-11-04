@@ -238,7 +238,7 @@ func intgTestAkoDeploymentConfigController() {
 		ctx.AviClient.IPAMDNSProviderProfile.SetGetIPAMFunc(func(uuid string, options ...session.ApiOptionsParams) (*models.IPAMDNSProviderProfile, error) {
 			res := &models.IPAMDNSProviderProfile{
 				InternalProfile: &models.IPAMDNSInternalProfile{
-					UsableNetworkRefs: []string{"10.0.0.1"},
+					UsableNetworks: []*models.IPAMUsableNetwork{{NwRef: pointer.StringPtr("10.0.0.1")}},
 				},
 			}
 			return res, nil
