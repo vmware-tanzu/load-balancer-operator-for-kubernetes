@@ -35,6 +35,10 @@ func ReconcilePhaseUnitTest() {
 					CIDR:    "1.1.1.1/20",
 					IPPools: []akoov1alpha1.IPPool{},
 				},
+				ControlPlaneNetwork: akoov1alpha1.ControlPlaneNetwork{
+					Name: "integration-test-8ed12g",
+					CIDR: "10.1.0.0/24",
+				},
 				CertificateAuthorityRef: &akoov1alpha1.SecretRef{
 					Name:      "test-ca-secret",
 					Namespace: "default",

@@ -13,6 +13,7 @@ import (
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/aviclient"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/builder"
 	testutil "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/util"
+	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -53,6 +54,10 @@ var suite = builder.NewTestSuiteForController(
 		if err != nil {
 			return err
 		}
+		err = akov1alpha1.AddToScheme(scheme)
+		if err != nil {
+			return err
+		}
 		err = corev1.AddToScheme(scheme)
 		if err != nil {
 			return err
@@ -64,6 +69,7 @@ var suite = builder.NewTestSuiteForController(
 		return nil
 	},
 	filepath.Join(testutil.FindModuleDir("sigs.k8s.io/cluster-api"), "config", "crd", "bases"),
+	filepath.Join(testutil.FindModuleDir("github.com/vmware/load-balancer-and-ingress-services-for-kubernetes"), "helm", "ako", "crds"),
 )
 
 func TestController(t *testing.T) {

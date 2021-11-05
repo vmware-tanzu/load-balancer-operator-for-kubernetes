@@ -201,17 +201,19 @@ func NewAKOSettings(clusterName string, obj *akoov1alpha1.AKODeploymentConfig) (
 
 // NetworkSettings outlines the network settings for virtual services.
 type NetworkSettings struct {
-	SubnetIP            string                 `yaml:"subnet_ip"`     // Subnet IP of the vip network
-	SubnetPrefix        string                 `yaml:"subnet_prefix"` // Subnet Prefix of the vip network
-	NetworkName         string                 `yaml:"network_name"`  // Network Name of the vip network
-	NodeNetworkList     []v1alpha1.NodeNetwork `yaml:"-"`             // This list of network and cidrs are used in pool placement network for vcenter cloud.
-	NodeNetworkListJson string                 `yaml:"node_network_list"`
-	VIPNetworkList      []v1alpha1.VIPNetwork  `yaml:"-"` // Network information of the VIP network. Multiple networks allowed only for AWS Cloud.
-	VIPNetworkListJson  string                 `yaml:"vip_network_list"`
-	EnableRHI           string                 `yaml:"enable_rhi"` // This is a cluster wide setting for BGP peering.
-	NsxtT1LR            string                 `yaml:"nsxt_t1_lr"`
-	BGPPeerLabels       []string               `yaml:"-"` // Select BGP peers using bgpPeerLabels, for selective VsVip advertisement.
-	BGPPeerLabelsJson   string                 `yaml:"bgp_peer_labels"`
+	SubnetIP                string                 `yaml:"subnet_ip"`                  // Subnet IP of the vip network
+	SubnetPrefix            string                 `yaml:"subnet_prefix"`              // Subnet Prefix of the vip network
+	NetworkName             string                 `yaml:"network_name"`               // Network Name of the vip network
+	ControlPlaneNetworkName string                 `yaml:"control_plane_network_name"` // Control Plane Network Name of the control plane vip network
+	ControlPlaneNetworkCIDR string                 `yaml:"control_plane_network_cidr"` // Control Plane Network Cidr of the control plane vip network
+	NodeNetworkList         []v1alpha1.NodeNetwork `yaml:"-"`                          // This list of network and cidrs are used in pool placement network for vcenter cloud.
+	NodeNetworkListJson     string                 `yaml:"node_network_list"`
+	VIPNetworkList          []v1alpha1.VIPNetwork  `yaml:"-"` // Network information of the VIP network. Multiple networks allowed only for AWS Cloud.
+	VIPNetworkListJson      string                 `yaml:"vip_network_list"`
+	EnableRHI               string                 `yaml:"enable_rhi"` // This is a cluster wide setting for BGP peering.
+	NsxtT1LR                string                 `yaml:"nsxt_t1_lr"`
+	BGPPeerLabels           []string               `yaml:"-"` // Select BGP peers using bgpPeerLabels, for selective VsVip advertisement.
+	BGPPeerLabelsJson       string                 `yaml:"bgp_peer_labels"`
 }
 
 // DefaultNetworkSettings returns default NetworkSettings
@@ -220,6 +222,8 @@ func DefaultNetworkSettings() *NetworkSettings {
 		// SubnetIP: don't set, populate in runtime
 		// SubnetPrefix: don't set, populate in runtime
 		// NetworkName: don't set, populate in runtime
+		// ControlPlaneNetworkName: don't set, populate in runtime
+		// ControlPlaneNetworkCIDR: don't set, populate in runtime
 		// NodeNetworkList: don't set, use default value in AKO
 		// NodeNetworkListJson: don't set, use default value in AKO
 	}
@@ -255,6 +259,15 @@ func NewNetworkSettings(obj *akoov1alpha1.AKODeploymentConfig) (*NetworkSettings
 		}
 		settings.VIPNetworkListJson = string(jsonBytes)
 	}
+
+	if obj.Spec.ControlPlaneNetwork.Name != "" {
+		settings.ControlPlaneNetworkName = obj.Spec.ControlPlaneNetwork.Name
+		settings.ControlPlaneNetworkCIDR = obj.Spec.ControlPlaneNetwork.CIDR
+	} else {
+		settings.ControlPlaneNetworkName = obj.Spec.DataNetwork.Name
+		settings.ControlPlaneNetworkCIDR = obj.Spec.DataNetwork.CIDR
+	}
+
 	if obj.Spec.ExtraConfigs.NetworksConfig.EnableRHI != nil {
 		settings.EnableRHI = strconv.FormatBool(*obj.Spec.ExtraConfigs.NetworksConfig.EnableRHI)
 	}

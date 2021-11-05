@@ -71,11 +71,15 @@ func intgTestAkoDeploymentConfigController() {
 					},
 				},
 			},
+			ControlPlaneNetwork: akoov1alpha1.ControlPlaneNetwork{
+				Name: "integration-test-8ed12g",
+				CIDR: "10.1.0.0/24",
+			},
+			ServiceEngineGroup: "ha-test",
 			AdminCredentialRef: &akoov1alpha1.SecretRef{
 				Name:      "controller-credentials",
 				Namespace: "default",
 			},
-
 			CertificateAuthorityRef: &akoov1alpha1.SecretRef{
 				Name:      "controller-ca",
 				Namespace: "default",

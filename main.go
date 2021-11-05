@@ -5,13 +5,15 @@ package main
 
 import (
 	"flag"
+	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
+	"net/http"
+	"net/http/pprof"
+	"os"
+
 	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	"net/http"
-	"net/http/pprof"
-	"os"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -35,6 +37,7 @@ func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 	_ = clusterv1.AddToScheme(scheme)
 	_ = akoov1alpha1.AddToScheme(scheme)
+	_ = akov1alpha1.AddToScheme(scheme)
 }
 
 func main() {

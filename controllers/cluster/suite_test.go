@@ -4,6 +4,7 @@
 package cluster_test
 
 import (
+	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	"path/filepath"
 	"testing"
 
@@ -42,6 +43,10 @@ var suite = builder.NewTestSuiteForController(
 			return err
 		}
 		err = clusterv1.AddToScheme(scheme)
+		if err != nil {
+			return err
+		}
+		err = akoov1alpha1.AddToScheme(scheme)
 		if err != nil {
 			return err
 		}

@@ -37,34 +37,55 @@ func AkoDeploymentConfigForCluster(c client.Client, log logr.Logger) handler.Map
 			logger.Info("Skipping cluster in handler")
 			return []reconcile.Request{}
 		}
-		// is cluster selected by non-default akodeploymentconfig
-		_, selected := cluster.Labels[akoov1alpha1.AviClusterSelectedLabel]
-		logger.V(3).Info("Getting all akodeploymentconfig")
-		var akoDeploymentConfigs akoov1alpha1.AKODeploymentConfigList
-		if err := c.List(ctx, &akoDeploymentConfigs, []client.ListOption{}...); err != nil {
+
+		adcForCluster, err := ListADCsForCluster(ctx, cluster, logger, c)
+		if err != nil {
 			return []reconcile.Request{}
 		}
-		// Create a reconcile request for every label matched akodeploymentconfig
 		var requests []ctrl.Request
-		for _, akoDeploymentConfig := range akoDeploymentConfigs.Items {
-			if selector, err := metav1.LabelSelectorAsSelector(&akoDeploymentConfig.Spec.ClusterSelector); err != nil {
-				logger.Error(err, "Failed to convert label sector to selector")
-				continue
-			} else if selector.Empty() && selected {
-				logger.V(3).Info("Cluster selected by non-default AKODeploymentConfig, skip default one")
-				continue
-			} else if selector.Matches(labels.Set(cluster.GetLabels())) {
-				logger.V(3).Info("Found matching AKODeploymentConfig", akoDeploymentConfig.Namespace+"/"+akoDeploymentConfig.Name)
-				requests = append(requests, ctrl.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: akoDeploymentConfig.Namespace,
-						Name:      akoDeploymentConfig.Name,
-					},
-				})
-			}
+		for _, akoDeploymentConfig := range adcForCluster {
+			requests = append(requests, ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: akoDeploymentConfig.Namespace,
+					Name:      akoDeploymentConfig.Name,
+				},
+			})
 		}
+
 		logger.V(3).Info("Generating requests", "requests", requests)
 		// Return reconcile requests for the AKODeploymentConfig resources.
 		return requests
 	}
+}
+
+func ListADCsForCluster(
+	ctx context.Context,
+	cluster *clusterv1.Cluster,
+	logger logr.Logger,
+	c client.Client,
+) ([]akoov1alpha1.AKODeploymentConfig, error) {
+	var adcForCluster []akoov1alpha1.AKODeploymentConfig
+	var akoDeploymentConfigs akoov1alpha1.AKODeploymentConfigList
+
+	_, selected := cluster.Labels[akoov1alpha1.AviClusterSelectedLabel]
+
+	logger.V(3).Info("Getting all akodeploymentconfig")
+
+	if err := c.List(ctx, &akoDeploymentConfigs, []client.ListOption{}...); err != nil {
+		return adcForCluster, err
+	}
+
+	for _, akoDeploymentConfig := range akoDeploymentConfigs.Items {
+		if selector, err := metav1.LabelSelectorAsSelector(&akoDeploymentConfig.Spec.ClusterSelector); err != nil {
+			logger.Error(err, "Failed to convert label sector to selector")
+			continue
+		} else if selector.Empty() && selected {
+			logger.V(3).Info("Cluster selected by non-default AKODeploymentConfig, skip default one")
+			continue
+		} else if selector.Matches(labels.Set(cluster.GetLabels())) {
+			logger.V(3).Info("Found matching AKODeploymentConfig", akoDeploymentConfig.Namespace+"/"+akoDeploymentConfig.Name)
+			adcForCluster = append(adcForCluster, akoDeploymentConfig)
+		}
+	}
+	return adcForCluster, nil
 }

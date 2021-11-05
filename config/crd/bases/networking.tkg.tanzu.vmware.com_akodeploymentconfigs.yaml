@@ -126,6 +126,18 @@ spec:
                       are ANDed.
                     type: object
                 type: object
+              controlPlaneNetwork:
+                description: ControlPlaneNetwork describes the control plane network
+                  of the clusters selected by an akoDeploymentConfig
+                properties:
+                  cidr:
+                    type: string
+                  name:
+                    type: string
+                required:
+                - cidr
+                - name
+                type: object
               controller:
                 description: Controller is the AVI Controller endpoint to which AKO
                   talks to provision Load Balancer resources The format is [scheme://]address[:port]

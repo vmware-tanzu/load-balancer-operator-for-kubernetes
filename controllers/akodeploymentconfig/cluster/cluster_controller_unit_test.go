@@ -45,6 +45,8 @@ loadBalancerAndIngressService:
             subnet_ip: 10.0.0.0
             subnet_prefix: "24"
             network_name: test-akdc
+            control_plane_network_name: test-akdc-cp
+            control_plane_network_cidr: 10.1.0.0/24
             node_network_list: '[{"networkName":"test-node-network-1","cidrs":["10.0.0.0/24","192.168.0.0/24"]}]'
             vip_network_list: '[{"networkName":"test-akdc","cidr":"10.0.0.0/24"}]'
             enable_rhi: ""
@@ -114,6 +116,10 @@ func unitTestAKODeploymentYaml() {
 						DataNetwork: akoov1alpha1.DataNetwork{
 							Name: "test-akdc",
 							CIDR: "10.0.0.0/24",
+						},
+						ControlPlaneNetwork: akoov1alpha1.ControlPlaneNetwork{
+							Name: "test-akdc-cp",
+							CIDR: "10.1.0.0/24",
 						},
 						ExtraConfigs: akoov1alpha1.ExtraConfigs{
 							Rbac: akoov1alpha1.AKORbacConfig{

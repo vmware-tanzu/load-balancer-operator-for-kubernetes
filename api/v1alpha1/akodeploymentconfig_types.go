@@ -85,6 +85,11 @@ type AKODeploymentConfigSpec struct {
 	// This field is immutable.
 	DataNetwork DataNetwork `json:"dataNetwork"`
 
+	// ControlPlaneNetwork describes the control plane network of the clusters selected by an akoDeploymentConfig
+	//
+	// +optional
+	ControlPlaneNetwork ControlPlaneNetwork `json:"controlPlaneNetwork,omitempty"`
+
 	// ExtraConfigs contains extra configurations for AKO Deployment
 	//
 	// +optional
@@ -324,6 +329,12 @@ type DataNetwork struct {
 	Name    string   `json:"name"`
 	CIDR    string   `json:"cidr"`
 	IPPools []IPPool `json:"ipPools,omitempty"`
+}
+
+// ControlPlaneNetwork describes the ControlPlane Network of the clusters selected by an akoDeploymentConfig
+type ControlPlaneNetwork struct {
+	Name string `json:"name"`
+	CIDR string `json:"cidr"`
 }
 
 // VIPNetwork describes a VIPNetwork in the adc file
