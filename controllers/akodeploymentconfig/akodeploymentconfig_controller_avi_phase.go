@@ -239,14 +239,14 @@ func (r *AKODeploymentConfigReconciler) reconcileCloudUsableNetwork(
 	// Ensure network is added to the cloud's IPAM Profile as one of its
 	// usable Networks
 	var foundUsableNetwork bool
-	for _, net := range ipam.InternalProfile.UsableNetworkRefs {
-		if net == *(network.URL) {
+	for _, net := range ipam.InternalProfile.UsableNetworks {
+		if *net.NwRef == *(network.URL) {
 			foundUsableNetwork = true
 			break
 		}
 	}
 	if !foundUsableNetwork {
-		ipam.InternalProfile.UsableNetworkRefs = append(ipam.InternalProfile.UsableNetworkRefs, *(network.URL))
+		ipam.InternalProfile.UsableNetworks = append(ipam.InternalProfile.UsableNetworks, &models.IPAMUsableNetwork{NwRef: network.URL})
 		_, err := r.aviClient.IPAMDNSProviderProfileUpdate(ipam)
 		if err != nil {
 			log.Error(err, "Failed to add usable network", "network", network.Name)
