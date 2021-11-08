@@ -134,11 +134,16 @@ func (r *HAProvider) annotateService(ctx context.Context, cluster *clusterv1.Clu
 		akoov1alpha1.TKGClusterNameSpaceLabel: cluster.Namespace,
 	}
 
+	if ako_operator.IsBootStrapCluster() {
+		return serviceAnnotation, nil
+	}
+
 	aviInfraSetting, err := r.getAviInfraSettingFromCluster(ctx, cluster)
 	if err != nil {
 		return serviceAnnotation, err
 	}
-	if aviInfraSetting != nil && !ako_operator.IsBootStrapCluster() {
+
+	if aviInfraSetting != nil {
 		// add AVIInfraSetting annotation when creating HA svc
 		serviceAnnotation[akoov1alpha1.HAAVIInfraSettingAnnotationsKey] = aviInfraSetting.Name
 	}
