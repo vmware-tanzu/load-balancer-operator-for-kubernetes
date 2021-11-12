@@ -64,7 +64,8 @@ EOF
 
 # If KIND_MINIMUM_VERSION is empty or unset, use "tkg-lcp"
 KIND_MANAGEMENT_CLUSTER="${KIND_MANAGEMENT_CLUSTER:-tkg-lcp}"
-CAPI_VERSION="v0.3.10"
+CAPI_VERSION="v1.0.0"
+
 # Runtime setup
 # By default do not skip anything.
 SKIP_CAPD_IMAGE_LOAD="${SKIP_CAPD_IMAGE_LOAD:-}"
