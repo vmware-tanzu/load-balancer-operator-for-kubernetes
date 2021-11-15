@@ -11,14 +11,15 @@ import (
 	"github.com/go-logr/logr"
 	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	appv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
-	akoStatefulSetName = "ako"
-	akoConditionType   = appv1.StatefulSetConditionType("ako.vmware.com/ObjectDeletionInProgress")
+	akoStatefulSetName         = "ako"
+	akoCleanUpAnnotationKey    = "AviObjectDeletionStatus"
+	akoCleanUpInProgressStatus = "Started"
+	akoCleanUpFinishedStatus   = "Done"
 )
 
 func CleanupFinished(ctx context.Context, remoteClient client.Client, log logr.Logger) (bool, error) {
@@ -36,14 +37,5 @@ func CleanupFinished(ctx context.Context, remoteClient client.Client, log logr.L
 		return false, err
 	}
 
-	return conditionHasStatus(ss.Status.Conditions, akoConditionType, corev1.ConditionFalse), nil
-}
-
-func conditionHasStatus(conditions []appv1.StatefulSetCondition, ctype appv1.StatefulSetConditionType, status corev1.ConditionStatus) bool {
-	for _, c := range conditions {
-		if c.Type == ctype && c.Status == status {
-			return true
-		}
-	}
-	return false
+	return ss.Annotations[akoCleanUpAnnotationKey] == akoCleanUpFinishedStatus, nil
 }
