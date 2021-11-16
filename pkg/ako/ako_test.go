@@ -14,7 +14,6 @@ import (
 
 	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	appv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeClient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -73,13 +72,8 @@ var _ = Describe("AKO", func() {
 	})
 	When("InProgress status is True", func() {
 		BeforeEach(func() {
-			ss.Status = appv1.StatefulSetStatus{
-				Conditions: []appv1.StatefulSetCondition{
-					{
-						Type:   akoConditionType,
-						Status: corev1.ConditionTrue,
-					},
-				},
+			ss.Annotations = map[string]string{
+				akoCleanUpAnnotationKey: akoCleanUpInProgressStatus,
 			}
 		})
 		It("should not claim finished", func() {
@@ -89,13 +83,8 @@ var _ = Describe("AKO", func() {
 	})
 	When("InProgress status is False", func() {
 		BeforeEach(func() {
-			ss.Status = appv1.StatefulSetStatus{
-				Conditions: []appv1.StatefulSetCondition{
-					{
-						Type:   akoConditionType,
-						Status: corev1.ConditionFalse,
-					},
-				},
+			ss.Annotations = map[string]string{
+				akoCleanUpAnnotationKey: akoCleanUpFinishedStatus,
 			}
 		})
 		It("should claim finished", func() {
