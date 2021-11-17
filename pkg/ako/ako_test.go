@@ -64,13 +64,13 @@ var _ = Describe("AKO", func() {
 		})
 	})
 
-	When("no status is in StatefulSet", func() {
+	When("no annotation is in StatefulSet", func() {
 		It("should not claim finished", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(finished).To(BeFalse())
 		})
 	})
-	When("InProgress status is True", func() {
+	When("Clean up annotation is in progress", func() {
 		BeforeEach(func() {
 			ss.Annotations = map[string]string{
 				akoCleanUpAnnotationKey: akoCleanUpInProgressStatus,
@@ -81,7 +81,7 @@ var _ = Describe("AKO", func() {
 			Expect(finished).To(BeFalse())
 		})
 	})
-	When("InProgress status is False", func() {
+	When("Clean up annotation is done", func() {
 		BeforeEach(func() {
 			ss.Annotations = map[string]string{
 				akoCleanUpAnnotationKey: akoCleanUpFinishedStatus,
