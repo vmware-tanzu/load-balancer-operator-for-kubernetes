@@ -5,16 +5,14 @@ package util
 
 import (
 	"encoding/json"
-	"os/exec"
-
 	. "github.com/onsi/gomega"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/builder"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/klog"
+	"os/exec"
 	capi "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/builder"
-	"k8s.io/klog"
 )
 
 type ExpectResult int
@@ -73,6 +71,9 @@ func ensureRuntimeObjectCreated(ctx *builder.IntegrationTestContext, o client.Ob
 		EnsureRuntimeObjectMatchExpectation(ctx, client.ObjectKey{Name: obj.Name, Namespace: obj.Namespace}, obj, EXIST)
 	case *capi.Cluster:
 		obj = o.(*capi.Cluster)
+		EnsureRuntimeObjectMatchExpectation(ctx, client.ObjectKey{Name: obj.Name, Namespace: obj.Namespace}, obj, EXIST)
+	case *corev1.ConfigMap:
+		obj = o.(*corev1.ConfigMap)
 		EnsureRuntimeObjectMatchExpectation(ctx, client.ObjectKey{Name: obj.Name, Namespace: obj.Namespace}, obj, EXIST)
 	default:
 		klog.Fatal("Unknown type object")

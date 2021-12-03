@@ -22,12 +22,15 @@ const (
 
 	ManagementClusterAkoDeploymentConfig = "install-ako-for-management-cluster"
 
-	AkoUserRoleName              = "ako-essential-role"
-	ClusterFinalizer             = "ako-operator.networking.tkg.tanzu.vmware.com"
-	AkoDeploymentConfigFinalizer = "ako-operator.networking.tkg.tanzu.vmware.com"
-	AkoDeploymentConfigKind      = "AKODeploymentConfig"
-	AkoDeploymentConfigVersion   = "networking.tanzu.vmware.com/v1alpha1"
-	AkoStatefulSetName           = "ako"
+	AkoUserRoleName               = "ako-essential-role"
+	ClusterFinalizer              = "ako-operator.networking.tkg.tanzu.vmware.com"
+	AkoDeploymentConfigFinalizer  = "ako-operator.networking.tkg.tanzu.vmware.com"
+	AkoDeploymentConfigKind       = "AKODeploymentConfig"
+	AkoDeploymentConfigVersion    = "networking.tanzu.vmware.com/v1alpha1"
+	AkoStatefulSetName            = "ako"
+	AkoConfigMapName              = "avi-k8s-config"
+	AkoConfigMapCloudNameKey      = "cloudName"
+	AkoConfigMapVipNetworkListKey = "vipNetworkList"
 
 	AVI_VERSION                                                  = "20.1.3"
 	AviClusterLabel                                              = "networking.tkg.tanzu.vmware.com/avi"
