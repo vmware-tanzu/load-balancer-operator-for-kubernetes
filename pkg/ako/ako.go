@@ -20,6 +20,7 @@ const (
 	akoCleanUpAnnotationKey    = "AviObjectDeletionStatus"
 	akoCleanUpInProgressStatus = "Started"
 	akoCleanUpFinishedStatus   = "Done"
+	akoCleanUpTimeoutStatus    = "Timeout"
 )
 
 func CleanupFinished(ctx context.Context, remoteClient client.Client, log logr.Logger) (bool, error) {
@@ -37,5 +38,13 @@ func CleanupFinished(ctx context.Context, remoteClient client.Client, log logr.L
 		return false, err
 	}
 
-	return ss.Annotations[akoCleanUpAnnotationKey] == akoCleanUpFinishedStatus, nil
+	if ss.Annotations[akoCleanUpAnnotationKey] == akoCleanUpFinishedStatus {
+		log.Info("Avi resource cleanup finished")
+		return true, nil
+	} else if ss.Annotations[akoCleanUpAnnotationKey] == akoCleanUpTimeoutStatus {
+		log.Info("Avi resource cleanup timed out")
+		return true, nil
+	}
+	log.Info("Avi resource cleanup in progress")
+	return false, nil
 }

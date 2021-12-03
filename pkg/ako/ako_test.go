@@ -92,4 +92,15 @@ var _ = Describe("AKO", func() {
 			Expect(finished).To(BeTrue())
 		})
 	})
+	When("Clean up annotation is timeout", func() {
+		BeforeEach(func() {
+			ss.Annotations = map[string]string{
+				akoCleanUpAnnotationKey: akoCleanUpTimeoutStatus,
+			}
+		})
+		It("should claim finished", func() {
+			Expect(err).ToNot(HaveOccurred())
+			Expect(finished).To(BeTrue())
+		})
+	})
 })
