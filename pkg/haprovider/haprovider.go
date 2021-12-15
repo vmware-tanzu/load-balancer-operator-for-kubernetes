@@ -138,15 +138,16 @@ func (r *HAProvider) annotateService(ctx context.Context, cluster *clusterv1.Clu
 		return serviceAnnotation, nil
 	}
 
-	aviInfraSetting, err := r.getAviInfraSettingFromCluster(ctx, cluster)
-	if err != nil {
-		return serviceAnnotation, err
-	}
+	// TODO(iXinqi): Temporarily commenting adding annotation to HA svc, will uncomment it after the feature is fully tested.
+	//aviInfraSetting, err := r.getAviInfraSettingFromCluster(ctx, cluster)
+	//if err != nil {
+	//	return serviceAnnotation, err
+	//}
 
-	if aviInfraSetting != nil {
-		// add AVIInfraSetting annotation when creating HA svc
-		serviceAnnotation[akoov1alpha1.HAAVIInfraSettingAnnotationsKey] = aviInfraSetting.Name
-	}
+	//if aviInfraSetting != nil {
+	//	// add AVIInfraSetting annotation when creating HA svc
+	//	serviceAnnotation[akoov1alpha1.HAAVIInfraSettingAnnotationsKey] = aviInfraSetting.Name
+	//}
 	return serviceAnnotation, nil
 }
 
