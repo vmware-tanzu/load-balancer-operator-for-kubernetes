@@ -40,6 +40,26 @@ type ConfigMapReconciler struct {
 	netprovider.UsableNetworkProvider
 }
 
+// initAVI initializes the AVI client with hardcoded name of secrets
+// @TODO(fhan): do not use hardcoded secret names, modify the t-f to pass in the secret name to this controller
+func (r *ConfigMapReconciler) initAVI(ctx context.Context,
+	log logr.Logger, controllerIP string) (ctrl.Result, error) {
+	res := ctrl.Result{}
+
+	if r.aviClient == nil {
+		var err error
+		r.aviClient, err = aviclient.NewAviClientFromSecrets(r.Client, ctx, log, controllerIP,
+			v1alpha1.AviCredentialName, v1alpha1.TKGSystemNamespace,
+			v1alpha1.AviCAName, v1alpha1.TKGSystemNamespace)
+		if err != nil {
+			log.Error(err, "Cannot init AVI clients from secrets")
+			return res, err
+		}
+		log.Info("AVI Client initialized successfully")
+	}
+	return res, nil
+}
+
 func (r *ConfigMapReconciler) SetAviClient(client aviclient.Client) {
 	r.aviClient = client
 }
@@ -76,14 +96,27 @@ func (r *ConfigMapReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		log.Info("Key not found in ConfigMap: vipNetworkList")
 		return ctrl.Result{}, InvalidAKOConfigMapErr
 	}
-
 	var vipNetworkList netprovider.UsableNetworks
 	if err := json.Unmarshal([]byte(vipNetworkListRaw), &vipNetworkList); err != nil {
 		log.Error(err, "Failed to unmarshal VIPNetworkList")
 		return ctrl.Result{}, err
 	}
+	controllerIP, exist := cm.Data[v1alpha1.AkoConfigMapControllerIPKey]
+	if !exist {
+		log.Info("Key not found in ConfigMap: controllerIP")
+		return ctrl.Result{}, InvalidAKOConfigMapErr
+	}
+	if controllerIP == "" {
+		log.Info("Controller IP is empty")
+		return ctrl.Result{}, InvalidAKOConfigMapErr
+	}
 
-	log.V(5).Info(fmt.Sprintf("ConfigMap %s found in %s", v1alpha1.AkoConfigMapName, v1alpha1.TKGSystemNamespace))
+	log.V(5).Info(fmt.Sprintf("ConfigMap %s found in %s, initializing AVI related clients", v1alpha1.AkoConfigMapName, v1alpha1.TKGSystemNamespace))
+
+	if res, err := r.initAVI(ctx, log, controllerIP); err != nil {
+		log.Error(err, "Failed to initialize avi related clients")
+		return res, err
+	}
 
 	for _, vipNetwork := range vipNetworkList {
 		added, err := r.AddUsableNetwork(r.aviClient, cloudName, vipNetwork.NetworkName)

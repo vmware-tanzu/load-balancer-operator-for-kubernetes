@@ -13,7 +13,6 @@ import (
 	"github.com/avinetworks/sdk/go/models"
 	"github.com/go-logr/logr"
 
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -25,8 +24,6 @@ import (
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/haprovider"
 
 	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
-	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
-
 	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
 )
 
@@ -39,43 +36,15 @@ func (r *AKODeploymentConfigReconciler) initAVI(
 
 	// Lazily initialize aviClient so we don't skip other reconciliations
 	if r.aviClient == nil {
-		adminCredential := &corev1.Secret{}
-		if err := r.Client.Get(ctx, client.ObjectKey{
-			Name:      obj.Spec.AdminCredentialRef.Name,
-			Namespace: obj.Spec.AdminCredentialRef.Namespace,
-		}, adminCredential); err != nil {
-			if apierrors.IsNotFound(err) {
-				log.Info("Cannot find referenced AdminCredential Secret, requeue the request")
-			} else {
-				log.Error(err, "Failed to find referenced AdminCredential Secret")
-			}
-			return res, err
-		}
+		var err error
+		r.aviClient, err = aviclient.NewAviClientFromSecrets(r.Client, ctx, log, obj.Spec.Controller,
+			obj.Spec.AdminCredentialRef.Name, obj.Spec.AdminCredentialRef.Namespace,
+			obj.Spec.CertificateAuthorityRef.Name, obj.Spec.CertificateAuthorityRef.Namespace)
 
-		aviControllerCA := &corev1.Secret{}
-		if err := r.Client.Get(ctx, client.ObjectKey{
-			Name:      obj.Spec.CertificateAuthorityRef.Name,
-			Namespace: obj.Spec.CertificateAuthorityRef.Namespace,
-		}, aviControllerCA); err != nil {
-			if apierrors.IsNotFound(err) {
-				log.Info("Cannot find referenced CertificateAuthorityRef Secret, requeue the request")
-			} else {
-				log.Error(err, "Failed to find referenced CertificateAuthorityRef Secret")
-			}
-			return res, err
-		}
-		aviClient, err := aviclient.NewAviClient(&aviclient.AviClientConfig{
-			ServerIP: obj.Spec.Controller,
-			Username: string(adminCredential.Data["username"][:]),
-			Password: string(adminCredential.Data["password"][:]),
-			CA:       string(aviControllerCA.Data["certificateAuthorityData"][:]),
-		}, ako_operator.GetAVIControllerVersion())
 		if err != nil {
-			log.Error(err, "Failed to initialize AVI Controller Client, requeue the request")
+			log.Error(err, "Cannot init AVI clients from secrets")
 			return res, err
 		}
-
-		r.aviClient = aviClient
 		log.Info("AVI Client initialized successfully")
 	}
 

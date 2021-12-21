@@ -38,6 +38,7 @@ func intgTestEnsureUsableNetworkAddedInBootstrapCluster() {
 			Namespace: "tkg-system",
 		},
 		Data: map[string]string{
+			"controllerIP":   "10.168.176.11",
 			"cloudName":      "Default Cloud 2",
 			"vipNetworkList": "[{\"networkName\":\"VM Network 2\",\"cidr\":\"10.168.176.0/20\"}]",
 		},
