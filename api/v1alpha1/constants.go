@@ -30,6 +30,7 @@ const (
 	AkoStatefulSetName            = "ako"
 	AkoConfigMapName              = "avi-k8s-config"
 	AkoConfigMapCloudNameKey      = "cloudName"
+	AkoConfigMapControllerIPKey   = "controllerIP"
 	AkoConfigMapVipNetworkListKey = "vipNetworkList"
 
 	AVI_VERSION                                                  = "20.1.3"
@@ -37,6 +38,8 @@ const (
 	AviClusterSelectedLabel                                      = "networking.tkg.tanzu.vmware.com/avi-skip-default-adc"
 	AviClusterSecretType                                         = "avi.cluster.x-k8s.io/secret"
 	AviNamespace                                                 = "avi-system"
+	AviCredentialName                                            = "avi-controller-credentials"
+	AviCAName                                                    = "avi-controller-ca"
 	AviCertificateKey                                            = "certificateAuthorityData"
 	AviResourceCleanupReason                                     = "AviResourceCleanup"
 	AviResourceCleanupSucceededCondition clusterv1.ConditionType = "AviResourceCleanupSucceeded"

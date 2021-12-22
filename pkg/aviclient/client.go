@@ -6,10 +6,17 @@
 package aviclient
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"github.com/go-logr/logr"
+	"github.com/pkg/errors"
+	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"net/http"
 	"regexp"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 
 	"github.com/avinetworks/sdk/go/clients"
@@ -35,6 +42,62 @@ type AviClientConfig struct {
 	// in the client's handshake to support virtual hosting unless it is
 	// an IP address.
 	ServerName string
+}
+
+var ErrEmptyInput = errors.New("input is empty")
+
+// NewAviClientFromSecrets creates a Client from two secrets, adminCredential and CA
+func NewAviClientFromSecrets(c client.Client, ctx context.Context, log logr.Logger,
+	controllerIP, credName, credNamespace, caName, caNamespace string) (*realAviClient, error) {
+	if controllerIP == "" {
+		log.Error(ErrEmptyInput, "controllerIP is empty", "controllerIP", controllerIP)
+		return nil, ErrEmptyInput
+	}
+
+	if credName == "" || credNamespace == "" || caName == "" || caNamespace == "" {
+		log.Error(ErrEmptyInput, "empty secret", "credName",
+			credName, "credNamespace", credNamespace,
+			"caName", caName, "caNamespace", caNamespace)
+		return nil, ErrEmptyInput
+	}
+
+	adminCredential := &corev1.Secret{}
+	if err := c.Get(ctx, client.ObjectKey{
+		Name:      credName,
+		Namespace: credNamespace,
+	}, adminCredential); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Info("Cannot find referenced AdminCredential Secret, requeue the request")
+		} else {
+			log.Error(err, "Failed to find referenced AdminCredential Secret")
+		}
+		return nil, err
+	}
+
+	aviControllerCA := &corev1.Secret{}
+	if err := c.Get(ctx, client.ObjectKey{
+		Name:      caName,
+		Namespace: caNamespace,
+	}, aviControllerCA); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Info("Cannot find referenced CertificateAuthorityRef Secret, requeue the request")
+		} else {
+			log.Error(err, "Failed to find referenced CertificateAuthorityRef Secret")
+		}
+		return nil, err
+	}
+	aviClient, err := NewAviClient(&AviClientConfig{
+		ServerIP: controllerIP,
+		Username: string(adminCredential.Data["username"][:]),
+		Password: string(adminCredential.Data["password"][:]),
+		CA:       string(aviControllerCA.Data["certificateAuthorityData"][:]),
+	}, ako_operator.GetAVIControllerVersion())
+	if err != nil {
+		log.Error(err, "Failed to initialize AVI Controller Client, requeue the request")
+		return nil, err
+	}
+
+	return aviClient, nil
 }
 
 // NewAviClient creates an Client
@@ -67,12 +130,12 @@ func NewAviClient(config *AviClientConfig, version string) (*realAviClient, erro
 		options = append(options, session.SetInsecure)
 	}
 
-	client, err := clients.NewAviClient(config.ServerIP, config.Username, options...)
+	c, err := clients.NewAviClient(config.ServerIP, config.Username, options...)
 	if err != nil {
 		return nil, err
 	}
 	return &realAviClient{
-		AviClient: client,
+		AviClient: c,
 		config:    config,
 	}, nil
 }
