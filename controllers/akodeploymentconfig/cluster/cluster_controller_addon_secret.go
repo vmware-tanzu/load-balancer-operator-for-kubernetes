@@ -114,6 +114,16 @@ func AkoAddonSecretDataYaml(cluster *clusterv1.Cluster, obj *akoov1alpha1.AKODep
 	if err != nil {
 		return "", err
 	}
+
+	//Avoid setting DeleteConfig for management cluster
+	if cluster.Namespace != akoov1alpha1.TKGSystemNamespace {
+		if deleteConfig, exists := cluster.Labels[akoov1alpha1.AviClusterDeleteConfigLabel]; exists {
+			if deleteConfig == "true" {
+				secret.LoadBalancerAndIngressService.Config.AKOSettings.DeleteConfig = "true"
+			}
+		}
+	}
+
 	secret.LoadBalancerAndIngressService.Config.Avicredentials.Username = string(aviUsersecret.Data["username"][:])
 	secret.LoadBalancerAndIngressService.Config.Avicredentials.Password = string(aviUsersecret.Data["password"][:])
 	secret.LoadBalancerAndIngressService.Config.Avicredentials.CertificateAuthorityData = string(aviUsersecret.Data[akoov1alpha1.AviCertificateKey][:])
