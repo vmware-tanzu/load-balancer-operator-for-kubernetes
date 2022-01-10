@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
 	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako"
 	controllerruntime "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/controller-runtime"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/builder"
 	corev1 "k8s.io/api/core/v1"
@@ -182,6 +183,28 @@ func intgTestAkoDeploymentConfigController() {
 			return res == expect
 		}).Should(BeTrue())
 	}
+
+	ensureAKOAddOnSecretDeleteConfigMatchExpectation := func(key client.ObjectKey, expect bool) {
+		Eventually(func() bool {
+			var res bool
+			obj := &corev1.Secret{}
+			if err := ctx.Client.Get(ctx.Context, key, obj); err != nil {
+				if apierrors.IsNotFound(err) {
+					res = false
+				} else {
+					return false
+				}
+			} else {
+				values, err := ako.NewValuesFromBytes(obj.Data["values.yaml"])
+				if err != nil {
+					return false
+				}
+				res = values.LoadBalancerAndIngressService.Config.AKOSettings.DeleteConfig == "true"
+			}
+			return res == expect
+		}).Should(BeTrue())
+	}
+
 	ensureClusterAviLabelMatchExpectation := func(key client.ObjectKey, expect bool) {
 		Eventually(func() bool {
 			obj := &clusterv1.Cluster{}
@@ -471,6 +494,34 @@ func intgTestAkoDeploymentConfigController() {
 									}).Should(BeTrue())
 								})
 							})
+						})
+					})
+
+					When("cluster has avi-delete-config label", func() {
+						It("AddOnSecret disableConfig must be true when avi-delete-config label is set", func() {
+							latestCluster := &clusterv1.Cluster{}
+							err := getCluster(latestCluster, cluster.Name, cluster.Namespace)
+							Expect(err).To(BeNil())
+							latestCluster.Labels[akoov1alpha1.AviClusterDeleteConfigLabel] = "true"
+							updateObjects(latestCluster)
+
+							ensureAKOAddOnSecretDeleteConfigMatchExpectation(client.ObjectKey{
+								Name:      cluster.Name + "-load-balancer-and-ingress-service-addon",
+								Namespace: cluster.Namespace,
+							}, true)
+						})
+
+						It("AddonSecret disableConfig must be false when avi-delete-config label is unset", func() {
+							latestCluster := &clusterv1.Cluster{}
+							err := getCluster(latestCluster, cluster.Name, cluster.Namespace)
+							Expect(err).To(BeNil())
+							delete(latestCluster.Labels, akoov1alpha1.AviClusterDeleteConfigLabel)
+							updateObjects(latestCluster)
+
+							ensureAKOAddOnSecretDeleteConfigMatchExpectation(client.ObjectKey{
+								Name:      cluster.Name + "-load-balancer-and-ingress-service-addon",
+								Namespace: cluster.Namespace,
+							}, false)
 						})
 					})
 
