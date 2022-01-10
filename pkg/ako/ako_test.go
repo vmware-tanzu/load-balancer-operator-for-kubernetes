@@ -14,7 +14,6 @@ import (
 
 	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	appv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeClient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -65,21 +64,16 @@ var _ = Describe("AKO", func() {
 		})
 	})
 
-	When("no status is in StatefulSet", func() {
+	When("no annotation is in StatefulSet", func() {
 		It("should not claim finished", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(finished).To(BeFalse())
 		})
 	})
-	When("InProgress status is True", func() {
+	When("Clean up annotation is in progress", func() {
 		BeforeEach(func() {
-			ss.Status = appv1.StatefulSetStatus{
-				Conditions: []appv1.StatefulSetCondition{
-					{
-						Type:   akoConditionType,
-						Status: corev1.ConditionTrue,
-					},
-				},
+			ss.Annotations = map[string]string{
+				akoCleanUpAnnotationKey: akoCleanUpInProgressStatus,
 			}
 		})
 		It("should not claim finished", func() {
@@ -87,15 +81,21 @@ var _ = Describe("AKO", func() {
 			Expect(finished).To(BeFalse())
 		})
 	})
-	When("InProgress status is False", func() {
+	When("Clean up annotation is done", func() {
 		BeforeEach(func() {
-			ss.Status = appv1.StatefulSetStatus{
-				Conditions: []appv1.StatefulSetCondition{
-					{
-						Type:   akoConditionType,
-						Status: corev1.ConditionFalse,
-					},
-				},
+			ss.Annotations = map[string]string{
+				akoCleanUpAnnotationKey: akoCleanUpFinishedStatus,
+			}
+		})
+		It("should claim finished", func() {
+			Expect(err).ToNot(HaveOccurred())
+			Expect(finished).To(BeTrue())
+		})
+	})
+	When("Clean up annotation is timeout", func() {
+		BeforeEach(func() {
+			ss.Annotations = map[string]string{
+				akoCleanUpAnnotationKey: akoCleanUpTimeoutStatus,
 			}
 		})
 		It("should claim finished", func() {

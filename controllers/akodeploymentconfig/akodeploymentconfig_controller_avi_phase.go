@@ -6,30 +6,25 @@ package akodeploymentconfig
 import (
 	"bytes"
 	"context"
+
 	"net"
 	"sort"
-	"time"
-
-	"github.com/pkg/errors"
-
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/phases"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/user"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/haprovider"
 
 	"github.com/avinetworks/sdk/go/models"
 	"github.com/go-logr/logr"
 
-	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/phases"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/user"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/aviclient"
-	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/haprovider"
 
-	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
+	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
 )
 
 func (r *AKODeploymentConfigReconciler) initAVI(
@@ -41,43 +36,15 @@ func (r *AKODeploymentConfigReconciler) initAVI(
 
 	// Lazily initialize aviClient so we don't skip other reconciliations
 	if r.aviClient == nil {
-		adminCredential := &corev1.Secret{}
-		if err := r.Client.Get(ctx, client.ObjectKey{
-			Name:      obj.Spec.AdminCredentialRef.Name,
-			Namespace: obj.Spec.AdminCredentialRef.Namespace,
-		}, adminCredential); err != nil {
-			if apierrors.IsNotFound(err) {
-				log.Info("Cannot find referenced AdminCredential Secret, requeue the request")
-			} else {
-				log.Error(err, "Failed to find referenced AdminCredential Secret")
-			}
-			return res, err
-		}
+		var err error
+		r.aviClient, err = aviclient.NewAviClientFromSecrets(r.Client, ctx, log, obj.Spec.Controller,
+			obj.Spec.AdminCredentialRef.Name, obj.Spec.AdminCredentialRef.Namespace,
+			obj.Spec.CertificateAuthorityRef.Name, obj.Spec.CertificateAuthorityRef.Namespace)
 
-		aviControllerCA := &corev1.Secret{}
-		if err := r.Client.Get(ctx, client.ObjectKey{
-			Name:      obj.Spec.CertificateAuthorityRef.Name,
-			Namespace: obj.Spec.CertificateAuthorityRef.Namespace,
-		}, aviControllerCA); err != nil {
-			if apierrors.IsNotFound(err) {
-				log.Info("Cannot find referenced CertificateAuthorityRef Secret, requeue the request")
-			} else {
-				log.Error(err, "Failed to find referenced CertificateAuthorityRef Secret")
-			}
-			return res, err
-		}
-		aviClient, err := aviclient.NewAviClient(&aviclient.AviClientConfig{
-			ServerIP: obj.Spec.Controller,
-			Username: string(adminCredential.Data["username"][:]),
-			Password: string(adminCredential.Data["password"][:]),
-			CA:       string(aviControllerCA.Data["certificateAuthorityData"][:]),
-		}, ako_operator.GetAVIControllerVersion())
 		if err != nil {
-			log.Error(err, "Failed to initialize AVI Controller Client, requeue the request")
+			log.Error(err, "Cannot init AVI clients from secrets")
 			return res, err
 		}
-
-		r.aviClient = aviClient
 		log.Info("AVI Client initialized successfully")
 	}
 
@@ -204,67 +171,20 @@ func (r *AKODeploymentConfigReconciler) reconcileCloudUsableNetwork(
 	log logr.Logger,
 	obj *akoov1alpha1.AKODeploymentConfig,
 ) (ctrl.Result, error) {
-	res := ctrl.Result{}
-
 	log = log.WithValues("cloud", obj.Spec.CloudName)
-	log.Info("Start reconciling AVI cloud usable networks")
+	log.Info("Start reconciling AVI cloud usable network")
 
-	requeueAfter := ctrl.Result{
-		Requeue:      true,
-		RequeueAfter: time.Second * 60,
-	}
-
-	network, err := r.aviClient.NetworkGetByName(obj.Spec.DataNetwork.Name)
+	added, err := r.AddUsableNetwork(r.aviClient, obj.Spec.CloudName, obj.Spec.DataNetwork.Name)
 	if err != nil {
-		log.Error(errors.Errorf("[WARN]Failed to get the Data Network %s from AVI Controller", obj.Spec.DataNetwork.Name), "")
-		return requeueAfter, nil
+		log.Error(err, "Failed to add usable network", obj.Spec.DataNetwork.Name)
+		return ctrl.Result{}, err
 	}
-
-	cloud, err := r.aviClient.CloudGetByName(obj.Spec.CloudName)
-	if err != nil {
-		log.Error(err, "Faild to find cloud, requeue the request")
-		// Cannot find the configured cloud, requeue the request but
-		// leave enough time for operators to resolve this issue
-		return requeueAfter, nil
-	}
-	if cloud.IPAMProviderRef == nil {
-		log.Info("No IPAM Provider is registered for the cloud, requeue the request")
-		// Cannot find any configured IPAM Provider, requeue the request but
-		// leave enough time for operators to resolve this issue
-		return requeueAfter, nil
-	}
-
-	ipamProviderUUID := aviclient.GetUUIDFromRef(*(cloud.IPAMProviderRef))
-
-	log = log.WithValues("ipam-profile", *(cloud.IPAMProviderRef))
-
-	ipam, err := r.aviClient.IPAMDNSProviderProfileGet(ipamProviderUUID)
-	if err != nil {
-		log.Error(err, "Failed to find ipam profile")
-		return requeueAfter, nil
-	}
-
-	// Ensure network is added to the cloud's IPAM Profile as one of its
-	// usable Networks
-	var foundUsableNetwork bool
-	for _, net := range ipam.InternalProfile.UsableNetworks {
-		if *net.NwRef == *(network.URL) {
-			foundUsableNetwork = true
-			break
-		}
-	}
-	if !foundUsableNetwork {
-		ipam.InternalProfile.UsableNetworks = append(ipam.InternalProfile.UsableNetworks, &models.IPAMUsableNetwork{NwRef: network.URL})
-		_, err := r.aviClient.IPAMDNSProviderProfileUpdate(ipam)
-		if err != nil {
-			log.Error(err, "Failed to add usable network", "network", network.Name)
-			return res, nil
-		}
+	if added {
+		log.Info("Added Usable Network", obj.Spec.DataNetwork.Name)
 	} else {
-		log.Info("Network is already one of the cloud's usable network")
+		log.Info("Network is already one of the cloud's usable network", obj.Spec.DataNetwork.Name)
 	}
-
-	return res, nil
+	return ctrl.Result{}, nil
 }
 
 func (r *AKODeploymentConfigReconciler) reconcileAviInfraSetting(

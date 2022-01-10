@@ -13,7 +13,7 @@ PUBLISH?=publish
 BUILD_VERSION ?= $(shell git describe --always --match "v*" | sed 's/v//')
 
 # TKG Version
-TKG_VERSION ?= v1.5.0+vmware.1
+TKG_VERSION ?= v1.5.0+vmware.3
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -98,6 +98,7 @@ integration-test: $(GINKGO) $(ETCD)
 	$(GINKGO) -v controllers/akodeploymentconfig -- -enable-integration-tests -enable-unit-tests=false
 	$(GINKGO) -v controllers/machine -- -enable-integration-tests -enable-unit-tests=false
 	$(GINKGO) -v controllers/cluster -- -enable-integration-tests -enable-unit-tests=false
+	$(GINKGO) -v controllers/configmap -- -enable-integration-tests -enable-unit-tests=false
 
 .PHONY: kind-e2e-test
 kind-e2e-test: $(KUSTOMIZE) $(KIND) $(KUBECTL) $(JQ) $(YTT)

@@ -5,6 +5,7 @@ package akodeploymentconfig
 
 import (
 	"context"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/netprovider"
 
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/cluster"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/phases"
@@ -48,6 +49,7 @@ type AKODeploymentConfigReconciler struct {
 	Scheme            *runtime.Scheme
 	userReconciler    *user.AkoUserReconciler
 	ClusterReconciler *cluster.ClusterReconciler
+	netprovider.UsableNetworkProvider
 }
 
 func (r *AKODeploymentConfigReconciler) SetAviClient(client aviclient.Client) {
