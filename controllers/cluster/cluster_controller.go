@@ -104,13 +104,24 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ 
 
 	// Matches current cluster with all the akoDeploymentConfigs
 	clusterLabels := cluster.GetLabels()
+	matchedAkoDeploymentConfigs := make([]akoov1alpha1.AKODeploymentConfig, 0)
 	for _, akoDeploymentConfig := range akoDeploymentConfigs.Items {
 		if selector, err := metav1.LabelSelectorAsSelector(&akoDeploymentConfig.Spec.ClusterSelector); err != nil {
 			log.Error(err, "Failed to convert label sector to selector when matching ", cluster.Name, " with ", akoDeploymentConfig.Name)
 		} else if selector.Matches(labels.Set(clusterLabels)) {
-			log.Info("Cluster ", cluster.Name, " is selected by Akodeploymentconfig ", akoDeploymentConfig.Namespace+"/"+akoDeploymentConfig.Name, ", return")
-			return res, nil
+			log.Info("Cluster ", cluster.Name, " is selected by Akodeploymentconfig ", akoDeploymentConfig.Namespace+"/"+akoDeploymentConfig.Name)
+			matchedAkoDeploymentConfigs = append(matchedAkoDeploymentConfigs, akoDeploymentConfig)
 		}
+	}
+
+	if len(matchedAkoDeploymentConfigs) > 0 {
+		// When the cluster is only selected by the default ADC, a.k.a. install-ako-for-all
+		// We drop its skip-default-adc label so that the cluster can be selected by the default ADC
+		// It happens when a cluster is no longer selected by a customized ADC
+		if len(matchedAkoDeploymentConfigs) == 1 && matchedAkoDeploymentConfigs[0].Name == akoov1alpha1.WorkloadClusterAkoDeploymentConfig {
+			delete(cluster.Labels, akoov1alpha1.AviClusterSelectedLabel)
+		}
+		return res, nil
 	}
 
 	// Removing finalizer if current cluster can't be selected by any akoDeploymentConfig
