@@ -74,8 +74,8 @@ loadBalancerAndIngressService:
             value: ""
         resources:
             limits:
-                cpu: 250m
-                memory: 300Mi
+                cpu: 350m
+                memory: 400Mi
             request:
                 cpu: 100m
                 memory: 200Mi

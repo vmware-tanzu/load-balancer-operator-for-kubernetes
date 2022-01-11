@@ -426,8 +426,8 @@ type Resources struct {
 func DefaultResources() *Resources {
 	return &Resources{
 		Limits: Limits{
-			Cpu:    "250m",
-			Memory: "300Mi",
+			Cpu:    "350m",
+			Memory: "400Mi",
 		},
 		Requests: Requests{
 			Cpu:    "100m",
