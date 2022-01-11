@@ -21,7 +21,8 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/cluster"
+	adccluster "github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/cluster"
+	cluster "github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/cluster"
 	ctrlmgr "sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
@@ -36,13 +37,23 @@ var suite = builder.NewTestSuiteForController(
 		builder.FakeAvi = aviclient.NewFakeAviClient()
 		rec.SetAviClient(builder.FakeAvi)
 
-		clusterReconciler := cluster.NewReconciler(rec.Client, rec.Log, rec.Scheme)
-		clusterReconciler.GetRemoteClient = cluster.GetFakeRemoteClient
-		rec.ClusterReconciler = clusterReconciler
+		adcClusterReconciler := adccluster.NewReconciler(rec.Client, rec.Log, rec.Scheme)
+		adcClusterReconciler.GetRemoteClient = adccluster.GetFakeRemoteClient
+		rec.ClusterReconciler = adcClusterReconciler
 
 		if err := rec.SetupWithManager(mgr); err != nil {
 			return err
 		}
+
+		// involve the cluster controller as well for the resetting skip-default-adc label test
+		if err := (&cluster.ClusterReconciler{
+			Client: mgr.GetClient(),
+			Log:    ctrl.Log.WithName("controllers").WithName("Cluster"),
+			Scheme: mgr.GetScheme(),
+		}).SetupWithManager(mgr); err != nil {
+			return err
+		}
+
 		return nil
 	},
 	func(scheme *runtime.Scheme) (err error) {

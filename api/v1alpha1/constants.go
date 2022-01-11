@@ -21,6 +21,7 @@ const (
 	TKGDataValueFormatString    = "#@data/values\n#@overlay/match-child-defaults missing_ok=True\n---\n"
 
 	ManagementClusterAkoDeploymentConfig = "install-ako-for-management-cluster"
+	WorkloadClusterAkoDeploymentConfig   = "install-ako-for-all"
 
 	AkoUserRoleName               = "ako-essential-role"
 	ClusterFinalizer              = "ako-operator.networking.tkg.tanzu.vmware.com"
