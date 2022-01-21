@@ -138,21 +138,35 @@ func (r *HAProvider) annotateService(ctx context.Context, cluster *clusterv1.Clu
 		return serviceAnnotation, nil
 	}
 
-	// TODO(iXinqi): Temporarily commenting adding annotation to HA svc, will uncomment it after the feature is fully tested.
-	//aviInfraSetting, err := r.getAviInfraSettingFromCluster(ctx, cluster)
-	//if err != nil {
-	//	return serviceAnnotation, err
-	//}
+	adcForCluster, err := r.getADCForCluster(ctx,cluster)
+	if err != nil {
+		return serviceAnnotation, err
+	}
+	//no adc is selected for cluster, no annotation is needed.
+	if adcForCluster == nil {
+		return serviceAnnotation, nil
+	}
 
-	//if aviInfraSetting != nil {
-	//	// add AVIInfraSetting annotation when creating HA svc
-	//	serviceAnnotation[akoov1alpha1.HAAVIInfraSettingAnnotationsKey] = aviInfraSetting.Name
-	//}
+	aviInfraSetting, err := r.getAviInfraSettingFromAdc(ctx, adcForCluster)
+	if err != nil {
+		return serviceAnnotation, err
+	}
+
+	if _, ok := cluster.Labels[akoov1alpha1.TKGManagememtClusterRoleLabel]; ok {
+		if adcForCluster.Spec.ControlPlaneNetwork.CIDR != "" && adcForCluster.Spec.ControlPlaneNetwork.CIDR != adcForCluster.Spec.DataNetwork.CIDR {
+			if aviInfraSetting == nil {
+				return serviceAnnotation, errors.New("management cluster control plane network set, but corresponding AVIInfraSetting not found, requeue to wait for AVIInfraSetting created")
+			}
+		}
+	}
+	if aviInfraSetting != nil {
+		//add AVIInfraSetting annotation when creating HA svc
+		serviceAnnotation[akoov1alpha1.HAAVIInfraSettingAnnotationsKey] = aviInfraSetting.Name
+	}
 	return serviceAnnotation, nil
 }
 
-func (r *HAProvider) getAviInfraSettingFromCluster(ctx context.Context, cluster *clusterv1.Cluster) (*akov1alpha1.AviInfraSetting, error) {
-	aviInfraSetting := &akov1alpha1.AviInfraSetting{}
+func (r* HAProvider) getADCForCluster(ctx context.Context, cluster *clusterv1.Cluster) (*akoov1alpha1.AKODeploymentConfig, error) {
 
 	// TODO(iXinqi): check a cluster should be managed by only one adc
 	adcForCluster, err := handlers.ListADCsForCluster(ctx, cluster, r.log, r.Client)
@@ -165,7 +179,13 @@ func (r *HAProvider) getAviInfraSettingFromCluster(ctx context.Context, cluster 
 		return nil, nil
 	}
 
-	aviInfraSettingName := GetAviInfraSettingName(&adcForCluster[0])
+	return &adcForCluster[0], nil
+}
+
+func (r *HAProvider) getAviInfraSettingFromAdc(ctx context.Context, adcForCluster *akoov1alpha1.AKODeploymentConfig) (*akov1alpha1.AviInfraSetting, error) {
+
+	aviInfraSetting := &akov1alpha1.AviInfraSetting{}
+	aviInfraSettingName := GetAviInfraSettingName(adcForCluster)
 	if err := r.Client.Get(ctx, client.ObjectKey{
 		Name: aviInfraSettingName,
 	}, aviInfraSetting); err != nil {
