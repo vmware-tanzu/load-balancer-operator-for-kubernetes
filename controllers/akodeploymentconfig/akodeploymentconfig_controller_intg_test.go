@@ -13,6 +13,10 @@ import (
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako"
 	controllerruntime "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/controller-runtime"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/builder"
+	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
+	"os"
+
+	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -39,6 +43,8 @@ func intgTestAkoDeploymentConfigController() {
 		staticControllerCA               *corev1.Secret
 		testLabels                       map[string]string
 		err                              error
+		aviInfraSettingName	             string
+		serviceName string
 
 		networkUpdate        *models.Network
 		userUpdateCalled     bool
@@ -311,6 +317,75 @@ func intgTestAkoDeploymentConfigController() {
 	AfterEach(func() {
 		ctx.AfterEach()
 		ctx = nil
+	})
+
+	When("HA and VIP seperation is enabled", func() {
+		BeforeEach(func() {
+			err := os.Setenv(ako_operator.IsControlPlaneHAProvider, "True")
+			Expect(err).ShouldNot(HaveOccurred())
+			cluster.Labels = testLabels
+			cluster.Labels["cluster-role.tkg.tanzu.vmware.com/management"] = ""
+			serviceName = cluster.Namespace + "-" + cluster.Name + "-" + akoov1alpha1.HAServiceName
+
+		})
+		AfterEach(func() {
+			latestCluster := &clusterv1.Cluster{}
+			if err := getCluster(latestCluster, cluster.Name, cluster.Namespace); err == nil {
+				latestCluster.Finalizers = nil
+				updateObjects(latestCluster)
+				deleteObjects(latestCluster)
+				ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+					Name:      cluster.Name,
+					Namespace: cluster.Namespace,
+				}, &clusterv1.Cluster{}, false)
+			}
+			deleteObjects(cluster)
+			ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+				Name:      cluster.Name,
+				Namespace: cluster.Namespace,
+			}, &clusterv1.Cluster{}, false)
+			deleteObjects(akoDeploymentConfig)
+			ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+				Name: akoDeploymentConfig.Name,
+			}, &akoov1alpha1.AKODeploymentConfig{}, false)
+			err := os.Setenv(ako_operator.IsControlPlaneHAProvider, "False")
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+		It("shouldn't wait AIS if controlplane and dataplane has the same CIDR", func() {
+			akoDeploymentConfig.Spec.ControlPlaneNetwork.CIDR = akoDeploymentConfig.Spec.DataNetwork.CIDR
+			createObjects(akoDeploymentConfig, cluster)
+			aviInfraSettingName = akoDeploymentConfig.Name + "-ais"
+			ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+				Name:      aviInfraSettingName,
+			}, &akov1alpha1.AviInfraSetting{}, true)
+
+			service := &corev1.Service{}
+			ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+				Name:      serviceName,
+				Namespace: ctx.Namespace,
+			}, &corev1.Service{}, true)
+
+			Expect(service.Annotations[akoov1alpha1.HAAVIInfraSettingAnnotationsKey]).To(BeEmpty())
+
+		})
+		It("should wait AIS before adding annotation to service", func() {
+			createObjects(akoDeploymentConfig, cluster)
+			aviInfraSettingName = akoDeploymentConfig.Name + "-ais"
+			ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+				Name:      aviInfraSettingName,
+			}, &akov1alpha1.AviInfraSetting{}, true)
+
+			service := &corev1.Service{}
+			ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+				Name:      serviceName,
+				Namespace: ctx.Namespace,
+			}, &corev1.Service{}, true)
+
+			err = ctx.Client.Get(ctx, client.ObjectKey{Name: serviceName, Namespace: ctx.Namespace}, service)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			Expect(service.Annotations[akoov1alpha1.HAAVIInfraSettingAnnotationsKey]).To(BeEquivalentTo(aviInfraSettingName))
+		})
 	})
 
 	When("An AKODeploymentConfig is created", func() {
