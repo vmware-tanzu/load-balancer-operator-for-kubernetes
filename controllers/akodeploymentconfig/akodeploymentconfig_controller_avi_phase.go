@@ -71,7 +71,6 @@ func (r *AKODeploymentConfigReconciler) reconcileAVI(
 
 	return phases.ReconcilePhases(ctx, log, obj, []phases.ReconcilePhase{
 		r.reconcileNetworkSubnets,
-		r.reconcileCloudUsableNetwork,
 		r.reconcileAviInfraSetting,
 		func(ctx context.Context, log logr.Logger, obj *akoov1alpha1.AKODeploymentConfig) (ctrl.Result, error) {
 			return phases.ReconcileClustersPhases(ctx, r.Client, log, obj,
@@ -166,26 +165,26 @@ func (r *AKODeploymentConfigReconciler) reconcileNetworkSubnets(
 	return res, nil
 }
 
-func (r *AKODeploymentConfigReconciler) reconcileCloudUsableNetwork(
-	ctx context.Context,
-	log logr.Logger,
-	obj *akoov1alpha1.AKODeploymentConfig,
-) (ctrl.Result, error) {
-	log = log.WithValues("cloud", obj.Spec.CloudName)
-	log.Info("Start reconciling AVI cloud usable network")
+// func (r *AKODeploymentConfigReconciler) reconcileCloudUsableNetwork(
+// 	ctx context.Context,
+// 	log logr.Logger,
+// 	obj *akoov1alpha1.AKODeploymentConfig,
+// ) (ctrl.Result, error) {
+// 	log = log.WithValues("cloud", obj.Spec.CloudName)
+// 	log.Info("Start reconciling AVI cloud usable network")
 
-	added, err := r.AddUsableNetwork(r.aviClient, obj.Spec.CloudName, obj.Spec.DataNetwork.Name)
-	if err != nil {
-		log.Error(err, "Failed to add usable network", obj.Spec.DataNetwork.Name)
-		return ctrl.Result{}, err
-	}
-	if added {
-		log.Info("Added Usable Network", obj.Spec.DataNetwork.Name)
-	} else {
-		log.Info("Network is already one of the cloud's usable network", obj.Spec.DataNetwork.Name)
-	}
-	return ctrl.Result{}, nil
-}
+// 	added, err := r.AddUsableNetwork(r.aviClient, obj.Spec.CloudName, obj.Spec.DataNetwork.Name)
+// 	if err != nil {
+// 		log.Error(err, "Failed to add usable network", obj.Spec.DataNetwork.Name)
+// 		return ctrl.Result{}, err
+// 	}
+// 	if added {
+// 		log.Info("Added Usable Network", obj.Spec.DataNetwork.Name)
+// 	} else {
+// 		log.Info("Network is already one of the cloud's usable network", obj.Spec.DataNetwork.Name)
+// 	}
+// 	return ctrl.Result{}, nil
+// }
 
 func (r *AKODeploymentConfigReconciler) reconcileAviInfraSetting(
 	ctx context.Context,
