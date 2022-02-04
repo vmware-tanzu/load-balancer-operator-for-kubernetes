@@ -8,9 +8,6 @@ import (
 	"context"
 	"net"
 	"sort"
-	"time"
-
-	"github.com/pkg/errors"
 
 	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/phases"
 	"gitlab.eng.vmware.com/core-build/ako-operator/controllers/akodeploymentconfig/user"
@@ -100,7 +97,6 @@ func (r *AKODeploymentConfigReconciler) reconcileAVI(
 
 	return phases.ReconcilePhases(ctx, log, obj, []phases.ReconcilePhase{
 		r.reconcileNetworkSubnets,
-		r.reconcileCloudUsableNetwork,
 		func(ctx context.Context, log logr.Logger, obj *akoov1alpha1.AKODeploymentConfig) (ctrl.Result, error) {
 			return phases.ReconcileClustersPhases(ctx, r.Client, log, obj,
 				[]phases.ReconcileClusterPhase{
@@ -190,73 +186,73 @@ func (r *AKODeploymentConfigReconciler) reconcileNetworkSubnets(
 	return res, nil
 }
 
-func (r *AKODeploymentConfigReconciler) reconcileCloudUsableNetwork(
-	ctx context.Context,
-	log logr.Logger,
-	obj *akoov1alpha1.AKODeploymentConfig,
-) (ctrl.Result, error) {
-	res := ctrl.Result{}
+// func (r *AKODeploymentConfigReconciler) reconcileCloudUsableNetwork(
+// 	ctx context.Context,
+// 	log logr.Logger,
+// 	obj *akoov1alpha1.AKODeploymentConfig,
+// ) (ctrl.Result, error) {
+// 	res := ctrl.Result{}
 
-	log = log.WithValues("cloud", obj.Spec.CloudName)
-	log.Info("Start reconciling AVI cloud usable networks")
+// 	log = log.WithValues("cloud", obj.Spec.CloudName)
+// 	log.Info("Start reconciling AVI cloud usable networks")
 
-	requeueAfter := ctrl.Result{
-		Requeue:      true,
-		RequeueAfter: time.Second * 60,
-	}
+// 	requeueAfter := ctrl.Result{
+// 		Requeue:      true,
+// 		RequeueAfter: time.Second * 60,
+// 	}
 
-	network, err := r.aviClient.NetworkGetByName(obj.Spec.DataNetwork.Name)
-	if err != nil {
-		log.Error(errors.Errorf("[WARN]Failed to get the Data Network %s from AVI Controller", obj.Spec.DataNetwork.Name), "")
-		return requeueAfter, nil
-	}
+// 	network, err := r.aviClient.NetworkGetByName(obj.Spec.DataNetwork.Name)
+// 	if err != nil {
+// 		log.Error(errors.Errorf("[WARN]Failed to get the Data Network %s from AVI Controller", obj.Spec.DataNetwork.Name), "")
+// 		return requeueAfter, nil
+// 	}
 
-	cloud, err := r.aviClient.CloudGetByName(obj.Spec.CloudName)
-	if err != nil {
-		log.Error(err, "Faild to find cloud, requeue the request")
-		// Cannot find the configured cloud, requeue the request but
-		// leave enough time for operators to resolve this issue
-		return requeueAfter, nil
-	}
-	if cloud.IPAMProviderRef == nil {
-		log.Info("No IPAM Provider is registered for the cloud, requeue the request")
-		// Cannot find any configured IPAM Provider, requeue the request but
-		// leave enough time for operators to resolve this issue
-		return requeueAfter, nil
-	}
+// 	cloud, err := r.aviClient.CloudGetByName(obj.Spec.CloudName)
+// 	if err != nil {
+// 		log.Error(err, "Faild to find cloud, requeue the request")
+// 		// Cannot find the configured cloud, requeue the request but
+// 		// leave enough time for operators to resolve this issue
+// 		return requeueAfter, nil
+// 	}
+// 	if cloud.IPAMProviderRef == nil {
+// 		log.Info("No IPAM Provider is registered for the cloud, requeue the request")
+// 		// Cannot find any configured IPAM Provider, requeue the request but
+// 		// leave enough time for operators to resolve this issue
+// 		return requeueAfter, nil
+// 	}
 
-	ipamProviderUUID := aviclient.GetUUIDFromRef(*(cloud.IPAMProviderRef))
+// 	ipamProviderUUID := aviclient.GetUUIDFromRef(*(cloud.IPAMProviderRef))
 
-	log = log.WithValues("ipam-profile", *(cloud.IPAMProviderRef))
+// 	log = log.WithValues("ipam-profile", *(cloud.IPAMProviderRef))
 
-	ipam, err := r.aviClient.IPAMDNSProviderProfileGet(ipamProviderUUID)
-	if err != nil {
-		log.Error(err, "Failed to find ipam profile")
-		return requeueAfter, nil
-	}
+// 	ipam, err := r.aviClient.IPAMDNSProviderProfileGet(ipamProviderUUID)
+// 	if err != nil {
+// 		log.Error(err, "Failed to find ipam profile")
+// 		return requeueAfter, nil
+// 	}
 
-	// Ensure network is added to the cloud's IPAM Profile as one of its
-	// usable Networks
-	var foundUsableNetwork bool
-	for _, net := range ipam.InternalProfile.UsableNetworkRefs {
-		if net == *(network.URL) {
-			foundUsableNetwork = true
-			break
-		}
-	}
-	if !foundUsableNetwork {
-		ipam.InternalProfile.UsableNetworkRefs = append(ipam.InternalProfile.UsableNetworkRefs, *(network.URL))
-		_, err := r.aviClient.IPAMDNSProviderProfileUpdate(ipam)
-		if err != nil {
-			log.Error(err, "Failed to add usable network", "network", network.Name)
-			return res, nil
-		}
-	} else {
-		log.Info("Network is already one of the cloud's usable network")
-	}
+// 	// Ensure network is added to the cloud's IPAM Profile as one of its
+// 	// usable Networks
+// 	var foundUsableNetwork bool
+// 	for _, net := range ipam.InternalProfile.UsableNetworkRefs {
+// 		if net == *(network.URL) {
+// 			foundUsableNetwork = true
+// 			break
+// 		}
+// 	}
+// 	if !foundUsableNetwork {
+// 		ipam.InternalProfile.UsableNetworkRefs = append(ipam.InternalProfile.UsableNetworkRefs, *(network.URL))
+// 		_, err := r.aviClient.IPAMDNSProviderProfileUpdate(ipam)
+// 		if err != nil {
+// 			log.Error(err, "Failed to add usable network", "network", network.Name)
+// 			return res, nil
+// 		}
+// 	} else {
+// 		log.Info("Network is already one of the cloud's usable network")
+// 	}
 
-	return res, nil
-}
+// 	return res, nil
+// }
 
 // EnsureAviNetwork brings network to the intented state by ensuring there is
 // one subnet in network that has the specified cidr/mask and ipPools
