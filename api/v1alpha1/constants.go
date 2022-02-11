@@ -8,9 +8,10 @@ import (
 )
 
 const (
-	TKGSystemNamespace       = "tkg-system"
-	TKGClusterNameLabel      = "tkg.tanzu.vmware.com/cluster-name"
-	TKGClusterNameSpaceLabel = "tkg.tanzu.vmware.com/cluster-namespace"
+	TKGSystemNamespace            = "tkg-system"
+	TKGClusterNameLabel           = "tkg.tanzu.vmware.com/cluster-name"
+	TKGClusterNameSpaceLabel      = "tkg.tanzu.vmware.com/cluster-namespace"
+	TKGManagememtClusterRoleLabel = "cluster-role.tkg.tanzu.vmware.com/management"
 
 	TKGAddonAnnotationKey       = "tkg.tanzu.vmware.com/addon-type"
 	TKGAddOnLabelAddonNameKey   = "tkg.tanzu.vmware.com/addon-name"
