@@ -9,6 +9,7 @@ import (
 	"github.com/go-logr/logr"
 	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako"
+	akoo "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,6 +31,20 @@ func (r *ClusterReconciler) ReconcileAddonSecret(
 		log.Info("Failed to get cluster avi user secret, requeue")
 		return res, err
 	}
+
+	// when avi is ha provider and deploy ako in management cluster, need to wait for
+	// control plane load balancer type of service creating
+	if akoo.IsHAProvider() && cluster.Namespace == akoov1alpha1.TKGSystemNamespace {
+		svc := &corev1.Service{}
+		if err = r.Get(ctx, client.ObjectKey{
+			Name:      cluster.Namespace + "-" + cluster.Name + "-" + akoov1alpha1.HAServiceName,
+			Namespace: akoov1alpha1.TKGSystemNamespace,
+		}, svc); err != nil {
+			log.Info("Failed to get cluster control plane load balancer type of service, requeue")
+			return res, err
+		}
+	}
+
 	newAddonSecret, err := r.createAKOAddonSecret(cluster, obj, aviSecret)
 	if err != nil {
 		log.Info("Failed to convert AKO Deployment Config to add-on secret, requeue the request")
