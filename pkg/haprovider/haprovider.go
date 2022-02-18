@@ -118,9 +118,16 @@ func (r *HAProvider) createService(
 			},
 		}
 	}
-	if ip, ok := cluster.ObjectMeta.Annotations[akoov1alpha1.ClusterControlPlaneAnnotations]; ok {
-		// "ip" can be ipv4 or hostname, add ipv4 or hostname to service.Spec.LoadBalancerIP
-		service.Spec.LoadBalancerIP = ip
+	if endpoint, ok := cluster.ObjectMeta.Annotations[akoov1alpha1.ClusterControlPlaneAnnotations]; ok {
+		// "endpoint" can be ipv4 or hostname, add ipv4 or hostname to service.Spec.LoadBalancerIP
+		if net.ParseIP(endpoint) == nil {
+			endpoint, err = queryFQDN(endpoint)
+			if err != nil {
+				r.log.Error(err, "Failed to resolve control plane endpoint ", "endpoint", endpoint)
+				return nil, err
+			}
+		}
+		service.Spec.LoadBalancerIP = endpoint
 	}
 	r.log.Info("Creating " + serviceName + " Service")
 	err = r.Create(ctx, service)
@@ -138,7 +145,7 @@ func (r *HAProvider) annotateService(ctx context.Context, cluster *clusterv1.Clu
 		return serviceAnnotation, nil
 	}
 
-	adcForCluster, err := r.getADCForCluster(ctx,cluster)
+	adcForCluster, err := r.getADCForCluster(ctx, cluster)
 	if err != nil {
 		return serviceAnnotation, err
 	}
@@ -166,7 +173,7 @@ func (r *HAProvider) annotateService(ctx context.Context, cluster *clusterv1.Clu
 	return serviceAnnotation, nil
 }
 
-func (r* HAProvider) getADCForCluster(ctx context.Context, cluster *clusterv1.Cluster) (*akoov1alpha1.AKODeploymentConfig, error) {
+func (r *HAProvider) getADCForCluster(ctx context.Context, cluster *clusterv1.Cluster) (*akoov1alpha1.AKODeploymentConfig, error) {
 
 	// TODO(iXinqi): check a cluster should be managed by only one adc
 	adcForCluster, err := handlers.ListADCsForCluster(ctx, cluster, r.log, r.Client)
@@ -202,10 +209,15 @@ func (r *HAProvider) getAviInfraSettingFromAdc(ctx context.Context, adcForCluste
 }
 
 func (r *HAProvider) updateClusterControlPlaneEndpoint(cluster *clusterv1.Cluster, service *corev1.Service) error {
+	endpoint, _ := cluster.Annotations[akoov1alpha1.ClusterControlPlaneAnnotations]
 	// Dakar Limitation: customers ensure the service engine is running
 	ingress := service.Status.LoadBalancer.Ingress
 	if len(ingress) > 0 && net.ParseIP(ingress[0].IP) != nil {
-		cluster.Spec.ControlPlaneEndpoint.Host = service.Status.LoadBalancer.Ingress[0].IP
+		if endpoint != "" && net.ParseIP(endpoint) == nil {
+			cluster.Spec.ControlPlaneEndpoint.Host = endpoint
+		} else {
+			cluster.Spec.ControlPlaneEndpoint.Host = service.Status.LoadBalancer.Ingress[0].IP
+		}
 		cluster.Spec.ControlPlaneEndpoint.Port = ako_operator.GetControlPlaneEndpointPort()
 		return nil
 	}
@@ -339,4 +351,12 @@ func (r *HAProvider) ensureEndpoints(ctx context.Context, serviceName, serviceNa
 
 func GetAviInfraSettingName(adc *akoov1alpha1.AKODeploymentConfig) string {
 	return adc.Name + "-ais"
+}
+
+func queryFQDN(fqdn string) (string, error) {
+	ips, err := net.LookupIP(fqdn)
+	if err == nil {
+		return ips[0].String(), err
+	}
+	return "", err
 }
