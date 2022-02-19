@@ -32,6 +32,7 @@ type HAProvider struct {
 
 var instance *HAProvider
 var once sync.Once
+var QueryFQDN = queryFQDNEndpoint
 
 // NewProvider make HAProvider as a singleton
 func NewProvider(c client.Client, log logr.Logger) *HAProvider {
@@ -121,7 +122,7 @@ func (r *HAProvider) createService(
 	if endpoint, ok := cluster.ObjectMeta.Annotations[akoov1alpha1.ClusterControlPlaneAnnotations]; ok {
 		// "endpoint" can be ipv4 or hostname, add ipv4 or hostname to service.Spec.LoadBalancerIP
 		if net.ParseIP(endpoint) == nil {
-			endpoint, err = queryFQDN(endpoint)
+			endpoint, err = QueryFQDN(endpoint)
 			if err != nil {
 				r.log.Error(err, "Failed to resolve control plane endpoint ", "endpoint", endpoint)
 				return nil, err
@@ -353,7 +354,7 @@ func GetAviInfraSettingName(adc *akoov1alpha1.AKODeploymentConfig) string {
 	return adc.Name + "-ais"
 }
 
-func queryFQDN(fqdn string) (string, error) {
+func queryFQDNEndpoint(fqdn string) (string, error) {
 	ips, err := net.LookupIP(fqdn)
 	if err == nil {
 		return ips[0].String(), err

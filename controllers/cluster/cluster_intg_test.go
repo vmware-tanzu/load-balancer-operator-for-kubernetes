@@ -4,6 +4,7 @@
 package cluster_test
 
 import (
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/haprovider"
 	"os"
 
 	. "github.com/onsi/ginkgo"
@@ -105,6 +106,45 @@ func intgTestEnsureClusterHAProvider() {
 
 				})
 			})
+
+			When("FQDN HA service endpoint exist", func() {
+				BeforeEach(func() {
+					err := os.Setenv(ako_operator.IsControlPlaneHAProvider, "True")
+					Expect(err).ShouldNot(HaveOccurred())
+					cluster.Annotations = make(map[string]string)
+					cluster.Annotations["tkg.tanzu.vmware.com/cluster-controlplane-endpoint"] = "test.local.org"
+					testutil.CreateObjects(ctx, cluster)
+				})
+				AfterEach(func() {
+					testutil.DeleteObjects(ctx, cluster)
+				})
+
+				It("should not create service endpoint when FQDN is not resolved", func() {
+					testutil.EnsureRuntimeObjectMatchExpectation(ctx, client.ObjectKey{
+						Name:      serviceName,
+						Namespace: ctx.Namespace,
+					}, &corev1.Service{}, testutil.NOTFOUND)
+				})
+
+				BeforeEach(func() {
+					haprovider.QueryFQDN = func(fqdn string) (string, error) {
+						return "10.1.2.1", nil
+					}
+				})
+
+				It("should create service and endpoint when FQDN is resolved", func() {
+					service := &corev1.Service{}
+					testutil.EnsureRuntimeObjectMatchExpectation(ctx, client.ObjectKey{
+						Name:      serviceName,
+						Namespace: ctx.Namespace,
+					}, &corev1.Service{}, testutil.EXIST)
+
+					err := ctx.Client.Get(ctx, client.ObjectKey{Name: serviceName, Namespace: ctx.Namespace}, service)
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(service.Spec.LoadBalancerIP).Should(Equal("10.1.2.1"))
+				})
+			})
 		})
+
 	})
 }
