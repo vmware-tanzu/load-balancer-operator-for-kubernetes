@@ -41,7 +41,6 @@ KUBE_APISERVER  := $(BIN_DIR)/kube-apiserver
 KUBEBUILDER     := $(BIN_DIR)/kubebuilder
 KUBECTL         := $(BIN_DIR)/kubectl
 ETCD            := $(BIN_DIR)/etcd
-KIND            := $(BIN_DIR)/kind
 JQ              := $(BIN_DIR)/jq
 
 ## --------------------------------------
@@ -79,11 +78,6 @@ ginkgo: $(GINKGO) $(SRCS)
 ginkgo: ## Build ginkgo
 $(GINKGO):
 	go build -tags=tools -o $@ github.com/onsi/ginkgo/ginkgo
-
-kind: $(KIND) $(SRCS)
-kind: ## Build kind
-$(KIND):
-	go build -tags=tools -o $@ sigs.k8s.io/kind
 
 jq: $(JQ) ## Install jq
 $(JQ):  

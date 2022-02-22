@@ -1,4 +1,4 @@
-module gitlab.eng.vmware.com/core-build/tkg-connectivity/hack/tools
+module github.com/vmware-samples/load-balancer-operator-for-kubernetes/hack/tools
 
 go 1.16
 
@@ -7,7 +7,6 @@ require (
 	github.com/onsi/ginkgo v1.16.4
 	k8s.io/code-generator v0.22.2
 	sigs.k8s.io/controller-tools v0.7.0
-	sigs.k8s.io/kind v0.11.1
 	sigs.k8s.io/kustomize/kustomize/v4 v4.4.0
 )
 

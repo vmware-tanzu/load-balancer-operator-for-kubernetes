@@ -43,7 +43,6 @@ KUBE_APISERVER     := $(TOOLS_BIN_DIR)/kube-apiserver
 KUBEBUILDER        := $(TOOLS_BIN_DIR)/kubebuilder
 KUBECTL            := $(TOOLS_BIN_DIR)/kubectl
 ETCD               := $(TOOLS_BIN_DIR)/etcd
-KIND               := $(TOOLS_BIN_DIR)/kind
 JQ                 := $(TOOLS_BIN_DIR)/jq
 YTT := $(abspath $(TOOLS_BIN_DIR)/ytt)
 
@@ -103,10 +102,6 @@ integration-test: $(GINKGO) $(ETCD)
 	$(GINKGO) -v controllers/machine -- -enable-integration-tests -enable-unit-tests=false
 	$(GINKGO) -v controllers/cluster -- -enable-integration-tests -enable-unit-tests=false
 	$(GINKGO) -v controllers/configmap -- -enable-integration-tests -enable-unit-tests=false
-
-.PHONY: kind-e2e-test
-kind-e2e-test: $(KUSTOMIZE) $(KIND) $(KUBECTL) $(JQ) $(YTT)
-	./hack/test-e2e.sh
 
 .PHONY: ytt
 ytt: $(YTT)
@@ -211,7 +206,7 @@ fix: lint-go ## Tries to fix errors reported by lint-go-full target
 .PHONY: $(TOOLING_BINARIES)
 TOOLING_BINARIES := $(CONTROLLER_GEN) $(GOLANGCI_LINT) $(KUSTOMIZE) \
                     $(KUBE_APISERVER) $(KUBEBUILDER) $(KUBECTL) \
-                    $(ETCD) $(GINKGO) $(KIND) $(JQ)
+                    $(ETCD) $(GINKGO) $(JQ)
 tools: $(TOOLING_BINARIES) ## Build tooling binaries
 $(TOOLING_BINARIES):
 	cd $(TOOLS_DIR) && $(MAKE) $(@F)
