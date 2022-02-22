@@ -53,6 +53,10 @@ all: manager
 test: generate fmt vet manifests
 	go test ./... -coverprofile cover.out
 
+cover: test
+	go tool cover -func=cover.out -o coverage.txt
+	go tool cover -html=cover.out -o coverage.html
+
 # Build manager binary
 manager: generate fmt vet
 	go build -o bin/manager main.go
