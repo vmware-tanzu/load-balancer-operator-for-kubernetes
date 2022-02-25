@@ -100,6 +100,7 @@ type LoadBalancerAndIngressService struct {
 // Config consists of different configurations for Values that includes settings of
 // AKO, networking, L4, L7, Rbac etc
 type Config struct {
+	TkgClusterRole        string              `yaml:"tkg_cluster_role"`
 	IsClusterService      string              `yaml:"is_cluster_service"`
 	ReplicaCount          int                 `yaml:"replica_count"`
 	AKOSettings           *AKOSettings        `yaml:"ako_settings"`
@@ -271,7 +272,9 @@ func NewNetworkSettings(obj *akoov1alpha1.AKODeploymentConfig) (*NetworkSettings
 	if obj.Spec.ExtraConfigs.NetworksConfig.EnableRHI != nil {
 		settings.EnableRHI = strconv.FormatBool(*obj.Spec.ExtraConfigs.NetworksConfig.EnableRHI)
 	}
-	settings.NsxtT1LR = obj.Spec.ExtraConfigs.NetworksConfig.NsxtT1LR
+	if obj.Spec.ExtraConfigs.NetworksConfig.NsxtT1LR != "" {
+		settings.NsxtT1LR = obj.Spec.ExtraConfigs.NetworksConfig.NsxtT1LR
+	}
 	settings.BGPPeerLabels = obj.Spec.ExtraConfigs.NetworksConfig.BGPPeerLabels
 	if len(settings.BGPPeerLabels) != 0 {
 		jsonBytes, err := json.Marshal(settings.BGPPeerLabels)

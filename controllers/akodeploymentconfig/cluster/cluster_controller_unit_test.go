@@ -22,6 +22,7 @@ loadBalancerAndIngressService:
     name: ako--test-cluster
     namespace: avi-system
     config:
+        tkg_cluster_role: workload
         is_cluster_service: ""
         replica_count: 1
         ako_settings:

@@ -130,8 +130,12 @@ func AkoAddonSecretDataYaml(cluster *clusterv1.Cluster, obj *akoov1alpha1.AKODep
 		return "", err
 	}
 
+	//Pass cluster role information to ako
 	//Avoid setting DeleteConfig for management cluster
-	if cluster.Namespace != akoov1alpha1.TKGSystemNamespace {
+	if cluster.Namespace == akoov1alpha1.TKGSystemNamespace {
+		secret.LoadBalancerAndIngressService.Config.TkgClusterRole = "management"
+	} else {
+		secret.LoadBalancerAndIngressService.Config.TkgClusterRole = "workload"
 		if deleteConfig, exists := cluster.Labels[akoov1alpha1.AviClusterDeleteConfigLabel]; exists {
 			if deleteConfig == "true" {
 				secret.LoadBalancerAndIngressService.Config.AKOSettings.DeleteConfig = "true"
