@@ -138,7 +138,7 @@ func (r *HAProvider) annotateService(ctx context.Context, cluster *clusterv1.Clu
 		return serviceAnnotation, nil
 	}
 
-	adcForCluster, err := r.getADCForCluster(ctx,cluster)
+	adcForCluster, err := r.getADCForCluster(ctx, cluster)
 	if err != nil {
 		return serviceAnnotation, err
 	}
@@ -166,7 +166,7 @@ func (r *HAProvider) annotateService(ctx context.Context, cluster *clusterv1.Clu
 	return serviceAnnotation, nil
 }
 
-func (r* HAProvider) getADCForCluster(ctx context.Context, cluster *clusterv1.Cluster) (*akoov1alpha1.AKODeploymentConfig, error) {
+func (r *HAProvider) getADCForCluster(ctx context.Context, cluster *clusterv1.Cluster) (*akoov1alpha1.AKODeploymentConfig, error) {
 
 	// TODO(iXinqi): check a cluster should be managed by only one adc
 	adcForCluster, err := handlers.ListADCsForCluster(ctx, cluster, r.log, r.Client)

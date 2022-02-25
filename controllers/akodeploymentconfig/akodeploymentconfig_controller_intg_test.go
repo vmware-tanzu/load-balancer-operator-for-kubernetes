@@ -43,8 +43,8 @@ func intgTestAkoDeploymentConfigController() {
 		staticControllerCA               *corev1.Secret
 		testLabels                       map[string]string
 		err                              error
-		aviInfraSettingName	             string
-		serviceName string
+		aviInfraSettingName              string
+		serviceName                      string
 
 		networkUpdate        *models.Network
 		userUpdateCalled     bool
@@ -356,7 +356,7 @@ func intgTestAkoDeploymentConfigController() {
 			createObjects(akoDeploymentConfig, cluster)
 			aviInfraSettingName = akoDeploymentConfig.Name + "-ais"
 			ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-				Name:      aviInfraSettingName,
+				Name: aviInfraSettingName,
 			}, &akov1alpha1.AviInfraSetting{}, true)
 
 			service := &corev1.Service{}
@@ -372,7 +372,7 @@ func intgTestAkoDeploymentConfigController() {
 			createObjects(akoDeploymentConfig, cluster)
 			aviInfraSettingName = akoDeploymentConfig.Name + "-ais"
 			ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-				Name:      aviInfraSettingName,
+				Name: aviInfraSettingName,
 			}, &akov1alpha1.AviInfraSetting{}, true)
 
 			service := &corev1.Service{}

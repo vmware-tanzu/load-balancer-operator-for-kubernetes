@@ -109,7 +109,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ 
 		if selector, err := metav1.LabelSelectorAsSelector(&akoDeploymentConfig.Spec.ClusterSelector); err != nil {
 			log.Error(err, "Failed to convert label sector to selector when matching ", cluster.Name, " with ", akoDeploymentConfig.Name)
 		} else if selector.Matches(labels.Set(clusterLabels)) {
-			log.Info("Cluster ", cluster.Name, " is selected by Akodeploymentconfig ", akoDeploymentConfig.Namespace+"/"+akoDeploymentConfig.Name)
+			log.Info("Cluster ", cluster.Name, " is selected by", "Akodeploymentconfig", (akoDeploymentConfig.Namespace + "/" + akoDeploymentConfig.Name))
 			matchedAkoDeploymentConfigs = append(matchedAkoDeploymentConfigs, akoDeploymentConfig)
 		}
 	}
