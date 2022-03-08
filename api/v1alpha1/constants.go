@@ -8,9 +8,10 @@ import (
 )
 
 const (
-	TKGSystemNamespace       = "tkg-system"
-	TKGClusterNameLabel      = "tkg.tanzu.vmware.com/cluster-name"
-	TKGClusterNameSpaceLabel = "tkg.tanzu.vmware.com/cluster-namespace"
+	TKGSystemNamespace            = "tkg-system"
+	TKGClusterNameLabel           = "tkg.tanzu.vmware.com/cluster-name"
+	TKGClusterNameSpaceLabel      = "tkg.tanzu.vmware.com/cluster-namespace"
+	TKGManagememtClusterRoleLabel = "cluster-role.tkg.tanzu.vmware.com/management"
 
 	TKGAddonAnnotationKey       = "tkg.tanzu.vmware.com/addon-type"
 	TKGAddOnLabelAddonNameKey   = "tkg.tanzu.vmware.com/addon-name"
@@ -21,6 +22,7 @@ const (
 	TKGDataValueFormatString    = "#@data/values\n#@overlay/match-child-defaults missing_ok=True\n---\n"
 
 	ManagementClusterAkoDeploymentConfig = "install-ako-for-management-cluster"
+	WorkloadClusterAkoDeploymentConfig   = "install-ako-for-all"
 
 	AkoUserRoleName               = "ako-essential-role"
 	ClusterFinalizer              = "ako-operator.networking.tkg.tanzu.vmware.com"
@@ -36,6 +38,7 @@ const (
 	AVI_VERSION                                                  = "20.1.3"
 	AviClusterLabel                                              = "networking.tkg.tanzu.vmware.com/avi"
 	AviClusterSelectedLabel                                      = "networking.tkg.tanzu.vmware.com/avi-skip-default-adc"
+	AviClusterDeleteConfigLabel                                  = "networking.tkg.tanzu.vmware.com/avi-config-delete"
 	AviClusterSecretType                                         = "avi.cluster.x-k8s.io/secret"
 	AviNamespace                                                 = "avi-system"
 	AviCredentialName                                            = "avi-controller-credentials"

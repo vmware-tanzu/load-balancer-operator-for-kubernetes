@@ -1,4 +1,4 @@
-// Copyright 2021 VMware, Inc.
+// Copyright 2022 VMware, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
 package ako_operator
@@ -46,7 +46,7 @@ func GetControlPlaneEndpointPort() int32 {
 
 func GetAVIControllerVersion() string {
 	version, set := os.LookupEnv(AVIControllerVersion)
-	if set {
+	if set && version != "" {
 		return version
 	}
 	return akoov1alpha1.AVI_VERSION

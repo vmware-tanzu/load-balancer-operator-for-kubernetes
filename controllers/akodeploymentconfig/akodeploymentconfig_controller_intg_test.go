@@ -10,8 +10,13 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
 	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako"
 	controllerruntime "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/controller-runtime"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/builder"
+	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
+	"os"
+
+	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -25,17 +30,21 @@ import (
 
 func intgTestAkoDeploymentConfigController() {
 	var (
-		ctx                         *builder.IntegrationTestContext
-		cluster                     *clusterv1.Cluster
-		akoDeploymentConfig         *akoov1alpha1.AKODeploymentConfig
-		controllerCredentials       *corev1.Secret
-		controllerCA                *corev1.Secret
-		staticCluster               *clusterv1.Cluster
-		staticAkoDeploymentConfig   *akoov1alpha1.AKODeploymentConfig
-		staticControllerCredentials *corev1.Secret
-		staticControllerCA          *corev1.Secret
-		testLabels                  map[string]string
-		err                         error
+		ctx                              *builder.IntegrationTestContext
+		cluster                          *clusterv1.Cluster
+		akoDeploymentConfig              *akoov1alpha1.AKODeploymentConfig
+		defaultAkoDeploymentConfig       *akoov1alpha1.AKODeploymentConfig
+		controllerCredentials            *corev1.Secret
+		controllerCA                     *corev1.Secret
+		staticCluster                    *clusterv1.Cluster
+		staticAkoDeploymentConfig        *akoov1alpha1.AKODeploymentConfig
+		staticDefaultAkoDeploymentConfig *akoov1alpha1.AKODeploymentConfig
+		staticControllerCredentials      *corev1.Secret
+		staticControllerCA               *corev1.Secret
+		testLabels                       map[string]string
+		err                              error
+		aviInfraSettingName              string
+		serviceName                      string
 
 		networkUpdate        *models.Network
 		userUpdateCalled     bool
@@ -50,41 +59,48 @@ func intgTestAkoDeploymentConfigController() {
 		},
 		Spec: clusterv1.ClusterSpec{},
 	}
+
+	defaultAkoDeploymentConfigCommonSpec := akoov1alpha1.AKODeploymentConfigSpec{
+		DataNetwork: akoov1alpha1.DataNetwork{
+			Name: "integration-test-8ed12g",
+			CIDR: "10.0.0.0/24",
+			IPPools: []akoov1alpha1.IPPool{
+				{
+					Start: "10.0.0.1",
+					End:   "10.0.0.10",
+					Type:  "V4",
+				},
+			},
+		},
+		ControlPlaneNetwork: akoov1alpha1.ControlPlaneNetwork{
+			Name: "integration-test-8ed12g",
+			CIDR: "10.1.0.0/24",
+		},
+		ServiceEngineGroup: "ha-test",
+		AdminCredentialRef: &akoov1alpha1.SecretRef{
+			Name:      "controller-credentials",
+			Namespace: "default",
+		},
+		CertificateAuthorityRef: &akoov1alpha1.SecretRef{
+			Name:      "controller-ca",
+			Namespace: "default",
+		},
+	}
+	akoDeploymentConfigCommonSpec := defaultAkoDeploymentConfigCommonSpec.DeepCopy()
+	akoDeploymentConfigCommonSpec.ClusterSelector = metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			"test": "true",
+		},
+	}
 	staticAkoDeploymentConfig = &akoov1alpha1.AKODeploymentConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "ako-deployment-config",
 		},
-		Spec: akoov1alpha1.AKODeploymentConfigSpec{
-			ClusterSelector: metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"test": "true",
-				},
-			},
-			DataNetwork: akoov1alpha1.DataNetwork{
-				Name: "integration-test-8ed12g",
-				CIDR: "10.0.0.0/24",
-				IPPools: []akoov1alpha1.IPPool{
-					{
-						Start: "10.0.0.1",
-						End:   "10.0.0.10",
-						Type:  "V4",
-					},
-				},
-			},
-			ControlPlaneNetwork: akoov1alpha1.ControlPlaneNetwork{
-				Name: "integration-test-8ed12g",
-				CIDR: "10.1.0.0/24",
-			},
-			ServiceEngineGroup: "ha-test",
-			AdminCredentialRef: &akoov1alpha1.SecretRef{
-				Name:      "controller-credentials",
-				Namespace: "default",
-			},
-			CertificateAuthorityRef: &akoov1alpha1.SecretRef{
-				Name:      "controller-ca",
-				Namespace: "default",
-			},
-		},
+		Spec: *akoDeploymentConfigCommonSpec,
+	}
+	staticDefaultAkoDeploymentConfig = &akoov1alpha1.AKODeploymentConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: akoov1alpha1.WorkloadClusterAkoDeploymentConfig},
+		Spec:       defaultAkoDeploymentConfigCommonSpec,
 	}
 
 	staticControllerCredentials = &corev1.Secret{
@@ -182,14 +198,36 @@ func intgTestAkoDeploymentConfigController() {
 			return res == expect
 		}).Should(BeTrue())
 	}
-	ensureClusterAviLabelMatchExpectation := func(key client.ObjectKey, expect bool) {
+
+	ensureAKOAddOnSecretDeleteConfigMatchExpectation := func(key client.ObjectKey, expect bool) {
+		Eventually(func() bool {
+			var res bool
+			obj := &corev1.Secret{}
+			if err := ctx.Client.Get(ctx.Context, key, obj); err != nil {
+				if apierrors.IsNotFound(err) {
+					res = false
+				} else {
+					return false
+				}
+			} else {
+				values, err := ako.NewValuesFromBytes(obj.Data["values.yaml"])
+				if err != nil {
+					return false
+				}
+				res = values.LoadBalancerAndIngressService.Config.AKOSettings.DeleteConfig == "true"
+			}
+			return res == expect
+		}).Should(BeTrue())
+	}
+
+	ensureClusterAviLabelMatchExpectation := func(key client.ObjectKey, label string, expect bool) {
 		Eventually(func() bool {
 			obj := &clusterv1.Cluster{}
 			err := ctx.Client.Get(ctx.Context, key, obj)
 			if err != nil {
 				return false
 			}
-			_, ok := obj.Labels[akoov1alpha1.AviClusterLabel]
+			_, ok := obj.Labels[label]
 			return expect == ok
 		}).Should(BeTrue())
 	}
@@ -215,6 +253,7 @@ func intgTestAkoDeploymentConfigController() {
 	BeforeEach(func() {
 		ctx = suite.NewIntegrationTestContext()
 		akoDeploymentConfig = staticAkoDeploymentConfig.DeepCopy()
+		defaultAkoDeploymentConfig = staticDefaultAkoDeploymentConfig.DeepCopy()
 		cluster = staticCluster.DeepCopy()
 		cluster.Namespace = ctx.Namespace
 		controllerCredentials = staticControllerCredentials.DeepCopy()
@@ -280,6 +319,75 @@ func intgTestAkoDeploymentConfigController() {
 		ctx = nil
 	})
 
+	When("HA and VIP seperation is enabled", func() {
+		BeforeEach(func() {
+			err := os.Setenv(ako_operator.IsControlPlaneHAProvider, "True")
+			Expect(err).ShouldNot(HaveOccurred())
+			cluster.Labels = testLabels
+			cluster.Labels["cluster-role.tkg.tanzu.vmware.com/management"] = ""
+			serviceName = cluster.Namespace + "-" + cluster.Name + "-" + akoov1alpha1.HAServiceName
+
+		})
+		AfterEach(func() {
+			latestCluster := &clusterv1.Cluster{}
+			if err := getCluster(latestCluster, cluster.Name, cluster.Namespace); err == nil {
+				latestCluster.Finalizers = nil
+				updateObjects(latestCluster)
+				deleteObjects(latestCluster)
+				ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+					Name:      cluster.Name,
+					Namespace: cluster.Namespace,
+				}, &clusterv1.Cluster{}, false)
+			}
+			deleteObjects(cluster)
+			ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+				Name:      cluster.Name,
+				Namespace: cluster.Namespace,
+			}, &clusterv1.Cluster{}, false)
+			deleteObjects(akoDeploymentConfig)
+			ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+				Name: akoDeploymentConfig.Name,
+			}, &akoov1alpha1.AKODeploymentConfig{}, false)
+			err := os.Setenv(ako_operator.IsControlPlaneHAProvider, "False")
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+		It("shouldn't wait AIS if controlplane and dataplane has the same CIDR", func() {
+			akoDeploymentConfig.Spec.ControlPlaneNetwork.CIDR = akoDeploymentConfig.Spec.DataNetwork.CIDR
+			createObjects(akoDeploymentConfig, cluster)
+			aviInfraSettingName = akoDeploymentConfig.Name + "-ais"
+			ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+				Name: aviInfraSettingName,
+			}, &akov1alpha1.AviInfraSetting{}, true)
+
+			service := &corev1.Service{}
+			ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+				Name:      serviceName,
+				Namespace: ctx.Namespace,
+			}, &corev1.Service{}, true)
+
+			Expect(service.Annotations[akoov1alpha1.HAAVIInfraSettingAnnotationsKey]).To(BeEmpty())
+
+		})
+		It("should wait AIS before adding annotation to service", func() {
+			createObjects(akoDeploymentConfig, cluster)
+			aviInfraSettingName = akoDeploymentConfig.Name + "-ais"
+			ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+				Name: aviInfraSettingName,
+			}, &akov1alpha1.AviInfraSetting{}, true)
+
+			service := &corev1.Service{}
+			ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+				Name:      serviceName,
+				Namespace: ctx.Namespace,
+			}, &corev1.Service{}, true)
+
+			err = ctx.Client.Get(ctx, client.ObjectKey{Name: serviceName, Namespace: ctx.Namespace}, service)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			Expect(service.Annotations[akoov1alpha1.HAAVIInfraSettingAnnotationsKey]).To(BeEquivalentTo(aviInfraSettingName))
+		})
+	})
+
 	When("An AKODeploymentConfig is created", func() {
 		BeforeEach(func() {
 			createObjects(akoDeploymentConfig, cluster, controllerCredentials, controllerCA)
@@ -329,7 +437,7 @@ func intgTestAkoDeploymentConfigController() {
 				ensureClusterAviLabelMatchExpectation(client.ObjectKey{
 					Name:      cluster.Name,
 					Namespace: cluster.Namespace,
-				}, true)
+				}, akoov1alpha1.AviClusterLabel, true)
 
 				//Reconcile -> reconcileNormal -> reconcileClusters(normal phase) -> addClusterFinalizer
 				By("should add Cluster Finalizer")
@@ -474,6 +582,34 @@ func intgTestAkoDeploymentConfigController() {
 						})
 					})
 
+					When("cluster has avi-delete-config label", func() {
+						It("AddOnSecret disableConfig must be true when avi-delete-config label is set", func() {
+							latestCluster := &clusterv1.Cluster{}
+							err := getCluster(latestCluster, cluster.Name, cluster.Namespace)
+							Expect(err).To(BeNil())
+							latestCluster.Labels[akoov1alpha1.AviClusterDeleteConfigLabel] = "true"
+							updateObjects(latestCluster)
+
+							ensureAKOAddOnSecretDeleteConfigMatchExpectation(client.ObjectKey{
+								Name:      cluster.Name + "-load-balancer-and-ingress-service-addon",
+								Namespace: cluster.Namespace,
+							}, true)
+						})
+
+						It("AddonSecret disableConfig must be false when avi-delete-config label is unset", func() {
+							latestCluster := &clusterv1.Cluster{}
+							err := getCluster(latestCluster, cluster.Name, cluster.Namespace)
+							Expect(err).To(BeNil())
+							delete(latestCluster.Labels, akoov1alpha1.AviClusterDeleteConfigLabel)
+							updateObjects(latestCluster)
+
+							ensureAKOAddOnSecretDeleteConfigMatchExpectation(client.ObjectKey{
+								Name:      cluster.Name + "-load-balancer-and-ingress-service-addon",
+								Namespace: cluster.Namespace,
+							}, false)
+						})
+					})
+
 					When("the cluster is being deleted ", func() {
 						When("the cluster is ready", func() {
 							BeforeEach(func() {
@@ -543,7 +679,7 @@ func intgTestAkoDeploymentConfigController() {
 							ensureClusterAviLabelMatchExpectation(client.ObjectKey{
 								Name:      cluster.Name,
 								Namespace: cluster.Namespace,
-							}, false)
+							}, akoov1alpha1.AviClusterLabel, false)
 						})
 						//Reconcile -> reconcileDelete -> reconcileClusters(normal phase) -> r.reconcileClustersDelete -> r.removeClusterFinalizer
 						It("should remove Cluster Finalizer", func() {
@@ -577,6 +713,49 @@ func intgTestAkoDeploymentConfigController() {
 								Namespace: cluster.Namespace,
 							}, &corev1.Secret{}, false)
 						})
+					})
+				})
+			})
+			When("there is default ADC install-ako-for-all", func() {
+				BeforeEach(func() {
+					createObjects(defaultAkoDeploymentConfig)
+					ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+						Name: akoov1alpha1.WorkloadClusterAkoDeploymentConfig,
+					}, &akoov1alpha1.AKODeploymentConfig{}, true)
+				})
+
+				AfterEach(func() {
+					deleteObjects(defaultAkoDeploymentConfig)
+					ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+						Name: akoov1alpha1.WorkloadClusterAkoDeploymentConfig,
+					}, &akoov1alpha1.AKODeploymentConfig{}, false)
+				})
+
+				It("is selected by a customized ADC", func() {
+					ensureClusterAviLabelMatchExpectation(client.ObjectKey{
+						Name:      cluster.Name,
+						Namespace: cluster.Namespace,
+					}, akoov1alpha1.AviClusterSelectedLabel, true)
+				})
+
+				When("no longer selected by a customized ADC", func() {
+					BeforeEach(func() {
+						latestCluster := &clusterv1.Cluster{}
+						Expect(getCluster(latestCluster, cluster.Name, cluster.Namespace)).To(BeNil())
+						delete(latestCluster.Labels, "test")
+						updateObjects(latestCluster)
+
+						ensureClusterAviLabelMatchExpectation(client.ObjectKey{
+							Name:      cluster.Name,
+							Namespace: cluster.Namespace,
+						}, "test", false)
+					})
+
+					It("should drop the skip-default-adc label (AviClusterSelectedLabel)", func() {
+						ensureClusterAviLabelMatchExpectation(client.ObjectKey{
+							Name:      cluster.Name,
+							Namespace: cluster.Namespace,
+						}, akoov1alpha1.AviClusterSelectedLabel, false)
 					})
 				})
 			})

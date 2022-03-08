@@ -5,10 +5,12 @@ package main
 
 import (
 	"flag"
-	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
 	"net/http"
 	"net/http/pprof"
 	"os"
+
+	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
+	"go.uber.org/zap/zapcore"
 
 	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -31,8 +33,16 @@ var (
 	setupLog = log.Log
 )
 
+func initLog() {
+	f := func(ecfg *zapcore.EncoderConfig) {
+		ecfg.EncodeTime = zapcore.ISO8601TimeEncoder
+	}
+	ctrl.SetLogger(zap.New(zap.UseDevMode(true),
+		zap.ConsoleEncoder(zap.EncoderConfigOption(f))))
+}
+
 func init() {
-	log.SetLogger(zap.New())
+	initLog()
 	// ignoring errors
 	_ = clientgoscheme.AddToScheme(scheme)
 	_ = clusterv1.AddToScheme(scheme)
@@ -48,10 +58,6 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false, "Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&profilerAddress, "profiler-addr", "", "Bind address to expose the pprof profiler")
 	flag.Parse()
-
-	ctrl.SetLogger(zap.New(func(o *zap.Options) {
-		o.Development = true
-	}))
 
 	if profilerAddress != "" {
 		setupLog.Info(

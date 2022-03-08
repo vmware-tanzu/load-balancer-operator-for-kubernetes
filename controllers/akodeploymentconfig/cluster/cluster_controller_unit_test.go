@@ -22,6 +22,7 @@ loadBalancerAndIngressService:
     name: ako--test-cluster
     namespace: avi-system
     config:
+        tkg_cluster_role: workload
         is_cluster_service: ""
         replica_count: 1
         ako_settings:
@@ -74,8 +75,8 @@ loadBalancerAndIngressService:
             value: ""
         resources:
             limits:
-                cpu: 250m
-                memory: 300Mi
+                cpu: 350m
+                memory: 400Mi
             request:
                 cpu: 100m
                 memory: 200Mi
@@ -101,7 +102,8 @@ func unitTestAKODeploymentYaml() {
 		BeforeEach(func() {
 			capicluster = &clusterv1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-cluster",
+					Name:   "test-cluster",
+					Labels: map[string]string{},
 				},
 			}
 		})
@@ -192,6 +194,55 @@ func unitTestAKODeploymentYaml() {
 				secretData, err := values.YttYaml()
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(secretData).Should(ContainSubstring("delete_config: \"true\""))
+			})
+
+			When("cluster has avi_delete_config label", func() {
+				BeforeEach(func() {
+					capicluster.Labels[akoov1alpha1.AviClusterDeleteConfigLabel] = "true"
+				})
+
+				It("deleteConfig True in add_on_secret when cluster has avi_delete_config label set to true", func() {
+					secretData, err := cluster.AkoAddonSecretDataYaml(capicluster, akoDeploymentConfig, aviUserSecret)
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(secretData).Should(ContainSubstring("delete_config: \"true\""))
+				})
+
+				It("deleteConfig False in add_on_secret when cluster has avi_delete_config label set to false", func() {
+					capicluster.Labels[akoov1alpha1.AviClusterDeleteConfigLabel] = "false"
+					secretData, err := cluster.AkoAddonSecretDataYaml(capicluster, akoDeploymentConfig, aviUserSecret)
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(secretData).Should(ContainSubstring("delete_config: \"false\""))
+				})
+
+				It("deleteConfig True in add_on_secret when cluster has avi_delete_config label set to true", func() {
+					secretData, err := cluster.AkoAddonSecretDataYaml(capicluster, akoDeploymentConfig, aviUserSecret)
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(secretData).Should(ContainSubstring("delete_config: \"true\""))
+				})
+
+				It("deleteConfig False in add_on_secret when cluster has avi_delete_config label set to false", func() {
+					delete(capicluster.Labels, akoov1alpha1.AviClusterDeleteConfigLabel)
+					secretData, err := cluster.AkoAddonSecretDataYaml(capicluster, akoDeploymentConfig, aviUserSecret)
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(secretData).Should(ContainSubstring("delete_config: \"false\""))
+				})
+
+				When("management cluster has avi_delete_config label", func() {
+					BeforeEach(func() {
+						capicluster.Namespace = akoov1alpha1.TKGSystemNamespace
+					})
+
+					It("deleteConfig always False in add_on_secret", func() {
+						secretData, err := cluster.AkoAddonSecretDataYaml(capicluster, akoDeploymentConfig, aviUserSecret)
+						Expect(err).ShouldNot(HaveOccurred())
+						Expect(secretData).Should(ContainSubstring("delete_config: \"false\""))
+
+						delete(capicluster.Labels, akoov1alpha1.AviClusterDeleteConfigLabel)
+						secretData, err = cluster.AkoAddonSecretDataYaml(capicluster, akoDeploymentConfig, aviUserSecret)
+						Expect(err).ShouldNot(HaveOccurred())
+						Expect(secretData).Should(ContainSubstring("delete_config: \"false\""))
+					})
+				})
 			})
 		})
 	})
