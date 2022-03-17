@@ -6,6 +6,7 @@ package akodeploymentconfig
 import (
 	"bytes"
 	"context"
+	"errors"
 
 	"net"
 	"sort"
@@ -37,7 +38,7 @@ func (r *AKODeploymentConfigReconciler) initAVI(
 	// Lazily initialize aviClient so we don't skip other reconciliations
 	if r.aviClient == nil {
 		var err error
-		r.aviClient, err = aviclient.NewAviClientFromSecrets(r.Client, ctx, log, obj.Spec.Controller,
+		aviclient, err := aviclient.NewAviClientFromSecrets(r.Client, ctx, log, obj.Spec.Controller,
 			obj.Spec.AdminCredentialRef.Name, obj.Spec.AdminCredentialRef.Namespace,
 			obj.Spec.CertificateAuthorityRef.Name, obj.Spec.CertificateAuthorityRef.Namespace)
 
@@ -45,6 +46,7 @@ func (r *AKODeploymentConfigReconciler) initAVI(
 			log.Error(err, "Cannot init AVI clients from secrets")
 			return res, err
 		}
+		r.aviClient = aviclient
 		log.Info("AVI Client initialized successfully")
 	}
 
@@ -126,6 +128,11 @@ func (r *AKODeploymentConfigReconciler) reconcileNetworkSubnets(
 	res := ctrl.Result{}
 
 	log.Info("Start reconciling AVI Network Subnets")
+
+	if r.aviClient == nil {
+		log.Info("AVI client not initialized, requeue")
+		return res, errors.New("AVI client not initialized")
+	}
 
 	network, err := r.aviClient.NetworkGetByName(obj.Spec.DataNetwork.Name)
 	if err != nil {
