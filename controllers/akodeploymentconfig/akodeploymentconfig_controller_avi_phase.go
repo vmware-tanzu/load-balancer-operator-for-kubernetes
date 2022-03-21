@@ -175,13 +175,13 @@ func (r *AKODeploymentConfigReconciler) reconcileNetworkSubnets(
 
 // 	added, err := r.AddUsableNetwork(r.aviClient, obj.Spec.CloudName, obj.Spec.DataNetwork.Name)
 // 	if err != nil {
-// 		log.Error(err, "Failed to add usable network", obj.Spec.DataNetwork.Name)
+// 		log.Error(err, "Failed to add usable network", "network", obj.Spec.DataNetwork.Name)
 // 		return ctrl.Result{}, err
 // 	}
 // 	if added {
-// 		log.Info("Added Usable Network", obj.Spec.DataNetwork.Name)
+// 		log.Info("Added Usable Network", "network", obj.Spec.DataNetwork.Name)
 // 	} else {
-// 		log.Info("Network is already one of the cloud's usable network", obj.Spec.DataNetwork.Name)
+// 		log.Info("Network is already one of the cloud's usable network", "network", obj.Spec.DataNetwork.Name)
 // 	}
 // 	return ctrl.Result{}, nil
 // }
