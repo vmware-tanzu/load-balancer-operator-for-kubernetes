@@ -83,7 +83,7 @@ func ListADCsForCluster(
 			logger.V(3).Info("Cluster selected by non-default AKODeploymentConfig, skip default one")
 			continue
 		} else if selector.Matches(labels.Set(cluster.GetLabels())) {
-			logger.V(3).Info("Found matching AKODeploymentConfig", akoDeploymentConfig.Namespace+"/"+akoDeploymentConfig.Name)
+			logger.V(3).Info("Found matching AKODeploymentConfig", "adc", akoDeploymentConfig.Namespace+"/"+akoDeploymentConfig.Name)
 			adcForCluster = append(adcForCluster, akoDeploymentConfig)
 		}
 	}
