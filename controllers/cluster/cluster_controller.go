@@ -107,7 +107,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ 
 	matchedAkoDeploymentConfigs := make([]akoov1alpha1.AKODeploymentConfig, 0)
 	for _, akoDeploymentConfig := range akoDeploymentConfigs.Items {
 		if selector, err := metav1.LabelSelectorAsSelector(&akoDeploymentConfig.Spec.ClusterSelector); err != nil {
-			log.Error(err, "Failed to convert label sector to selector when matching ", cluster.Name, " with ", akoDeploymentConfig.Name)
+			log.Error(err, "Failed to convert label sector to selector when matching ", "cluster", cluster.Name, " with ", akoDeploymentConfig.Name)
 		} else if selector.Matches(labels.Set(clusterLabels)) {
 			log.Info("Cluster ", cluster.Name, " is selected by", "Akodeploymentconfig", (akoDeploymentConfig.Namespace + "/" + akoDeploymentConfig.Name))
 			matchedAkoDeploymentConfigs = append(matchedAkoDeploymentConfigs, akoDeploymentConfig)
@@ -130,7 +130,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ 
 
 	// Removing add on secret and its associated resources for a AKO
 	if _, err := r.deleteAddonSecret(ctx, log, cluster); err != nil {
-		log.Error(err, "Failed to remove secret", cluster.Name)
+		log.Error(err, "Failed to remove secret", "secret", cluster.Name)
 		return res, err
 	}
 
