@@ -5,12 +5,11 @@ package akodeploymentconfig
 
 import (
 	"context"
-
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/netprovider"
-
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/cluster"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/phases"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/user"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/netprovider"
+	corev1 "k8s.io/api/core/v1"
 
 	controllerruntime "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/controller-runtime"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -39,6 +38,10 @@ func (r *AKODeploymentConfigReconciler) SetupWithManager(mgr ctrl.Manager) error
 		Watches(
 			&source.Kind{Type: &clusterv1.Cluster{}},
 			handler.EnqueueRequestsFromMapFunc(handlers.AkoDeploymentConfigForCluster(r.Client, r.Log)),
+		).
+		Watches(
+			&source.Kind{Type: &corev1.Secret{}},
+			handler.EnqueueRequestsFromMapFunc(handlers.AkoDeploymentConfigForSecret(r.Client, r.Log)),
 		).
 		Complete(r)
 }

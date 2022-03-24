@@ -235,3 +235,7 @@ func (r *realAviClient) VirtualServiceGetByName(name string, options ...session.
 func (r *realAviClient) PoolGetByName(name string, options ...session.ApiOptionsParams) (*models.Pool, error) {
 	return r.Pool.GetByName(name)
 }
+
+func (r *realAviClient) AviCertificateConfig() (string, error) {
+	return r.config.CA, nil
+}

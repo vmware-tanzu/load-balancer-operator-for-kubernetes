@@ -86,6 +86,10 @@ func (r *FakeAviClient) PoolGetByName(name string, options ...session.ApiOptions
 	return r.Pool.GetByName(name)
 }
 
+func (r *FakeAviClient) AviCertificateConfig() (string, error) {
+	return "", nil
+}
+
 // Network Client
 type NetworkClient struct {
 	getByNameFn GetByNameFunc

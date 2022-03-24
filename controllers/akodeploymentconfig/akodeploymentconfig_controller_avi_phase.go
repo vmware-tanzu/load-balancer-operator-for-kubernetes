@@ -14,6 +14,7 @@ import (
 	"github.com/avinetworks/sdk/go/models"
 	"github.com/go-logr/logr"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -28,6 +29,24 @@ import (
 	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
 )
 
+func getAviCAFromADC(c client.Client, ctx context.Context,
+	log logr.Logger, obj *akoov1alpha1.AKODeploymentConfig) (string, error) {
+	aviControllerCA := &corev1.Secret{}
+	if err := c.Get(ctx, client.ObjectKey{
+		Name:      obj.Spec.CertificateAuthorityRef.Name,
+		Namespace: obj.Spec.CertificateAuthorityRef.Namespace,
+	}, aviControllerCA); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Info("Cannot find referenced secret " + obj.Spec.CertificateAuthorityRef.Name + "/" + obj.Spec.CertificateAuthorityRef.Namespace + " requeue the request")
+		} else {
+			log.Error(err, "Failed to find referenced "+obj.Spec.CertificateAuthorityRef.Name+"/"+obj.Spec.CertificateAuthorityRef.Namespace+" Secret")
+		}
+		return "", err
+	}
+
+	return string(aviControllerCA.Data["certificateAuthorityData"][:]), nil
+}
+
 func (r *AKODeploymentConfigReconciler) initAVI(
 	ctx context.Context,
 	log logr.Logger,
@@ -35,10 +54,21 @@ func (r *AKODeploymentConfigReconciler) initAVI(
 ) (ctrl.Result, error) {
 	res := ctrl.Result{}
 
+	var currentCa, newCa string
+
+	if r.aviClient != nil {
+		currentCa, _ = r.aviClient.AviCertificateConfig()
+	}
+	newCa, err := getAviCAFromADC(r.Client, ctx, log, obj)
+	if err != nil {
+		return res, err
+	}
+	reInit := currentCa != newCa
+
 	// Lazily initialize aviClient so we don't skip other reconciliations
-	if r.aviClient == nil {
+	if r.aviClient == nil || reInit {
 		var err error
-		aviclient, err := aviclient.NewAviClientFromSecrets(r.Client, ctx, log, obj.Spec.Controller,
+		r.aviClient, err = aviclient.NewAviClientFromSecrets(r.Client, ctx, log, obj.Spec.Controller,
 			obj.Spec.AdminCredentialRef.Name, obj.Spec.AdminCredentialRef.Namespace,
 			obj.Spec.CertificateAuthorityRef.Name, obj.Spec.CertificateAuthorityRef.Namespace)
 
@@ -46,11 +76,10 @@ func (r *AKODeploymentConfigReconciler) initAVI(
 			log.Error(err, "Cannot init AVI clients from secrets")
 			return res, err
 		}
-		r.aviClient = aviclient
 		log.Info("AVI Client initialized successfully")
 	}
 
-	if r.userReconciler == nil {
+	if r.userReconciler == nil || reInit {
 		r.userReconciler = user.NewProvider(r.Client, r.aviClient, r.Log, r.Scheme)
 		log.Info("Ako User Reconciler initialized")
 	}
