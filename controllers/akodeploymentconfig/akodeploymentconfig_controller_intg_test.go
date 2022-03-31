@@ -43,8 +43,8 @@ func intgTestAkoDeploymentConfigController() {
 		staticControllerCA               *corev1.Secret
 		testLabels                       map[string]string
 		err                              error
-		aviInfraSettingName	             string
-		serviceName string
+		aviInfraSettingName              string
+		serviceName                      string
 
 		networkUpdate        *models.Network
 		userUpdateCalled     bool
@@ -121,7 +121,7 @@ func intgTestAkoDeploymentConfigController() {
 		},
 		Type: "Opaque",
 		Data: map[string][]byte{
-			"certificateAuthorityData": []byte("-----BEGIN CERTIFICATE-----MIICxzCCAa+gAwIBAgIUWxv6EsFnaXvTF4Lbwk9BucKJhgowDQYJKoZIhvcNAQELBQAwEzERMA8GA1UEAwwIZTJlLXRlc3QwHhcNMjEwMjE2MjAzNTU1WhcNMjIwMjE2MjAzNTU1WjATMREwDwYDVQQDDAhlMmUtdGVzdDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALxAXjEjZvandPgciqEerY7ptVqzdPIP0MHFA/ky0e7NVszgjHj5OcWAPnPD11p0zkR1tXknJRSJOeJnbJLNWTF5ApsOZWP9tUHt+TmvA3hVKZQiFb79VlF/VaVdJPb9vMYFjJyAlZj6rH8HABQ/Y9ysUozVaFaIMcx4sdIWxG0eGfmFT1Yrh1yZGnf0pESfcx4IzFZmQQIRvqKHZToaQEGX6T6oisM37qdrbWmPdQF2S3aFyoW/lDEqoVNJ5pzDdbTOf4CaqaPsNXbhQFF6LX2Q9kAnltwLxcdVN+KvN3Hqgif0jokEqmojhSK/bCatesMwImTmaYKG2+lK9dHbUCMCAwEAAaMTMBEwDwYDVR0RBAgwBocECqFgVTANBgkqhkiG9w0BAQsFAAOCAQEAcvgfGtVc9416oPbI7e11Kufy3DptOsMjFz7S5W1ifhDfRseEpv1oVgg4+qFVVBMyQgfH1DZ985TbwsozGCib4cU00/Tk7aoFy5TNC2xP8XJgJb5TDC4EaISgR2GPDsIW+BqkYX5jCDEMqnlGJBjG6V/z5OhqWUFZmb5Ly5qjxqt6JBP+E/z5fnZquFFNjhGIgnlpQDF6plKzYnJy5d3Yc5EurmYOmoQ/7gX/Sv6RTbha4UnQh4LsURT/sBurMW3fFdZsD5cH0t8SgxOeqsDa8YSr2T74BRm5rqKRGgX5Rz0TBJ9m6ViO3VwBceJFd2O/Gd6ElhJ81SM0lOp/jf5Hlg==-----END CERTIFICATE-----"),
+			"certificateAuthorityData": []byte(""),
 		},
 	}
 
@@ -345,6 +345,7 @@ func intgTestAkoDeploymentConfigController() {
 				Namespace: cluster.Namespace,
 			}, &clusterv1.Cluster{}, false)
 			deleteObjects(akoDeploymentConfig)
+			deleteObjects(controllerCredentials, controllerCA)
 			ensureRuntimeObjectMatchExpectation(client.ObjectKey{
 				Name: akoDeploymentConfig.Name,
 			}, &akoov1alpha1.AKODeploymentConfig{}, false)
@@ -353,10 +354,10 @@ func intgTestAkoDeploymentConfigController() {
 		})
 		It("shouldn't wait AIS if controlplane and dataplane has the same CIDR", func() {
 			akoDeploymentConfig.Spec.ControlPlaneNetwork.CIDR = akoDeploymentConfig.Spec.DataNetwork.CIDR
-			createObjects(akoDeploymentConfig, cluster)
+			createObjects(akoDeploymentConfig, cluster, controllerCredentials, controllerCA)
 			aviInfraSettingName = akoDeploymentConfig.Name + "-ais"
 			ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-				Name:      aviInfraSettingName,
+				Name: aviInfraSettingName,
 			}, &akov1alpha1.AviInfraSetting{}, true)
 
 			service := &corev1.Service{}
@@ -369,10 +370,10 @@ func intgTestAkoDeploymentConfigController() {
 
 		})
 		It("should wait AIS before adding annotation to service", func() {
-			createObjects(akoDeploymentConfig, cluster)
+			createObjects(akoDeploymentConfig, cluster, controllerCredentials, controllerCA)
 			aviInfraSettingName = akoDeploymentConfig.Name + "-ais"
 			ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-				Name:      aviInfraSettingName,
+				Name: aviInfraSettingName,
 			}, &akov1alpha1.AviInfraSetting{}, true)
 
 			service := &corev1.Service{}

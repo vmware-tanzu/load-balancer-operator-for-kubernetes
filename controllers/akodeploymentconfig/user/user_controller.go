@@ -222,6 +222,13 @@ func (r *AkoUserReconciler) reconcileAviUserNormal(
 				log.Error(err, "Failed to get cluster avi user secret, requeue")
 				return res, err
 			}
+		} else {
+			// controller certificate can be updated by the user
+			mcSecret.Data[akoov1alpha1.AviCertificateKey] = []byte(aviCA)
+			if err := r.Client.Update(ctx, mcSecret); err != nil {
+				log.Error(err, "Failed to update avi-credentials secret, requeue")
+				return res, err
+			}
 		}
 
 		// Use the value from the management cluster

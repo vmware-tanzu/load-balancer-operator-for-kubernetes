@@ -29,4 +29,6 @@ type Client interface {
 	VirtualServiceGetByName(name string, options ...session.ApiOptionsParams) (*models.VirtualService, error)
 
 	PoolGetByName(name string, options ...session.ApiOptionsParams) (*models.Pool, error)
+
+	AviCertificateConfig() (string, error)
 }
