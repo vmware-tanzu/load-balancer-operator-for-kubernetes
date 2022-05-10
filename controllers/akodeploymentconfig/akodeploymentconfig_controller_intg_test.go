@@ -33,7 +33,6 @@ func intgTestAkoDeploymentConfigController() {
 		ctx                              *builder.IntegrationTestContext
 		cluster                          *clusterv1.Cluster
 		akoDeploymentConfig              *akoov1alpha1.AKODeploymentConfig
-		defaultAkoDeploymentConfig       *akoov1alpha1.AKODeploymentConfig
 		controllerCredentials            *corev1.Secret
 		controllerCA                     *corev1.Secret
 		staticCluster                    *clusterv1.Cluster
@@ -253,7 +252,6 @@ func intgTestAkoDeploymentConfigController() {
 	BeforeEach(func() {
 		ctx = suite.NewIntegrationTestContext()
 		akoDeploymentConfig = staticAkoDeploymentConfig.DeepCopy()
-		defaultAkoDeploymentConfig = staticDefaultAkoDeploymentConfig.DeepCopy()
 		cluster = staticCluster.DeepCopy()
 		cluster.Namespace = ctx.Namespace
 		controllerCredentials = staticControllerCredentials.DeepCopy()
@@ -717,49 +715,80 @@ func intgTestAkoDeploymentConfigController() {
 					})
 				})
 			})
-			When("there is default ADC install-ako-for-all", func() {
-				BeforeEach(func() {
-					createObjects(defaultAkoDeploymentConfig)
-					ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-						Name: akoov1alpha1.WorkloadClusterAkoDeploymentConfig,
-					}, &akoov1alpha1.AKODeploymentConfig{}, true)
-				})
 
-				AfterEach(func() {
-					deleteObjects(defaultAkoDeploymentConfig)
-					ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-						Name: akoov1alpha1.WorkloadClusterAkoDeploymentConfig,
-					}, &akoov1alpha1.AKODeploymentConfig{}, false)
-				})
+			// Tests for adding & removing the networking.tkg.tanzu.vmware.com/avi-skip-default-adc labels
+			// When there is matching cluster for ADC -> and when there is another ADC install-ako-for-all
+			defaultAkoDeploymentConfig := staticDefaultAkoDeploymentConfig.DeepCopy()
+			defaultAkoDeploymentConfigWithNonEmptyClusterSelector := staticDefaultAkoDeploymentConfig.DeepCopy()
+			defaultAkoDeploymentConfigWithNonEmptyClusterSelector.Spec.ClusterSelector = metav1.LabelSelector{
+				MatchLabels: map[string]string{"test": "true"},
+			}
 
-				It("is selected by a customized ADC", func() {
-					ensureClusterAviLabelMatchExpectation(client.ObjectKey{
-						Name:      cluster.Name,
-						Namespace: cluster.Namespace,
-					}, akoov1alpha1.AviClusterSelectedLabel, true)
-				})
+			defaultADCTestCaseInputs := []DefaultADCTestCaseInput{
+				{
+					Name:       "there is default ADC install-ako-for-all",
+					DefaultADC: defaultAkoDeploymentConfig,
+				},
+				{
+					// This test case covers the bug https://github.com/vmware-samples/load-balancer-operator-for-kubernetes/pull/81
+					// The bug was triggerred when the default workload ADC install-ako-for-all has non-empty cluster selector
+					Name:       "there is default ADC with non-empty clusterSelector",
+					DefaultADC: defaultAkoDeploymentConfigWithNonEmptyClusterSelector,
+				},
+			}
 
-				When("no longer selected by a customized ADC", func() {
+			for _, tc := range defaultADCTestCaseInputs {
+				var defaultADC *akoov1alpha1.AKODeploymentConfig
+				When(tc.Name, func() {
 					BeforeEach(func() {
-						latestCluster := &clusterv1.Cluster{}
-						Expect(getCluster(latestCluster, cluster.Name, cluster.Namespace)).To(BeNil())
-						delete(latestCluster.Labels, "test")
-						updateObjects(latestCluster)
-
-						ensureClusterAviLabelMatchExpectation(client.ObjectKey{
-							Name:      cluster.Name,
-							Namespace: cluster.Namespace,
-						}, "test", false)
+						defaultADC = tc.DefaultADC.DeepCopy()
+						createObjects(defaultADC)
+						ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+							Name: akoov1alpha1.WorkloadClusterAkoDeploymentConfig,
+						}, &akoov1alpha1.AKODeploymentConfig{}, true)
 					})
 
-					It("should drop the skip-default-adc label (AviClusterSelectedLabel)", func() {
+					AfterEach(func() {
+						deleteObjects(defaultADC)
+						ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+							Name: akoov1alpha1.WorkloadClusterAkoDeploymentConfig,
+						}, &akoov1alpha1.AKODeploymentConfig{}, false)
+					})
+
+					It("is selected by a customized ADC", func() {
 						ensureClusterAviLabelMatchExpectation(client.ObjectKey{
 							Name:      cluster.Name,
 							Namespace: cluster.Namespace,
-						}, akoov1alpha1.AviClusterSelectedLabel, false)
+						}, akoov1alpha1.AviClusterSelectedLabel, true)
+					})
+
+					When("no longer selected by a customized ADC", func() {
+						BeforeEach(func() {
+							latestCluster := &clusterv1.Cluster{}
+							Expect(getCluster(latestCluster, cluster.Name, cluster.Namespace)).To(BeNil())
+							delete(latestCluster.Labels, "test")
+							updateObjects(latestCluster)
+
+							ensureClusterAviLabelMatchExpectation(client.ObjectKey{
+								Name:      cluster.Name,
+								Namespace: cluster.Namespace,
+							}, "test", false)
+						})
+
+						It("should drop the skip-default-adc label (AviClusterSelectedLabel)", func() {
+							ensureClusterAviLabelMatchExpectation(client.ObjectKey{
+								Name:      cluster.Name,
+								Namespace: cluster.Namespace,
+							}, akoov1alpha1.AviClusterSelectedLabel, false)
+						})
 					})
 				})
-			})
+			}
 		})
 	})
+}
+
+type DefaultADCTestCaseInput struct {
+	Name       string                            // test case name
+	DefaultADC *akoov1alpha1.AKODeploymentConfig // default ADC input
 }
