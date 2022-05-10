@@ -6,12 +6,10 @@ package akodeploymentconfig
 import (
 	"context"
 
+	"github.com/go-logr/logr"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/cluster"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/phases"
 	controllerruntime "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/controller-runtime"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/go-logr/logr"
 
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -93,12 +91,9 @@ func (r *AKODeploymentConfigReconciler) applyClusterLabel(
 	} else {
 		log.Info("Label already applied to cluster", "label", akoov1alpha1.AviClusterLabel)
 	}
-	selector, err := metav1.LabelSelectorAsSelector(&obj.Spec.ClusterSelector)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	// cluster selected by AKODeploymentConfig with selectors
-	if !selector.Empty() {
+	// When the cluster is selected by this AKODeploymentConfig, but its is not install-ako-for-all,
+	// this indicates that the cluster is managed by a customized ADC and the default ADC shall be skipped.
+	if obj.Name != akoov1alpha1.WorkloadClusterAkoDeploymentConfig {
 		cluster.Labels[akoov1alpha1.AviClusterSelectedLabel] = ""
 	}
 	// Always set avi label on managed cluster

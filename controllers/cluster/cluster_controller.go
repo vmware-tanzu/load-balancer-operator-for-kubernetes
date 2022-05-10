@@ -114,13 +114,16 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ 
 		}
 	}
 
+	// When the cluster is not selected or only selected by the default ADC, a.k.a. install-ako-for-all
+	// We drop its skip-default-adc label, allowing cluster to use default ADC's config.
+	// It happens when a cluster is no longer selected by a customized ADC
+	if len(matchedAkoDeploymentConfigs) == 0 ||
+		(len(matchedAkoDeploymentConfigs) == 1 && matchedAkoDeploymentConfigs[0].Name == akoov1alpha1.WorkloadClusterAkoDeploymentConfig) {
+		delete(cluster.Labels, akoov1alpha1.AviClusterSelectedLabel)
+	}
+
+	// If the cluster is selected by some AKODeploymentConfig objects, skip removing the finalizer
 	if len(matchedAkoDeploymentConfigs) > 0 {
-		// When the cluster is only selected by the default ADC, a.k.a. install-ako-for-all
-		// We drop its skip-default-adc label so that the cluster can be selected by the default ADC
-		// It happens when a cluster is no longer selected by a customized ADC
-		if len(matchedAkoDeploymentConfigs) == 1 && matchedAkoDeploymentConfigs[0].Name == akoov1alpha1.WorkloadClusterAkoDeploymentConfig {
-			delete(cluster.Labels, akoov1alpha1.AviClusterSelectedLabel)
-		}
 		return res, nil
 	}
 
