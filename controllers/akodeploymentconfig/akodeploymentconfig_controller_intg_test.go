@@ -4,8 +4,6 @@
 package akodeploymentconfig_test
 
 import (
-	"github.com/avinetworks/sdk/go/models"
-	"github.com/avinetworks/sdk/go/session"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
@@ -13,6 +11,8 @@ import (
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako"
 	controllerruntime "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/controller-runtime"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/builder"
+	"github.com/vmware/alb-sdk/go/models"
+	"github.com/vmware/alb-sdk/go/session"
 	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
 	"os"
 

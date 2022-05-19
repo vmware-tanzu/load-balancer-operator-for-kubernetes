@@ -6,12 +6,12 @@ package user
 import (
 	"context"
 
-	"github.com/avinetworks/sdk/go/models"
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/aviclient"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/utils"
+	"github.com/vmware/alb-sdk/go/models"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

@@ -5,12 +5,12 @@ package configmap_test
 
 import (
 	"fmt"
-	"github.com/avinetworks/sdk/go/models"
-	"github.com/avinetworks/sdk/go/session"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
 	testutil "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/util"
+	"github.com/vmware/alb-sdk/go/models"
+	"github.com/vmware/alb-sdk/go/session"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
