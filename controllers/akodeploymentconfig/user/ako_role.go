@@ -4,7 +4,7 @@
 package user
 
 import (
-	"github.com/avinetworks/sdk/go/models"
+	"github.com/vmware/alb-sdk/go/models"
 	"k8s.io/utils/pointer"
 )
 

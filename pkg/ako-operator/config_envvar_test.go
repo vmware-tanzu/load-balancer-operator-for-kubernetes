@@ -4,10 +4,10 @@
 package ako_operator
 
 import (
-	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
-	"os"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"os"
 )
 
 var _ = Describe("AKO Operator", func() {

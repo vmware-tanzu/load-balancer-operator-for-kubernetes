@@ -46,7 +46,7 @@ func GetControlPlaneEndpointPort() int32 {
 
 func GetAVIControllerVersion() string {
 	version, set := os.LookupEnv(AVIControllerVersion)
-	if set && version != ""{
+	if set && version != "" {
 		return version
 	}
 	return akoov1alpha1.AVI_VERSION

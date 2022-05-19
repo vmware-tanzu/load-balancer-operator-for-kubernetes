@@ -4,8 +4,8 @@
 package aviclient
 
 import (
-	"github.com/avinetworks/sdk/go/models"
-	"github.com/avinetworks/sdk/go/session"
+	"github.com/vmware/alb-sdk/go/models"
+	"github.com/vmware/alb-sdk/go/session"
 )
 
 // FakeAviClient -- an API Client for Avi Controller for intg test of AkoDeploymentConfig

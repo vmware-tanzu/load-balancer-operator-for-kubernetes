@@ -3,8 +3,8 @@
 package aviclient
 
 import (
-	"github.com/avinetworks/sdk/go/models"
-	"github.com/avinetworks/sdk/go/session"
+	"github.com/vmware/alb-sdk/go/models"
+	"github.com/vmware/alb-sdk/go/session"
 )
 
 type Client interface {
