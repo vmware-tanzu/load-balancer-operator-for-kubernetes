@@ -2,6 +2,8 @@
 
 ## Install
 
+The Makefile target `deploy-ako-operator` deploys the manager of the load balancer operator.
+
 ```bash
 make deploy-ako-operator
 ```
@@ -10,17 +12,20 @@ make deploy-ako-operator
 
 ### Setup
 
-Creating a CAPD based testing environment
+Create a CAPD based testing environment with the script `e2e.sh`. This program deploys a local test environment using
+Kind and the Cluster API provider for Docker (CAPD).
 
 ```bash
 make ytt
 hack/e2e.sh -u
 ```
 
-This will create a management cluster and a workload cluster locally in Docker
+This will also create a management cluster and a workload cluster locally in Docker
 for you.
 
 ### Run against the mangement cluster
+
+Use `make install` to install the AKODeploymentConfig CRD to the cluster.
 
 ```bash
 # Set current kubectl context to the local management cluster
@@ -30,7 +35,7 @@ make install
 
 ```
 
-Run as a binary
+Run as a binary locally outside the cluster.
 
 ```bash
 # Set the default kubeconfig to point to the kind
@@ -45,7 +50,7 @@ go build -o bin/manager main.go
 ./bin/manager
 ```
 
-Run in the kind management cluster as a Deployment
+Alternatively, you can run in the kind management cluster as a Deployment
 
 ```bash
 # Build docker image
@@ -63,6 +68,9 @@ make deploy
 ```
 
 ### AKODeploymentConfig
+
+AKODeploymentConfig is a Custom Resource to configure how the load balancer operator should manage the load balancer and
+ingress resources.
 
 Deploy a AKODeploymentConfig to install AKO automatically in the
 workload cluster.
