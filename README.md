@@ -11,9 +11,9 @@ Load Balancer Operator for Kubernetes is a Cluster API speaking operator for loa
 ## Features
 
 1. It reconciles Cluster API objects and provisions Service type LoadBalancer for control plane Machines to achieve HA.
-2. It leverages [Carvel Packaging APIs](https://carvel.dev/kapp-controller/docs/latest/packaging) to lifecycle manage load balancer provider operator. Currently, we now support VMware's [NSX-T Advanced LB Kubernetes Operator](https://github.com/vmware/load-balancer-and-ingress-services-for-kubernetes) as a reference implementation.
+2. It leverages [Carvel Packaging APIs](https://carvel.dev/kapp-controller/docs/latest/packaging) to lifecycle manage load balancer provider operator. Currently, we now support VMware's [NSX Advanced Load Balancer Kubernetes Operator](https://github.com/vmware/load-balancer-and-ingress-services-for-kubernetes) as a reference implementation.
 3. It bridges [Cluster API](https://cluster-api.sigs.k8s.io/) and load balancer provider operator to ensure load balancer resources are cleaned up when cluster is deleted.
-4. For the NSX-T Advanced Load Balancer operator, it also automates the user account creation and injection per cluster.
+4. For the NSX Advanced Load Balancer operator, it also automates the user account creation and injection per cluster.
 
 ## Contributing
 
