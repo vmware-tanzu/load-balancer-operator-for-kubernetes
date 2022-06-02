@@ -687,13 +687,6 @@ func intgTestAkoDeploymentConfigController() {
 								Namespace: cluster.Namespace,
 							}, false)
 						})
-						//Reconcile -> reconcileDelete -> reconcileClusters(normal phase) -> r.reconcileClustersDelete -> r.clusterReconciler.ReconcileAddonSecretDelete
-						It("should remove add-on secret", func() {
-							ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-								Name:      cluster.Name + "-load-balancer-and-ingress-service-addon",
-								Namespace: cluster.Namespace,
-							}, &corev1.Secret{}, false)
-						})
 					})
 
 					When("the cluster is being deleted ", func() {
@@ -703,14 +696,6 @@ func intgTestAkoDeploymentConfigController() {
 								Name:      cluster.Name,
 								Namespace: cluster.Namespace,
 							}, &clusterv1.Cluster{}, false)
-						})
-
-						//Reconcile -> reconcileDelete -> r.reconcileClustersDelete -> r.clusterReconciler.ReconcileAddonSecretDelete
-						It("should remove Cluster Add-on Secret", func() {
-							ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-								Name:      cluster.Name + "-load-balancer-and-ingress-service-addon",
-								Namespace: cluster.Namespace,
-							}, &corev1.Secret{}, false)
 						})
 					})
 				})
