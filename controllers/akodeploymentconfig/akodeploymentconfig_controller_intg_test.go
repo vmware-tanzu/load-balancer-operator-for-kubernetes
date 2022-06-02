@@ -4,6 +4,8 @@
 package akodeploymentconfig_test
 
 import (
+	"os"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
@@ -14,7 +16,6 @@ import (
 	"github.com/vmware/alb-sdk/go/models"
 	"github.com/vmware/alb-sdk/go/session"
 	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
-	"os"
 
 	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 	corev1 "k8s.io/api/core/v1"
@@ -687,13 +688,6 @@ func intgTestAkoDeploymentConfigController() {
 								Namespace: cluster.Namespace,
 							}, false)
 						})
-						//Reconcile -> reconcileDelete -> reconcileClusters(normal phase) -> r.reconcileClustersDelete -> r.clusterReconciler.ReconcileAddonSecretDelete
-						It("should remove add-on secret", func() {
-							ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-								Name:      cluster.Name + "-load-balancer-and-ingress-service-addon",
-								Namespace: cluster.Namespace,
-							}, &corev1.Secret{}, false)
-						})
 					})
 
 					When("the cluster is being deleted ", func() {
@@ -703,14 +697,6 @@ func intgTestAkoDeploymentConfigController() {
 								Name:      cluster.Name,
 								Namespace: cluster.Namespace,
 							}, &clusterv1.Cluster{}, false)
-						})
-
-						//Reconcile -> reconcileDelete -> r.reconcileClustersDelete -> r.clusterReconciler.ReconcileAddonSecretDelete
-						It("should remove Cluster Add-on Secret", func() {
-							ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-								Name:      cluster.Name + "-load-balancer-and-ingress-service-addon",
-								Namespace: cluster.Namespace,
-							}, &corev1.Secret{}, false)
 						})
 					})
 				})

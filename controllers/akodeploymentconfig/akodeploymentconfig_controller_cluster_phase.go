@@ -43,7 +43,6 @@ func (r *AKODeploymentConfigReconciler) reconcileClusters(
 			r.ClusterReconciler.ReconcileAddonSecret,
 		},
 		[]phases.ReconcileClusterPhase{
-			r.ClusterReconciler.ReconcileAddonSecretDelete,
 			r.ClusterReconciler.ReconcileDelete,
 		},
 	)
@@ -66,10 +65,8 @@ func (r *AKODeploymentConfigReconciler) reconcileClustersDelete(
 		[]phases.ReconcileClusterPhase{
 			r.removeClusterLabel,
 			r.removeClusterFinalizer,
-			r.ClusterReconciler.ReconcileAddonSecretDelete,
 		},
 		[]phases.ReconcileClusterPhase{
-			r.ClusterReconciler.ReconcileAddonSecretDelete,
 			r.ClusterReconciler.ReconcileDelete,
 		},
 	)
