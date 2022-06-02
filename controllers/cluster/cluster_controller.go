@@ -131,46 +131,8 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ 
 	log.Info("Removing finalizer", "finalizer", akoov1alpha1.ClusterFinalizer)
 	ctrlutil.RemoveFinalizer(cluster, akoov1alpha1.ClusterFinalizer)
 
-	// Removing add on secret and its associated resources for a AKO
-	if _, err := r.deleteAddonSecret(ctx, log, cluster); err != nil {
-		log.Error(err, "Failed to remove secret", "secret", cluster.Name)
-		return res, err
-	}
-
 	// Removing avi label after deleting all the resources
 	delete(cluster.Labels, akoov1alpha1.AviClusterLabel)
 
 	return res, nil
-}
-
-// deleteAddonSecret delete cluster related add on secret
-func (r *ClusterReconciler) deleteAddonSecret(
-	ctx context.Context,
-	log logr.Logger,
-	cluster *clusterv1.Cluster,
-) (ctrl.Result, error) {
-	log.Info("Starts reconciling add on secret deletion")
-	res := ctrl.Result{}
-	secret := &corev1.Secret{}
-	if err := r.Get(ctx, client.ObjectKey{
-		Name:      r.akoAddonSecretName(cluster),
-		Namespace: cluster.Namespace,
-	}, secret); err != nil {
-		if apierrors.IsNotFound(err) {
-			log.V(3).Info("add on secret is already deleted")
-			return res, nil
-		}
-		log.Error(err, "Failed to get add on secret, requeue")
-		return res, err
-	}
-
-	if err := r.Delete(ctx, secret); err != nil {
-		log.Error(err, "Failed to delete add on secret, requeue")
-		return res, err
-	}
-	return res, nil
-}
-
-func (r *ClusterReconciler) akoAddonSecretName(cluster *clusterv1.Cluster) string {
-	return cluster.Name + "-load-balancer-and-ingress-service-addon"
 }
