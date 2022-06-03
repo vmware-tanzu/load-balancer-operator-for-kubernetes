@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
-	handlers "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/controller-runtime/handlers"
+	handlers "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/handlers"
 )
 
 // ReconcilePhase defines a function that reconciles one aspect of

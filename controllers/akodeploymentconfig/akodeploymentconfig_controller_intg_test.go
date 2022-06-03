@@ -4,23 +4,23 @@
 package akodeploymentconfig_test
 
 import (
+	"os"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
 	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako"
-	controllerruntime "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/controller-runtime"
+	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/builder"
 	"github.com/vmware/alb-sdk/go/models"
 	"github.com/vmware/alb-sdk/go/session"
 	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
-	"os"
-
-	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	kcfg "sigs.k8s.io/cluster-api/util/kubeconfig"
+	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -160,11 +160,11 @@ func intgTestAkoDeploymentConfigController() {
 			}
 			finalizer := akoov1alpha1.AkoDeploymentConfigFinalizer
 			if expectReconciled {
-				if !controllerruntime.ContainsFinalizer(obj, finalizer) {
+				if !ctrlutil.ContainsFinalizer(obj, finalizer) {
 					return false
 				}
 			} else {
-				if controllerruntime.ContainsFinalizer(obj, finalizer) {
+				if ctrlutil.ContainsFinalizer(obj, finalizer) {
 					return false
 				}
 			}
@@ -179,7 +179,7 @@ func intgTestAkoDeploymentConfigController() {
 				return false
 			}
 			finalizer := akoov1alpha1.ClusterFinalizer
-			return controllerruntime.ContainsFinalizer(obj, finalizer) == expect
+			return ctrlutil.ContainsFinalizer(obj, finalizer) == expect
 		}).Should(BeTrue())
 	}
 	ensureRuntimeObjectMatchExpectation := func(key client.ObjectKey, obj client.Object, expect bool) {

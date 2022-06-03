@@ -8,7 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/controller-runtime/handlers"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/handlers"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/handler"

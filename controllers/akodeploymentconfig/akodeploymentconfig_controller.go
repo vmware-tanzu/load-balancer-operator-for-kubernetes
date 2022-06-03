@@ -5,13 +5,13 @@ package akodeploymentconfig
 
 import (
 	"context"
+
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/cluster"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/phases"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/user"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/netprovider"
 	corev1 "k8s.io/api/core/v1"
 
-	controllerruntime "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/controller-runtime"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/go-logr/logr"
@@ -28,7 +28,7 @@ import (
 
 	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/aviclient"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/controller-runtime/handlers"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/handlers"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
@@ -122,7 +122,7 @@ func (r *AKODeploymentConfigReconciler) reconcileNormal(
 	log logr.Logger,
 	obj *akoov1alpha1.AKODeploymentConfig,
 ) (ctrl.Result, error) {
-	if !controllerruntime.ContainsFinalizer(obj, akoov1alpha1.AkoDeploymentConfigFinalizer) {
+	if !ctrlutil.ContainsFinalizer(obj, akoov1alpha1.AkoDeploymentConfigFinalizer) {
 		log.Info("Add finalizer", "finalizer", akoov1alpha1.AkoDeploymentConfigFinalizer)
 		// The finalizer must be present before proceeding in order to ensure that all avi user account
 		// resources are released when the interface is destroyed. Return immediately after here to let the
@@ -139,7 +139,7 @@ func (r *AKODeploymentConfigReconciler) reconcileDelete(
 	obj *akoov1alpha1.AKODeploymentConfig,
 ) (res ctrl.Result, reterr error) {
 	// Directly return if there is no finalizer
-	if !controllerruntime.ContainsFinalizer(obj, akoov1alpha1.AkoDeploymentConfigFinalizer) {
+	if !ctrlutil.ContainsFinalizer(obj, akoov1alpha1.AkoDeploymentConfigFinalizer) {
 		return res, nil
 	}
 
