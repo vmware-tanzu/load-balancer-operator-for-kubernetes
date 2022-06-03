@@ -23,6 +23,7 @@ import (
 
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers"
 
+	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -84,6 +85,15 @@ func main() {
 	if err != nil {
 		setupLog.Error(err, "Unable to setup reconcilers")
 		os.Exit(1)
+	}
+
+	//setup webhook here
+	if !ako_operator.IsBootStrapCluster() {
+		err = (&akoov1alpha1.AKODeploymentConfig{}).SetupWebhookWithManager(mgr)
+		if err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "AKODeploymentConfig")
+			os.Exit(1)
+		}
 	}
 
 	setupLog.Info("starting manager")
