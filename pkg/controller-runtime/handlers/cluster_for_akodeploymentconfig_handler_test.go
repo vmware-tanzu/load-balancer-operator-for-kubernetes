@@ -70,7 +70,7 @@ var _ = Describe("AKODeploymentConfig Cluster Handler", func() {
 		BeforeEach(func() {
 			akodeploymentconfigForAll := &akoov1alpha1.AKODeploymentConfig{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "test",
+					Name: akoov1alpha1.WorkloadClusterAkoDeploymentConfig,
 				},
 				Spec: akoov1alpha1.AKODeploymentConfigSpec{
 					ClusterSelector: metav1.LabelSelector{},
@@ -190,7 +190,7 @@ var _ = Describe("AKODeploymentConfig Cluster Handler", func() {
 			input = cluster
 		})
 		It("should create only one request", func() {
-			Expect(len(requests)).To(Equal(2))
+			Expect(len(requests)).To(Equal(1))
 		})
 	})
 
