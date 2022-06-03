@@ -10,7 +10,7 @@ import (
 	"sync"
 
 	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/controller-runtime/handlers"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/handlers"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/go-logr/logr"

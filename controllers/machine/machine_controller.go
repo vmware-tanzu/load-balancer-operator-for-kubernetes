@@ -11,10 +11,8 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/handlers"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/haprovider"
-
-	controllerruntime "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/controller-runtime"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/controller-runtime/handlers"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -22,6 +20,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -181,7 +180,7 @@ func (r *MachineReconciler) reconcileMachineDeletionHook(
 
 	res := ctrl.Result{}
 
-	if controllerruntime.ContainsFinalizer(cluster, akoov1alpha1.ClusterFinalizer) {
+	if ctrlutil.ContainsFinalizer(cluster, akoov1alpha1.ClusterFinalizer) {
 		log.Info("Cluster has finalizer set. Clean up has not finished. Will skip reconciling", "finalizer", akoov1alpha1.ClusterFinalizer)
 		return res, nil
 	}
