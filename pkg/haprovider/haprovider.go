@@ -10,7 +10,6 @@ import (
 	"sync"
 
 	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/handlers"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/go-logr/logr"
@@ -175,19 +174,14 @@ func (r *HAProvider) annotateService(ctx context.Context, cluster *clusterv1.Clu
 }
 
 func (r *HAProvider) getADCForCluster(ctx context.Context, cluster *clusterv1.Cluster) (*akoov1alpha1.AKODeploymentConfig, error) {
-
-	// TODO(iXinqi): check a cluster should be managed by only one adc
-	adcForCluster, err := handlers.ListADCsForCluster(ctx, cluster, r.log, r.Client)
+	adcForCluster, err := ako_operator.UpdateClusterSelectedADCInfo(ctx, r.Client, r.log, cluster)
 	if err != nil {
 		return nil, err
 	}
-
-	if len(adcForCluster) == 0 {
+	if adcForCluster == nil {
 		r.log.Info("Current cluster is not selected by any akoDeploymentConfig, skip adding AviInfraSetting annotation")
-		return nil, nil
 	}
-
-	return &adcForCluster[0], nil
+	return adcForCluster, nil
 }
 
 func (r *HAProvider) getAviInfraSettingFromAdc(ctx context.Context, adcForCluster *akoov1alpha1.AKODeploymentConfig) (*akov1alpha1.AviInfraSetting, error) {

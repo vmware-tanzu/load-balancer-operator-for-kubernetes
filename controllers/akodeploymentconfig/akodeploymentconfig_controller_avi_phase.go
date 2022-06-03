@@ -22,6 +22,7 @@ import (
 
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/phases"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/user"
+	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/aviclient"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/haprovider"
 
@@ -291,7 +292,7 @@ func (r *AKODeploymentConfigReconciler) reconcileAviInfraSettingDelete(
 	log.Info("Start reconciling AVIInfraSetting Delete")
 
 	// Get the list of clusters managed by the AKODeploymentConfig
-	clusters, err := phases.ListAkoDeplymentConfigDeployedClusters(ctx, r.Client, adc)
+	clusters, err := ako_operator.ListAkoDeplymentConfigSelectClusters(ctx, r.Client, adc)
 	if err != nil {
 		log.Error(err, "Fail to list clusters deployed by current AKODeploymentConfig")
 		return res, err

@@ -66,6 +66,30 @@ func (r *ClusterReconciler) ReconcileAddonSecret(
 	return res, r.Update(ctx, secret)
 }
 
+func (r *ClusterReconciler) ReconcileAddonSecretDelete(
+	ctx context.Context,
+	log logr.Logger,
+	cluster *clusterv1.Cluster,
+	_ *akoov1alpha1.AKODeploymentConfig,
+) (ctrl.Result, error) {
+	log.Info("Starts reconciling add on secret deletion")
+	res := ctrl.Result{}
+
+	secret := &corev1.Secret{}
+	if err := r.Get(ctx, client.ObjectKey{
+		Name:      r.akoAddonSecretName(cluster),
+		Namespace: cluster.Namespace,
+	}, secret); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Info("AKO add on secret already deleted")
+			return res, nil
+		}
+		log.Error(err, "Failed to get AKO Deployment Secret, requeue")
+		return res, err
+	}
+	return res, r.Delete(ctx, secret)
+}
+
 func (r *ClusterReconciler) aviUserSecretName(cluster *clusterv1.Cluster) string {
 	return cluster.Name + "-avi-credentials"
 }

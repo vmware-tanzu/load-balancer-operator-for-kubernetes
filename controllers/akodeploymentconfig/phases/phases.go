@@ -9,7 +9,6 @@ import (
 	"github.com/go-logr/logr"
 
 	"github.com/pkg/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util"
@@ -18,7 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
-	handlers "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/handlers"
+	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 )
 
 // ReconcilePhase defines a function that reconciles one aspect of
@@ -67,7 +66,7 @@ func ReconcileClustersPhases(
 	res := ctrl.Result{}
 
 	// Get the list of clusters managed by the AKODeploymentConfig
-	clusters, err := ListAkoDeplymentConfigDeployedClusters(ctx, client, obj)
+	clusters, err := ako_operator.ListAkoDeplymentConfigSelectClusters(ctx, client, obj)
 	if err != nil {
 		log.Error(err, "Fail to list clusters deployed by current AKODeploymentConfig")
 		return res, err
@@ -126,41 +125,4 @@ func ReconcileClustersPhases(
 	}
 
 	return res, kerrors.NewAggregate(allErrs)
-}
-
-// ListAkoDeplymentConfigDeployedClusters list all clusters enabled current akodeploymentconfig
-func ListAkoDeplymentConfigDeployedClusters(ctx context.Context, kclient client.Client, obj *akoov1alpha1.AKODeploymentConfig) (*clusterv1.ClusterList, error) {
-	selector, err := metav1.LabelSelectorAsSelector(&obj.Spec.ClusterSelector)
-	if err != nil {
-		return nil, err
-	}
-	listOptions := []client.ListOption{
-		client.MatchingLabelsSelector{Selector: selector},
-	}
-	var clusters clusterv1.ClusterList
-	if err := kclient.List(ctx, &clusters, listOptions...); err != nil {
-		return nil, err
-	}
-
-	var newItems []clusterv1.Cluster
-	for _, c := range clusters.Items {
-		if !handlers.SkipCluster(&c) {
-			_, selected := c.Labels[akoov1alpha1.AviClusterSelectedLabel]
-			// when cluster selected by non-default AKODeploymentConfig,
-			// skip default select all AKODeploymentConfig
-			if selector.Empty() && selected {
-				continue
-			}
-			// management cluster can't be selected by other AKODeploymentConfig
-			// instead of management cluster AKODeploymentConfig
-			if c.Namespace == akoov1alpha1.TKGSystemNamespace &&
-				obj.Name != akoov1alpha1.ManagementClusterAkoDeploymentConfig {
-				continue
-			}
-			newItems = append(newItems, c)
-		}
-	}
-	clusters.Items = newItems
-
-	return &clusters, nil
 }
