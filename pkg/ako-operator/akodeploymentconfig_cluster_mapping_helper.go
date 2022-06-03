@@ -32,7 +32,13 @@ func ListAkoDeplymentConfigSelectClusters(ctx context.Context, kclient client.Cl
 	for _, c := range clusters.Items {
 		if !SkipCluster(&c) {
 			adcName, selected := c.Labels[akoov1alpha1.AviClusterLabel]
-			if !selected || adcName != obj.Name {
+			if !selected {
+				continue
+			}
+			// if cluster previously is selected by default adc then it can be override
+			// no matter default adc has selector or not, it has lower priority than customer
+			// newly created adc
+			if adcName != obj.Name && adcName != akoov1alpha1.WorkloadClusterAkoDeploymentConfig {
 				continue
 			}
 			// management cluster can't be selected by other AKODeploymentConfig
@@ -58,6 +64,7 @@ func GetAKODeploymentConfigForCluster(ctx context.Context, kclient client.Client
 		if selector, err := metav1.LabelSelectorAsSelector(&akoDeploymentConfig.Spec.ClusterSelector); err != nil {
 			log.Error(err, "Failed to convert label sector to selector")
 		} else if selector.Empty() {
+			// TODO:(xudongl) add webhook to provent customer to create adc without selector
 			if akoDeploymentConfig.Name == akoov1alpha1.WorkloadClusterAkoDeploymentConfig {
 				log.Info("this is default ako deployment config, it can select all non-selected clusters")
 				adc = &akoDeploymentConfig
@@ -74,6 +81,17 @@ func GetAKODeploymentConfigForCluster(ctx context.Context, kclient client.Client
 	return adc, nil
 }
 
+func UpdateClusterSelectedADCInfo(ctx context.Context, kclient client.Client, log logr.Logger, cluster *clusterv1.Cluster) (adc *akoov1alpha1.AKODeploymentConfig, err error) {
+	adcForCluster, err := GetAKODeploymentConfigForCluster(ctx, kclient, log, cluster)
+	if err != nil || adcForCluster == nil {
+		removeClusterLabel(log, cluster)
+	} else {
+		applyClusterLabel(log, cluster, adcForCluster)
+	}
+	err = kclient.Update(ctx, cluster)
+	return adcForCluster, err
+}
+
 func SkipCluster(cluster *clusterv1.Cluster) bool {
 	// if condition.ready is false and cluster is not being deleted and not bootstrap cluster, skip
 	if conditions.IsFalse(cluster, clusterv1.ReadyCondition) &&
@@ -83,4 +101,27 @@ func SkipCluster(cluster *clusterv1.Cluster) bool {
 		return true
 	}
 	return false
+}
+
+// applyClusterLabel is a reconcileClusterPhase. It applies the AVI label to a Cluster
+func applyClusterLabel(log logr.Logger, cluster *clusterv1.Cluster, obj *akoov1alpha1.AKODeploymentConfig) {
+	if cluster.Labels == nil {
+		cluster.Labels = make(map[string]string)
+	}
+	if _, exists := cluster.Labels[akoov1alpha1.AviClusterLabel]; !exists {
+		log.Info("Adding label to cluster", "label", akoov1alpha1.AviClusterLabel)
+	} else {
+		log.Info("Label already applied to cluster", "label", akoov1alpha1.AviClusterLabel)
+	}
+	// Always set avi label on managed cluster
+	cluster.Labels[akoov1alpha1.AviClusterLabel] = obj.Name
+}
+
+// removeClusterLabel is a reconcileClusterPhase. It removes the AVI label from a Cluster
+func removeClusterLabel(log logr.Logger, cluster *clusterv1.Cluster) {
+	if _, exists := cluster.Labels[akoov1alpha1.AviClusterLabel]; exists {
+		log.Info("Removing label from cluster", "label", akoov1alpha1.AviClusterLabel)
+	}
+	// Always deletes avi label on managed cluster
+	delete(cluster.Labels, akoov1alpha1.AviClusterLabel)
 }

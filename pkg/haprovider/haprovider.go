@@ -174,18 +174,13 @@ func (r *HAProvider) annotateService(ctx context.Context, cluster *clusterv1.Clu
 }
 
 func (r *HAProvider) getADCForCluster(ctx context.Context, cluster *clusterv1.Cluster) (*akoov1alpha1.AKODeploymentConfig, error) {
-
-	// TODO(iXinqi): check a cluster should be managed by only one adc
-	adcForCluster, err := ako_operator.GetAKODeploymentConfigForCluster(ctx, r.Client, r.log, cluster)
+	adcForCluster, err := ako_operator.UpdateClusterSelectedADCInfo(ctx, r.Client, r.log, cluster)
 	if err != nil {
 		return nil, err
 	}
-
 	if adcForCluster == nil {
 		r.log.Info("Current cluster is not selected by any akoDeploymentConfig, skip adding AviInfraSetting annotation")
-		return nil, nil
 	}
-
 	return adcForCluster, nil
 }
 
