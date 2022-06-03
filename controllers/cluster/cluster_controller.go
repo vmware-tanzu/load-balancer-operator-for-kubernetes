@@ -18,8 +18,6 @@ import (
 	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/haprovider"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -90,49 +88,27 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ 
 
 	log = log.WithValues("Cluster", cluster.Namespace+"/"+cluster.Name)
 
-	if _, exist := cluster.Labels[akoov1alpha1.AviClusterLabel]; !exist {
+	adcName, exist := cluster.Labels[akoov1alpha1.AviClusterLabel]
+	if !exist {
 		log.Info("Cluster doesn't have AVI enabled, skip Cluster reconciling")
 		return res, nil
 	}
 
 	log.Info("Cluster has AVI enabled, start Cluster reconciling")
 	// Getting all akodeploymentconfigs
-	var akoDeploymentConfigs akoov1alpha1.AKODeploymentConfigList
-	if err := r.Client.List(ctx, &akoDeploymentConfigs); err != nil {
+	var akoDeploymentConfig akoov1alpha1.AKODeploymentConfig
+
+	if err := r.Client.Get(ctx, client.ObjectKey{Name: adcName}, &akoDeploymentConfig); err == nil {
+		return res, nil
+	} else if apierrors.IsNotFound(err) {
+		// Removing finalizer if current cluster can't be selected by any akoDeploymentConfig
+		log.Info("Removing finalizer", "finalizer", akoov1alpha1.ClusterFinalizer)
+		ctrlutil.RemoveFinalizer(cluster, akoov1alpha1.ClusterFinalizer)
+
+		// Removing avi label after deleting all the resources
+		delete(cluster.Labels, akoov1alpha1.AviClusterLabel)
+		return res, nil
+	} else {
 		return res, err
 	}
-
-	// Matches current cluster with all the akoDeploymentConfigs
-	clusterLabels := cluster.GetLabels()
-	matchedAkoDeploymentConfigs := make([]akoov1alpha1.AKODeploymentConfig, 0)
-	for _, akoDeploymentConfig := range akoDeploymentConfigs.Items {
-		if selector, err := metav1.LabelSelectorAsSelector(&akoDeploymentConfig.Spec.ClusterSelector); err != nil {
-			log.Error(err, "Failed to convert label sector to selector when matching ", "cluster", cluster.Name, " with ", akoDeploymentConfig.Name)
-		} else if selector.Matches(labels.Set(clusterLabels)) {
-			log.Info("Cluster ", cluster.Name, " is selected by", "Akodeploymentconfig", (akoDeploymentConfig.Namespace + "/" + akoDeploymentConfig.Name))
-			matchedAkoDeploymentConfigs = append(matchedAkoDeploymentConfigs, akoDeploymentConfig)
-		}
-	}
-
-	// When the cluster is not selected or only selected by the default ADC, a.k.a. install-ako-for-all
-	// We drop its skip-default-adc label, allowing cluster to use default ADC's config.
-	// It happens when a cluster is no longer selected by a customized ADC
-	if len(matchedAkoDeploymentConfigs) == 0 ||
-		(len(matchedAkoDeploymentConfigs) == 1 && matchedAkoDeploymentConfigs[0].Name == akoov1alpha1.WorkloadClusterAkoDeploymentConfig) {
-		delete(cluster.Labels, akoov1alpha1.AviClusterSelectedLabel)
-	}
-
-	// If the cluster is selected by some AKODeploymentConfig objects, skip removing the finalizer
-	if len(matchedAkoDeploymentConfigs) > 0 {
-		return res, nil
-	}
-
-	// Removing finalizer if current cluster can't be selected by any akoDeploymentConfig
-	log.Info("Removing finalizer", "finalizer", akoov1alpha1.ClusterFinalizer)
-	ctrlutil.RemoveFinalizer(cluster, akoov1alpha1.ClusterFinalizer)
-
-	// Removing avi label after deleting all the resources
-	delete(cluster.Labels, akoov1alpha1.AviClusterLabel)
-
-	return res, nil
 }

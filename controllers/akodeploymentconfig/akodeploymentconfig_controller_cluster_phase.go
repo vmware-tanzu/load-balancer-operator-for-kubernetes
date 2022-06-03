@@ -37,11 +37,11 @@ func (r *AKODeploymentConfigReconciler) reconcileClusters(
 
 	return phases.ReconcileClustersPhases(ctx, r.Client, log, obj,
 		[]phases.ReconcileClusterPhase{
-			r.applyClusterLabel,
 			r.addClusterFinalizer,
 			r.ClusterReconciler.ReconcileAddonSecret,
 		},
 		[]phases.ReconcileClusterPhase{
+			r.ClusterReconciler.ReconcileAddonSecretDelete,
 			r.ClusterReconciler.ReconcileDelete,
 		},
 	)
@@ -62,56 +62,14 @@ func (r *AKODeploymentConfigReconciler) reconcileClustersDelete(
 		// cluster is in normal state, remove the label and finalizer to
 		// stop managing it
 		[]phases.ReconcileClusterPhase{
-			r.removeClusterLabel,
 			r.removeClusterFinalizer,
+			r.ClusterReconciler.ReconcileAddonSecretDelete,
 		},
 		[]phases.ReconcileClusterPhase{
+			r.ClusterReconciler.ReconcileAddonSecretDelete,
 			r.ClusterReconciler.ReconcileDelete,
 		},
 	)
-}
-
-// applyClusterLabel is a reconcileClusterPhase. It applies the AVI label to a
-// Cluster
-func (r *AKODeploymentConfigReconciler) applyClusterLabel(
-	_ context.Context,
-	log logr.Logger,
-	cluster *clusterv1.Cluster,
-	obj *akoov1alpha1.AKODeploymentConfig,
-) (ctrl.Result, error) {
-	if cluster.Labels == nil {
-		cluster.Labels = make(map[string]string)
-	}
-	if _, exists := cluster.Labels[akoov1alpha1.AviClusterLabel]; !exists {
-		log.Info("Adding label to cluster", "label", akoov1alpha1.AviClusterLabel)
-	} else {
-		log.Info("Label already applied to cluster", "label", akoov1alpha1.AviClusterLabel)
-	}
-	// When the cluster is selected by this AKODeploymentConfig, but its is not install-ako-for-all,
-	// this indicates that the cluster is managed by a customized ADC and the default ADC shall be skipped.
-	if obj.Name != akoov1alpha1.WorkloadClusterAkoDeploymentConfig {
-		cluster.Labels[akoov1alpha1.AviClusterSelectedLabel] = ""
-	}
-	// Always set avi label on managed cluster
-	cluster.Labels[akoov1alpha1.AviClusterLabel] = ""
-	return ctrl.Result{}, nil
-}
-
-// removeClusterLabel is a reconcileClusterPhase. It removes the AVI label from a
-// Cluster
-func (r *AKODeploymentConfigReconciler) removeClusterLabel(
-	_ context.Context,
-	log logr.Logger,
-	cluster *clusterv1.Cluster,
-	_ *akoov1alpha1.AKODeploymentConfig,
-) (ctrl.Result, error) {
-	if _, exists := cluster.Labels[akoov1alpha1.AviClusterLabel]; exists {
-		log.Info("Removing label from cluster", "label", akoov1alpha1.AviClusterLabel)
-	}
-	// Always deletes avi label on managed cluster
-	delete(cluster.Labels, akoov1alpha1.AviClusterLabel)
-	delete(cluster.Labels, akoov1alpha1.AviClusterSelectedLabel)
-	return ctrl.Result{}, nil
 }
 
 // addClusterFinalizer is a reconcileClusterPhase. It adds the AVI
