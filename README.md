@@ -6,7 +6,7 @@
 
 - [Quick Start](./docs/quick-start.md)
 
-Load Balancer Operator for Kubernetes is a Cluster API speaking operator for load balancers. It manages the lifecycle of load balancers implementations and provides a cluster control plane high availability interface in the multi-cluster scenario. 
+Load Balancer Operator for Kubernetes is a Cluster API speaking operator for load balancers. It manages the lifecycle of load balancers implementations and provides a cluster control plane high availability interface in the multi-cluster scenario.
 
 ## Features
 

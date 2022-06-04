@@ -9,7 +9,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/cluster"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/phases"
-	controllerruntime "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/controller-runtime"
 
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -81,7 +80,7 @@ func (r *AKODeploymentConfigReconciler) addClusterFinalizer(
 	cluster *clusterv1.Cluster,
 	_ *akoov1alpha1.AKODeploymentConfig,
 ) (ctrl.Result, error) {
-	if !controllerruntime.ContainsFinalizer(cluster, akoov1alpha1.ClusterFinalizer) &&
+	if !ctrlutil.ContainsFinalizer(cluster, akoov1alpha1.ClusterFinalizer) &&
 		cluster.Namespace != akoov1alpha1.TKGSystemNamespace {
 		log.Info("Add finalizer to cluster", "finalizer", akoov1alpha1.ClusterFinalizer)
 		ctrlutil.AddFinalizer(cluster, akoov1alpha1.ClusterFinalizer)
@@ -98,7 +97,7 @@ func (r *AKODeploymentConfigReconciler) removeClusterFinalizer(
 	cluster *clusterv1.Cluster,
 	_ *akoov1alpha1.AKODeploymentConfig,
 ) (ctrl.Result, error) {
-	if controllerruntime.ContainsFinalizer(cluster, akoov1alpha1.ClusterFinalizer) {
+	if ctrlutil.ContainsFinalizer(cluster, akoov1alpha1.ClusterFinalizer) {
 		log.Info("Removing finalizer from cluster", "finalizer", akoov1alpha1.ClusterFinalizer)
 	}
 	ctrlutil.RemoveFinalizer(cluster, akoov1alpha1.ClusterFinalizer)

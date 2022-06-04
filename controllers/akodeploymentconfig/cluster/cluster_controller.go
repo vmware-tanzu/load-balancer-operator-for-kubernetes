@@ -17,7 +17,6 @@ import (
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako"
-	controllerruntime "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/controller-runtime"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -63,7 +62,7 @@ func (r *ClusterReconciler) ReconcileDelete(
 ) (ctrl.Result, error) {
 	res := ctrl.Result{}
 
-	if controllerruntime.ContainsFinalizer(cluster, akoov1alpha1.ClusterFinalizer) {
+	if ctrlutil.ContainsFinalizer(cluster, akoov1alpha1.ClusterFinalizer) {
 		log.Info("Handling deleted Cluster")
 
 		finished, err := r.cleanup(ctx, log, cluster)
