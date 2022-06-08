@@ -17,7 +17,7 @@ import (
 )
 
 // ListAkoDeplymentConfigSelectClusters list all clusters enabled current akodeploymentconfig
-func ListAkoDeplymentConfigSelectClusters(ctx context.Context, kclient client.Client, obj *akoov1alpha1.AKODeploymentConfig) (*clusterv1.ClusterList, error) {
+func ListAkoDeplymentConfigSelectClusters(ctx context.Context, kclient client.Client, log logr.Logger, obj *akoov1alpha1.AKODeploymentConfig) (*clusterv1.ClusterList, error) {
 	selector, err := metav1.LabelSelectorAsSelector(&obj.Spec.ClusterSelector)
 	if err != nil {
 		return nil, err
@@ -32,13 +32,11 @@ func ListAkoDeplymentConfigSelectClusters(ctx context.Context, kclient client.Cl
 	for _, c := range clusters.Items {
 		if !SkipCluster(&c) {
 			adcName, selected := c.Labels[akoov1alpha1.AviClusterLabel]
-			if !selected {
-				continue
-			}
-			// if cluster previously is selected by default adc then it can be override
-			// no matter default adc has selector or not, it has lower priority than customer
-			// newly created adc
-			if adcName != obj.Name && adcName != akoov1alpha1.WorkloadClusterAkoDeploymentConfig {
+			// if cluster previously is selected by other customized adc then it can't be override
+			// but if it is selected by default adc, no matter default adc has selector or not,
+			// it has lower priority than customer newly created adc
+			if selected && adcName != obj.Name &&
+				adcName != akoov1alpha1.WorkloadClusterAkoDeploymentConfig {
 				continue
 			}
 			// management cluster can't be selected by other AKODeploymentConfig
@@ -47,6 +45,11 @@ func ListAkoDeplymentConfigSelectClusters(ctx context.Context, kclient client.Cl
 				obj.Name != akoov1alpha1.ManagementClusterAkoDeploymentConfig {
 				continue
 			}
+			// update cluster corresponding adc label
+			applyClusterLabel(log, &c, obj)
+			if !selected || adcName != obj.Name {
+				_ = kclient.Update(ctx, &c)
+			}
 			newItems = append(newItems, c)
 		}
 	}
@@ -54,20 +57,21 @@ func ListAkoDeplymentConfigSelectClusters(ctx context.Context, kclient client.Cl
 	return &clusters, nil
 }
 
-func GetAKODeploymentConfigForCluster(ctx context.Context, kclient client.Client, log logr.Logger, cluster *clusterv1.Cluster) (adc *akoov1alpha1.AKODeploymentConfig, err error) {
+func GetAKODeploymentConfigForCluster(ctx context.Context, kclient client.Client, log logr.Logger, cluster *clusterv1.Cluster) (*akoov1alpha1.AKODeploymentConfig, error) {
 	var akoDeploymentConfigs akoov1alpha1.AKODeploymentConfigList
 	if err := kclient.List(ctx, &akoDeploymentConfigs, []client.ListOption{}...); err != nil {
 		log.Error(err, "Failed to list all AKODeploymentConfig objects")
 		return nil, err
 	}
+	// find which adc matches current cluster
+	var defaultAdc akoov1alpha1.AKODeploymentConfig
 	for _, akoDeploymentConfig := range akoDeploymentConfigs.Items {
 		if selector, err := metav1.LabelSelectorAsSelector(&akoDeploymentConfig.Spec.ClusterSelector); err != nil {
 			log.Error(err, "Failed to convert label sector to selector")
 		} else if selector.Empty() {
-			// TODO:(xudongl) add webhook to provent customer to create adc without selector
 			if akoDeploymentConfig.Name == akoov1alpha1.WorkloadClusterAkoDeploymentConfig {
-				log.Info("this is default ako deployment config, it can select all non-selected clusters")
-				adc = &akoDeploymentConfig
+				defaultAdc = akoDeploymentConfig
+				log.V(3).Info("this is default ako deployment config, it can select all non-selected clusters", "adc", defaultAdc.Name)
 			} else {
 				err = errors.New("non default AKODeploymentConfig cluster selector must not be empty")
 				log.Error(err, "selector must not be empty")
@@ -78,7 +82,14 @@ func GetAKODeploymentConfigForCluster(ctx context.Context, kclient client.Client
 			return &akoDeploymentConfig, nil
 		}
 	}
-	return adc, nil
+	// only default adc with empty selector will return here
+	if defaultAdc.Name == akoov1alpha1.WorkloadClusterAkoDeploymentConfig {
+		log.Info("cluster got selected by akodeploymentconfig", "adc", defaultAdc.Name)
+		return &defaultAdc, nil
+	}
+
+	log.Info("cluster is not selected by any akodeploymentconfigs")
+	return nil, nil
 }
 
 func UpdateClusterSelectedADCInfo(ctx context.Context, kclient client.Client, log logr.Logger, cluster *clusterv1.Cluster) (adc *akoov1alpha1.AKODeploymentConfig, err error) {
@@ -88,7 +99,6 @@ func UpdateClusterSelectedADCInfo(ctx context.Context, kclient client.Client, lo
 	} else {
 		applyClusterLabel(log, cluster, adcForCluster)
 	}
-	err = kclient.Update(ctx, cluster)
 	return adcForCluster, err
 }
 
@@ -109,9 +119,9 @@ func applyClusterLabel(log logr.Logger, cluster *clusterv1.Cluster, obj *akoov1a
 		cluster.Labels = make(map[string]string)
 	}
 	if _, exists := cluster.Labels[akoov1alpha1.AviClusterLabel]; !exists {
-		log.Info("Adding label to cluster", "label", akoov1alpha1.AviClusterLabel)
+		log.Info("Adding label to cluster", "label", akoov1alpha1.AviClusterLabel, "adc", obj.Name)
 	} else {
-		log.Info("Label already applied to cluster", "label", akoov1alpha1.AviClusterLabel)
+		log.Info("Label already applied to cluster, overriding", "label", akoov1alpha1.AviClusterLabel, "adc", obj.Name)
 	}
 	// Always set avi label on managed cluster
 	cluster.Labels[akoov1alpha1.AviClusterLabel] = obj.Name

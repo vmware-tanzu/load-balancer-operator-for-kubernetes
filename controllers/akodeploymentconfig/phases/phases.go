@@ -66,7 +66,7 @@ func ReconcileClustersPhases(
 	res := ctrl.Result{}
 
 	// Get the list of clusters managed by the AKODeploymentConfig
-	clusters, err := ako_operator.ListAkoDeplymentConfigSelectClusters(ctx, client, obj)
+	clusters, err := ako_operator.ListAkoDeplymentConfigSelectClusters(ctx, client, log, obj)
 	if err != nil {
 		log.Error(err, "Fail to list clusters deployed by current AKODeploymentConfig")
 		return res, err
