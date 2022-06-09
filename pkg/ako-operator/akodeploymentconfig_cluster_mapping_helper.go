@@ -31,23 +31,24 @@ func ListAkoDeplymentConfigSelectClusters(ctx context.Context, kclient client.Cl
 	var newItems []clusterv1.Cluster
 	for _, c := range clusters.Items {
 		if !SkipCluster(&c) {
-			adcName, selected := c.Labels[akoov1alpha1.AviClusterLabel]
-			// if cluster previously is selected by other customized adc then it can't be override
-			// but if it is selected by default adc, no matter default adc has selector or not,
-			// it has lower priority than customer newly created adc
-			if selected && adcName != obj.Name &&
-				adcName != akoov1alpha1.WorkloadClusterAkoDeploymentConfig {
-				continue
-			}
-			// management cluster can't be selected by other AKODeploymentConfig
-			// instead of management cluster AKODeploymentConfig
+			// management cluster can't be selected by other adc objects
+			// except the management cluster AKODeploymentConfig
 			if c.Namespace == akoov1alpha1.TKGSystemNamespace &&
 				obj.Name != akoov1alpha1.ManagementClusterAkoDeploymentConfig {
 				continue
 			}
-			// update cluster corresponding adc label
-			applyClusterLabel(log, &c, obj)
-			if !selected || adcName != obj.Name {
+			adcName, exist := c.Labels[akoov1alpha1.AviClusterLabel]
+			// if cluster is already selected by other customized adc objects
+			// only clusters selected by default select-all adc object can be overrided
+			// otherwise skip
+			if exist && adcName != obj.Name {
+				if !isDefaultADC(adcName) || !defaultADCHasEmptySelector(ctx, kclient) {
+					continue
+				}
+			}
+			// update cluster adc label
+			if !exist || adcName != obj.Name {
+				applyClusterLabel(log, &c, obj)
 				_ = kclient.Update(ctx, &c)
 			}
 			newItems = append(newItems, c)
@@ -55,6 +56,24 @@ func ListAkoDeplymentConfigSelectClusters(ctx context.Context, kclient client.Cl
 	}
 	clusters.Items = newItems
 	return &clusters, nil
+}
+
+func isDefaultADC(adcName string) bool {
+	return adcName == akoov1alpha1.WorkloadClusterAkoDeploymentConfig
+}
+
+func defaultADCHasEmptySelector(ctx context.Context, kclient client.Client) bool {
+	var defaultAdc akoov1alpha1.AKODeploymentConfig
+	if err := kclient.Get(ctx,
+		client.ObjectKey{Name: akoov1alpha1.WorkloadClusterAkoDeploymentConfig},
+		&defaultAdc); err != nil {
+		return false
+	}
+	selector, err := metav1.LabelSelectorAsSelector(&defaultAdc.Spec.ClusterSelector)
+	if err != nil {
+		return false
+	}
+	return selector.Empty()
 }
 
 func GetAKODeploymentConfigForCluster(ctx context.Context, kclient client.Client, log logr.Logger, cluster *clusterv1.Cluster) (*akoov1alpha1.AKODeploymentConfig, error) {
