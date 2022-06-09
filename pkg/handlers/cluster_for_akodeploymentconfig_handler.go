@@ -37,12 +37,11 @@ func AkoDeploymentConfigForCluster(c client.Client, log logr.Logger) handler.Map
 		}
 
 		adcForCluster, err := ako_operator.UpdateClusterSelectedADCInfo(ctx, c, logger, cluster)
-
+		_ = c.Update(ctx, cluster)
 		if err != nil || adcForCluster == nil {
 			logger.V(3).Info("cluster is not selected by any ako deploymentconfig")
 			return []reconcile.Request{}
 		} else {
-			_ = c.Update(ctx, cluster)
 			logger.V(3).Info("cluster is selected by adc", "akodeploymentconfig", adcForCluster)
 			return []ctrl.Request{{NamespacedName: types.NamespacedName{Name: adcForCluster.Name}}}
 		}
