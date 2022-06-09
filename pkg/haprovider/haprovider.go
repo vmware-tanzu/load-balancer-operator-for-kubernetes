@@ -174,7 +174,7 @@ func (r *HAProvider) annotateService(ctx context.Context, cluster *clusterv1.Clu
 }
 
 func (r *HAProvider) getADCForCluster(ctx context.Context, cluster *clusterv1.Cluster) (*akoov1alpha1.AKODeploymentConfig, error) {
-	adcForCluster, err := ako_operator.UpdateClusterSelectedADCInfo(ctx, r.Client, r.log, cluster)
+	adcForCluster, err := ako_operator.UpdateClusterAKODeploymentConfigLabel(ctx, r.Client, r.log, cluster)
 	if err != nil {
 		return nil, err
 	}
