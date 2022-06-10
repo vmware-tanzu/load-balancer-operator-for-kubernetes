@@ -9,23 +9,24 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
-	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako"
-	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/builder"
 	"github.com/vmware/alb-sdk/go/models"
 	"github.com/vmware/alb-sdk/go/session"
 	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"sigs.k8s.io/cluster-api/util/conditions"
-	kcfg "sigs.k8s.io/cluster-api/util/kubeconfig"
-	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/cluster-api/util/conditions"
+	kcfg "sigs.k8s.io/cluster-api/util/kubeconfig"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako"
+	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/builder"
+	testutil "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/util"
 )
 
 func intgTestAkoDeploymentConfigController() {
@@ -51,56 +52,9 @@ func intgTestAkoDeploymentConfigController() {
 		userCreateCalled     bool
 	)
 
-	staticCluster = &clusterv1.Cluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "integration-test-8ed12g",
-			Namespace: "integration-test-8ed12g",
-		},
-		Spec: clusterv1.ClusterSpec{},
-	}
-
-	defaultAkoDeploymentConfigCommonSpec := akoov1alpha1.AKODeploymentConfigSpec{
-		DataNetwork: akoov1alpha1.DataNetwork{
-			Name: "integration-test-8ed12g",
-			CIDR: "10.0.0.0/24",
-			IPPools: []akoov1alpha1.IPPool{
-				{
-					Start: "10.0.0.1",
-					End:   "10.0.0.10",
-					Type:  "V4",
-				},
-			},
-		},
-		ControlPlaneNetwork: akoov1alpha1.ControlPlaneNetwork{
-			Name: "integration-test-8ed12g",
-			CIDR: "10.1.0.0/24",
-		},
-		ServiceEngineGroup: "ha-test",
-		AdminCredentialRef: &akoov1alpha1.SecretRef{
-			Name:      "controller-credentials",
-			Namespace: "default",
-		},
-		CertificateAuthorityRef: &akoov1alpha1.SecretRef{
-			Name:      "controller-ca",
-			Namespace: "default",
-		},
-	}
-	akoDeploymentConfigCommonSpec := defaultAkoDeploymentConfigCommonSpec.DeepCopy()
-	akoDeploymentConfigCommonSpec.ClusterSelector = metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			"test": "true",
-		},
-	}
-	staticAkoDeploymentConfig = &akoov1alpha1.AKODeploymentConfig{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "ako-deployment-config",
-		},
-		Spec: *akoDeploymentConfigCommonSpec,
-	}
-	staticDefaultAkoDeploymentConfig = &akoov1alpha1.AKODeploymentConfig{
-		ObjectMeta: metav1.ObjectMeta{Name: akoov1alpha1.WorkloadClusterAkoDeploymentConfig},
-		Spec:       defaultAkoDeploymentConfigCommonSpec,
-	}
+	staticCluster = &testutil.DefaultCluster
+	staticAkoDeploymentConfig = testutil.GetCustomizedADC(testutil.CustomizedADCLabels)
+	staticDefaultAkoDeploymentConfig = testutil.GetDefaultADC()
 
 	staticControllerCredentials = &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
