@@ -6,11 +6,10 @@ package handlers
 import (
 	"context"
 	"fmt"
+
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
-	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
+	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -32,59 +31,30 @@ func AkoDeploymentConfigForCluster(c client.Client, log logr.Logger) handler.Map
 			return nil
 		}
 		logger := log.WithValues("cluster", cluster.Namespace+"/"+cluster.Name)
-		if SkipCluster(cluster) {
+		if ako_operator.SkipCluster(cluster) {
 			logger.Info("Skipping cluster in handler")
 			return []reconcile.Request{}
 		}
-
-		adcForCluster, err := ListADCsForCluster(ctx, cluster, logger, c)
+		// get akodeploymentconfig object for this cluster
+		adcForCluster, err := ako_operator.GetAKODeploymentConfigForCluster(ctx, c, logger, cluster)
 		if err != nil {
+			logger.Error(err, "failed to get cluster matched akodeploymentconfig object")
 			return []reconcile.Request{}
 		}
-		var requests []ctrl.Request
-		for _, akoDeploymentConfig := range adcForCluster {
-			requests = append(requests, ctrl.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: akoDeploymentConfig.Namespace,
-					Name:      akoDeploymentConfig.Name,
-				},
-			})
+		requests := []reconcile.Request{}
+		if adcForCluster == nil {
+			logger.V(1).Info("cluster is not selected by any ako deploymentconfig")
+			ako_operator.RemoveClusterLabel(log, cluster)
+		} else {
+			logger.V(1).Info("cluster is selected by adc", "akodeploymentconfig", adcForCluster)
+			ako_operator.ApplyClusterLabel(log, cluster, adcForCluster)
+			requests = append(requests, ctrl.Request{NamespacedName: types.NamespacedName{Name: adcForCluster.Name}})
 		}
-
-		logger.V(3).Info("Generating requests", "requests", requests)
-		// Return reconcile requests for the AKODeploymentConfig resources.
+		// update cluster with avi label
+		if err := c.Update(ctx, cluster); err != nil {
+			logger.Error(err, "update cluster's adc label error")
+			return []reconcile.Request{}
+		}
 		return requests
 	}
-}
-
-func ListADCsForCluster(
-	ctx context.Context,
-	cluster *clusterv1.Cluster,
-	logger logr.Logger,
-	c client.Client,
-) ([]akoov1alpha1.AKODeploymentConfig, error) {
-	var adcForCluster []akoov1alpha1.AKODeploymentConfig
-	var akoDeploymentConfigs akoov1alpha1.AKODeploymentConfigList
-
-	_, selected := cluster.Labels[akoov1alpha1.AviClusterSelectedLabel]
-
-	logger.V(3).Info("Getting all akodeploymentconfig")
-
-	if err := c.List(ctx, &akoDeploymentConfigs, []client.ListOption{}...); err != nil {
-		return adcForCluster, err
-	}
-
-	for _, akoDeploymentConfig := range akoDeploymentConfigs.Items {
-		if selector, err := metav1.LabelSelectorAsSelector(&akoDeploymentConfig.Spec.ClusterSelector); err != nil {
-			logger.Error(err, "Failed to convert label sector to selector")
-			continue
-		} else if selector.Empty() && selected {
-			logger.V(3).Info("Cluster selected by non-default AKODeploymentConfig, skip default one")
-			continue
-		} else if selector.Matches(labels.Set(cluster.GetLabels())) {
-			logger.V(3).Info("Found matching AKODeploymentConfig", "adc", akoDeploymentConfig.Namespace+"/"+akoDeploymentConfig.Name)
-			adcForCluster = append(adcForCluster, akoDeploymentConfig)
-		}
-	}
-	return adcForCluster, nil
 }

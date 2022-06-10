@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
+	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -34,7 +35,7 @@ func MachinesForCluster(c client.Client, log logr.Logger) handler.MapFunc {
 
 		logger := log.WithValues("cluster", cluster.Namespace+"/"+cluster.Name)
 
-		if SkipCluster(cluster) {
+		if ako_operator.SkipCluster(cluster) {
 			logger.Info("Skipping cluster in handler")
 			return []reconcile.Request{}
 		}

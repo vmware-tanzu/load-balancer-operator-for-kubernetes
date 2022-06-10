@@ -759,7 +759,7 @@ func intgTestAkoDeploymentConfigController() {
 						ensureClusterAviLabelMatchExpectation(client.ObjectKey{
 							Name:      cluster.Name,
 							Namespace: cluster.Namespace,
-						}, akoov1alpha1.AviClusterSelectedLabel, true)
+						}, akoov1alpha1.AviClusterLabel, true)
 					})
 
 					When("no longer selected by a customized ADC", func() {
@@ -775,11 +775,11 @@ func intgTestAkoDeploymentConfigController() {
 							}, "test", false)
 						})
 
-						It("should drop the skip-default-adc label (AviClusterSelectedLabel)", func() {
+						It("should drop the AviClusterLabel)", func() {
 							ensureClusterAviLabelMatchExpectation(client.ObjectKey{
 								Name:      cluster.Name,
 								Namespace: cluster.Namespace,
-							}, akoov1alpha1.AviClusterSelectedLabel, false)
+							}, akoov1alpha1.AviClusterLabel, false)
 						})
 					})
 				})

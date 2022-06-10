@@ -41,6 +41,7 @@ var _ = Describe("AKODeploymentConfig Cluster Handler", func() {
 		scheme := runtime.NewScheme()
 		Expect(akoov1alpha1.AddToScheme(scheme)).NotTo(HaveOccurred())
 		Expect(akov1alpha1.AddToScheme(scheme)).NotTo(HaveOccurred())
+		Expect(clusterv1.AddToScheme(scheme)).NotTo(HaveOccurred())
 		fclient = fakeClient.NewClientBuilder().WithScheme(scheme).Build()
 		logger = log.Log
 		log.SetLogger(zap.New())
@@ -60,6 +61,7 @@ var _ = Describe("AKODeploymentConfig Cluster Handler", func() {
 	When("no AKODeploymentConfig exists", func() {
 		BeforeEach(func() {
 			input = cluster
+			Expect(fclient.Create(ctx, input)).NotTo(HaveOccurred())
 		})
 		It("should not create any request", func() {
 			Expect(len(requests)).To(Equal(0))
@@ -70,7 +72,7 @@ var _ = Describe("AKODeploymentConfig Cluster Handler", func() {
 		BeforeEach(func() {
 			akodeploymentconfigForAll := &akoov1alpha1.AKODeploymentConfig{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "test",
+					Name: akoov1alpha1.WorkloadClusterAkoDeploymentConfig,
 				},
 				Spec: akoov1alpha1.AKODeploymentConfigSpec{
 					ClusterSelector: metav1.LabelSelector{},
@@ -79,14 +81,18 @@ var _ = Describe("AKODeploymentConfig Cluster Handler", func() {
 
 			Expect(fclient.Create(ctx, akodeploymentconfigForAll)).NotTo(HaveOccurred())
 			input = cluster
+			Expect(fclient.Create(ctx, input)).NotTo(HaveOccurred())
 		})
 		It("should create one request", func() {
 			Expect(len(requests)).To(Equal(1))
 		})
 		When("the cluster is from the system namespace", func() {
 			BeforeEach(func() {
+				cluster.Name = "system-test"
 				cluster.Namespace = akoov1alpha1.TKGSystemNamespace
+				cluster.ResourceVersion = ""
 				input = cluster
+				Expect(fclient.Create(ctx, input)).NotTo(HaveOccurred())
 			})
 			// After Dakar, ako would also be deployed in management cluster.
 			It("should create 1 request", func() {
@@ -147,6 +153,7 @@ var _ = Describe("AKODeploymentConfig Cluster Handler", func() {
 			Expect(fclient.Create(ctx, akodeploymentconfig1)).NotTo(HaveOccurred())
 			Expect(fclient.Create(ctx, akodeploymentconfig2)).NotTo(HaveOccurred())
 			input = cluster
+			Expect(fclient.Create(ctx, input)).NotTo(HaveOccurred())
 		})
 		It("should not create any request", func() {
 			Expect(len(requests)).To(Equal(0))
@@ -188,9 +195,10 @@ var _ = Describe("AKODeploymentConfig Cluster Handler", func() {
 				"test2": "wow",
 			}
 			input = cluster
+			Expect(fclient.Create(ctx, input)).NotTo(HaveOccurred())
 		})
 		It("should create only one request", func() {
-			Expect(len(requests)).To(Equal(2))
+			Expect(len(requests)).To(Equal(1))
 		})
 	})
 
