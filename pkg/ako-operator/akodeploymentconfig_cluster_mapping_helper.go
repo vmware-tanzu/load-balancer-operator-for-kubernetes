@@ -51,7 +51,7 @@ func ListAkoDeploymentConfigSelectClusters(
 			// if cluster is already selected by other customized adc objects, skip
 			// only clusters selected by default adc with empty selector object can be overrided
 			if exist && adcName != obj.Name {
-				if !isDefaultADC(adcName) || !defaultADCHasEmptySelector(ctx, kclient) {
+				if !isDefaultWcADC(adcName) || !defaultADCHasEmptySelector(ctx, kclient) {
 					continue
 				}
 			}
@@ -81,7 +81,7 @@ func GetAKODeploymentConfigForCluster(
 		if selector, err := metav1.LabelSelectorAsSelector(&akoDeploymentConfig.Spec.ClusterSelector); err != nil {
 			log.Error(err, "Failed to convert label sector to selector")
 		} else if selector.Empty() {
-			if isDefaultADC(akoDeploymentConfig.Name) {
+			if isDefaultWcADC(akoDeploymentConfig.Name) {
 				defaultAdc = akoDeploymentConfig
 			}
 		} else if selector.Matches(labels.Set(cluster.GetLabels())) {
@@ -111,8 +111,8 @@ func SkipCluster(cluster *clusterv1.Cluster) bool {
 	return false
 }
 
-// isDefaultADC check if akodeploymentconfig object is default one
-func isDefaultADC(adcName string) bool {
+// isDefaultWcADC check if akodeploymentconfig object is default one
+func isDefaultWcADC(adcName string) bool {
 	return adcName == akoov1alpha1.WorkloadClusterAkoDeploymentConfig
 }
 
