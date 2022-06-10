@@ -74,6 +74,8 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ 
 		}
 	}()
 
+	log = log.WithValues("Cluster", cluster.Namespace+"/"+cluster.Name)
+
 	if ako_operator.IsHAProvider() {
 		log.Info("AVI is control plane HA provider")
 		r.Haprovider = haprovider.NewProvider(r.Client, r.Log)
@@ -86,29 +88,22 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ 
 		}
 	}
 
-	log = log.WithValues("Cluster", cluster.Namespace+"/"+cluster.Name)
+	akoDeploymentConfig, err := ako_operator.GetAKODeploymentConfigForCluster(ctx, r.Client, log, cluster)
+	if err != nil {
+		log.Error(err, "failed to get cluster matched akodeploymentconfig")
+		return res, err
+	}
 
-	adcName, exist := cluster.Labels[akoov1alpha1.AviClusterLabel]
-	if !exist {
+	if akoDeploymentConfig == nil {
+		// Removing finalizer if current cluster can't be selected by any akoDeploymentConfig
+		log.Info("Not find cluster matched akodeploymentconfig, removing finalizer", "finalizer", akoov1alpha1.ClusterFinalizer)
+		ctrlutil.RemoveFinalizer(cluster, akoov1alpha1.ClusterFinalizer)
+		// Removing avi label after deleting all the resources
+		delete(cluster.Labels, akoov1alpha1.AviClusterLabel)
 		log.Info("Cluster doesn't have AVI enabled, skip Cluster reconciling")
 		return res, nil
 	}
 
-	log.Info("Cluster has AVI enabled, start Cluster reconciling")
-	// Getting all akodeploymentconfigs
-	var akoDeploymentConfig akoov1alpha1.AKODeploymentConfig
-
-	if err := r.Client.Get(ctx, client.ObjectKey{Name: adcName}, &akoDeploymentConfig); err == nil {
-		return res, nil
-	} else if apierrors.IsNotFound(err) {
-		// Removing finalizer if current cluster can't be selected by any akoDeploymentConfig
-		log.Info("Removing finalizer", "finalizer", akoov1alpha1.ClusterFinalizer)
-		ctrlutil.RemoveFinalizer(cluster, akoov1alpha1.ClusterFinalizer)
-
-		// Removing avi label after deleting all the resources
-		delete(cluster.Labels, akoov1alpha1.AviClusterLabel)
-		return res, nil
-	} else {
-		return res, err
-	}
+	log.Info("Cluster has AVI enabled")
+	return res, nil
 }

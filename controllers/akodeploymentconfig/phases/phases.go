@@ -66,7 +66,7 @@ func ReconcileClustersPhases(
 	res := ctrl.Result{}
 
 	// Get the list of clusters managed by the AKODeploymentConfig
-	clusters, err := ako_operator.ListAkoDeplymentConfigSelectClusters(ctx, client, log, obj)
+	clusters, err := ako_operator.ListAkoDeploymentConfigSelectClusters(ctx, client, log, obj)
 	if err != nil {
 		log.Error(err, "Fail to list clusters deployed by current AKODeploymentConfig")
 		return res, err
@@ -90,6 +90,9 @@ func ReconcileClustersPhases(
 			return res, errors.Wrapf(err, "failed to init patch helper for %s %s",
 				cluster.GroupVersionKind(), cluster.Namespace+"/"+cluster.Name)
 		}
+
+		// update cluster avi label before run any phase functions
+		ako_operator.ApplyClusterLabel(log, &cluster, obj)
 
 		phases := normalPhases
 		if !cluster.GetDeletionTimestamp().IsZero() {

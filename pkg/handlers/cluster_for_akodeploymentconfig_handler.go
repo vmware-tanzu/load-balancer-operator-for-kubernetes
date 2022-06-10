@@ -35,21 +35,26 @@ func AkoDeploymentConfigForCluster(c client.Client, log logr.Logger) handler.Map
 			logger.Info("Skipping cluster in handler")
 			return []reconcile.Request{}
 		}
-		adcForCluster, err := ako_operator.UpdateClusterAKODeploymentConfigLabel(ctx, c, logger, cluster)
+		// get akodeploymentconfig object for this cluster
+		adcForCluster, err := ako_operator.GetAKODeploymentConfigForCluster(ctx, c, logger, cluster)
 		if err != nil {
-			logger.Error(err, "update cluster's adc label error")
+			logger.Error(err, "failed to get cluster matched akodeploymentconfig object")
 			return []reconcile.Request{}
 		}
+		requests := []reconcile.Request{}
+		if adcForCluster == nil {
+			logger.V(1).Info("cluster is not selected by any ako deploymentconfig")
+			ako_operator.RemoveClusterLabel(log, cluster)
+		} else {
+			logger.V(1).Info("cluster is selected by adc", "akodeploymentconfig", adcForCluster)
+			ako_operator.ApplyClusterLabel(log, cluster, adcForCluster)
+			requests = append(requests, ctrl.Request{NamespacedName: types.NamespacedName{Name: adcForCluster.Name}})
+		}
+		// update cluster with avi label
 		if err := c.Update(ctx, cluster); err != nil {
 			logger.Error(err, "update cluster's adc label error")
 			return []reconcile.Request{}
 		}
-		if adcForCluster == nil {
-			logger.V(1).Info("cluster is not selected by any ako deploymentconfig")
-			return []reconcile.Request{}
-		} else {
-			logger.V(1).Info("cluster is selected by adc", "akodeploymentconfig", adcForCluster)
-			return []ctrl.Request{{NamespacedName: types.NamespacedName{Name: adcForCluster.Name}}}
-		}
+		return requests
 	}
 }

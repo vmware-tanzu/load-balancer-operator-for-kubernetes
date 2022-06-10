@@ -16,8 +16,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// ListAkoDeplymentConfigSelectClusters list all clusters enabled current akodeploymentconfig
-func ListAkoDeplymentConfigSelectClusters(
+// ListAkoDeploymentConfigSelectClusters list all clusters enabled current akodeploymentconfig
+func ListAkoDeploymentConfigSelectClusters(
 	ctx context.Context,
 	kclient client.Client,
 	log logr.Logger,
@@ -55,13 +55,6 @@ func ListAkoDeplymentConfigSelectClusters(
 					continue
 				}
 			}
-			// update cluster adc label
-			if !exist || adcName != obj.Name {
-				applyClusterLabel(log, &cluster, obj)
-				if err := kclient.Update(ctx, &cluster); err != nil {
-					allErrs = append(allErrs, err)
-				}
-			}
 			newItems = append(newItems, cluster)
 		}
 	}
@@ -69,22 +62,40 @@ func ListAkoDeplymentConfigSelectClusters(
 	return &clusters, kerrors.NewAggregate(allErrs)
 }
 
-// UpdateClusterAKODeploymentConfigLabel updates the cluster's networking.tkg.tanzu.vmware.com/avi
-// label to the akodeploymentconfig object currently selects this cluster
-func UpdateClusterAKODeploymentConfigLabel(
+// GetAKODeploymentConfigForCluster return the akodeloymentconfig object which selects
+// current cluster
+func GetAKODeploymentConfigForCluster(
 	ctx context.Context,
 	kclient client.Client,
 	log logr.Logger,
-	cluster *clusterv1.Cluster) (adc *akoov1alpha1.AKODeploymentConfig, err error) {
-	// get akodeploymentconfig object for this cluster
-	adcForCluster, err := getAKODeploymentConfigForCluster(ctx, kclient, log, cluster)
-	// update label
-	if err != nil || adcForCluster == nil {
-		removeClusterLabel(log, cluster)
-	} else {
-		applyClusterLabel(log, cluster, adcForCluster)
+	cluster *clusterv1.Cluster) (*akoov1alpha1.AKODeploymentConfig, error) {
+	// list all the akodeploymentconfig objects
+	var akoDeploymentConfigs akoov1alpha1.AKODeploymentConfigList
+	if err := kclient.List(ctx, &akoDeploymentConfigs, []client.ListOption{}...); err != nil {
+		log.Error(err, "Failed to list all AKODeploymentConfig objects")
+		return nil, err
 	}
-	return adcForCluster, err
+	// find which adc matches current cluster
+	var defaultAdc akoov1alpha1.AKODeploymentConfig
+	for _, akoDeploymentConfig := range akoDeploymentConfigs.Items {
+		if selector, err := metav1.LabelSelectorAsSelector(&akoDeploymentConfig.Spec.ClusterSelector); err != nil {
+			log.Error(err, "Failed to convert label sector to selector")
+		} else if selector.Empty() {
+			if isDefaultADC(akoDeploymentConfig.Name) {
+				defaultAdc = akoDeploymentConfig
+			}
+		} else if selector.Matches(labels.Set(cluster.GetLabels())) {
+			log.Info("cluster is selected by akodeploymentconfig", "adc", akoDeploymentConfig.Name)
+			return &akoDeploymentConfig, nil
+		}
+	}
+	// only default adc with empty selector can select all clusters and return
+	if defaultAdc.Name == akoov1alpha1.WorkloadClusterAkoDeploymentConfig {
+		log.Info("cluster is selected by akodeploymentconfig", "adc", defaultAdc.Name)
+		return &defaultAdc, nil
+	}
+	log.Info("cluster is not selected by any akodeploymentconfig objects")
+	return nil, nil
 }
 
 // SkipCluster checks if akodeploymentconfig controller should skip reconciling this cluster or not
@@ -120,44 +131,8 @@ func defaultADCHasEmptySelector(ctx context.Context, kclient client.Client) bool
 	return selector.Empty()
 }
 
-// getAKODeploymentConfigForCluster return the akodeloymentconfig object which selects
-// current cluster
-func getAKODeploymentConfigForCluster(
-	ctx context.Context,
-	kclient client.Client,
-	log logr.Logger,
-	cluster *clusterv1.Cluster) (*akoov1alpha1.AKODeploymentConfig, error) {
-	// list all the akodeploymentconfig objects
-	var akoDeploymentConfigs akoov1alpha1.AKODeploymentConfigList
-	if err := kclient.List(ctx, &akoDeploymentConfigs, []client.ListOption{}...); err != nil {
-		log.Error(err, "Failed to list all AKODeploymentConfig objects")
-		return nil, err
-	}
-	// find which adc matches current cluster
-	var defaultAdc akoov1alpha1.AKODeploymentConfig
-	for _, akoDeploymentConfig := range akoDeploymentConfigs.Items {
-		if selector, err := metav1.LabelSelectorAsSelector(&akoDeploymentConfig.Spec.ClusterSelector); err != nil {
-			log.Error(err, "Failed to convert label sector to selector")
-		} else if selector.Empty() {
-			if akoDeploymentConfig.Name == akoov1alpha1.WorkloadClusterAkoDeploymentConfig {
-				defaultAdc = akoDeploymentConfig
-			}
-		} else if selector.Matches(labels.Set(cluster.GetLabels())) {
-			log.Info("cluster is selected by akodeploymentconfig", "adc", akoDeploymentConfig.Name)
-			return &akoDeploymentConfig, nil
-		}
-	}
-	// only default adc with empty selector can select all clusters and return
-	if defaultAdc.Name == akoov1alpha1.WorkloadClusterAkoDeploymentConfig {
-		log.Info("cluster is selected by akodeploymentconfig", "adc", defaultAdc.Name)
-		return &defaultAdc, nil
-	}
-	log.Info("cluster is not selected by any akodeploymentconfig objects")
-	return nil, nil
-}
-
 // applyClusterLabel applies the networking.tkg.tanzu.vmware.com/avi label to a Cluster
-func applyClusterLabel(log logr.Logger, cluster *clusterv1.Cluster, obj *akoov1alpha1.AKODeploymentConfig) {
+func ApplyClusterLabel(log logr.Logger, cluster *clusterv1.Cluster, obj *akoov1alpha1.AKODeploymentConfig) {
 	if cluster.Labels == nil {
 		cluster.Labels = make(map[string]string)
 	}
@@ -166,7 +141,7 @@ func applyClusterLabel(log logr.Logger, cluster *clusterv1.Cluster, obj *akoov1a
 }
 
 // removeClusterLabel removes the networking.tkg.tanzu.vmware.com/avi label from a Cluster
-func removeClusterLabel(log logr.Logger, cluster *clusterv1.Cluster) {
+func RemoveClusterLabel(log logr.Logger, cluster *clusterv1.Cluster) {
 	if _, exists := cluster.Labels[akoov1alpha1.AviClusterLabel]; exists {
 		log.Info("Removing label from cluster", "label", akoov1alpha1.AviClusterLabel)
 	}

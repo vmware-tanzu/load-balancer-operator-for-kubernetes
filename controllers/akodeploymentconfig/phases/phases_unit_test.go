@@ -4,11 +4,12 @@
 package phases
 
 import (
+	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
+
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
-	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/builder"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -51,7 +52,7 @@ func ReconcilePhaseUnitTest() {
 			},
 		}
 		ctx = suite.NewIntegrationTestContext()
-		log = ctrl.Log.WithName("controllers").WithName("test")
+		log = ctrl.Log.WithName("controllers").WithName("AKODeploymentConfig")
 	})
 
 	Context("Should be able to list all workload clusters", func() {
@@ -80,7 +81,7 @@ func ReconcilePhaseUnitTest() {
 		})
 
 		It("list all selected workload clusters", func() {
-			clusterList, err := ako_operator.ListAkoDeplymentConfigSelectClusters(ctx.Context, ctx.Client, log, akoDeploymentConfig)
+			clusterList, err := ako_operator.ListAkoDeploymentConfigSelectClusters(ctx.Context, ctx.Client, log, akoDeploymentConfig)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(len(clusterList.Items)).To(Equal(1))
 			Expect(clusterList.Items[0].Name).To(Equal("test-cluster"))

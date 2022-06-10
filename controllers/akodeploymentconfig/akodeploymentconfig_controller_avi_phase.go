@@ -22,12 +22,13 @@ import (
 
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/phases"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/user"
-	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/aviclient"
 	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/haprovider"
 
 	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
+
+	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 )
 
 func getAviCAFromADC(c client.Client, ctx context.Context,
@@ -292,7 +293,7 @@ func (r *AKODeploymentConfigReconciler) reconcileAviInfraSettingDelete(
 	log.Info("Start reconciling AVIInfraSetting Delete")
 
 	// Get the list of clusters managed by the AKODeploymentConfig
-	clusters, err := ako_operator.ListAkoDeplymentConfigSelectClusters(ctx, r.Client, log, adc)
+	clusters, err := ako_operator.ListAkoDeploymentConfigSelectClusters(ctx, r.Client, log, adc)
 	if err != nil {
 		log.Error(err, "Fail to list clusters deployed by current AKODeploymentConfig")
 		return res, err
