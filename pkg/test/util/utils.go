@@ -5,14 +5,19 @@ package util
 
 import (
 	"encoding/json"
+	"os/exec"
+	"time"
+
 	. "github.com/onsi/gomega"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/builder"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog"
-	"os/exec"
 	capi "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/builder"
 )
 
 type ExpectResult int
@@ -75,6 +80,9 @@ func ensureRuntimeObjectCreated(ctx *builder.IntegrationTestContext, o client.Ob
 	case *corev1.ConfigMap:
 		obj = o.(*corev1.ConfigMap)
 		EnsureRuntimeObjectMatchExpectation(ctx, client.ObjectKey{Name: obj.Name, Namespace: obj.Namespace}, obj, EXIST)
+	case *akoov1alpha1.AKODeploymentConfig:
+		obj = o.(*akoov1alpha1.AKODeploymentConfig)
+		EnsureRuntimeObjectMatchExpectation(ctx, client.ObjectKey{Name: obj.Name, Namespace: obj.Namespace}, obj, EXIST)
 	default:
 		klog.Fatal("Unknown type object")
 	}
@@ -91,5 +99,47 @@ func EnsureRuntimeObjectMatchExpectation(ctx *builder.IntegrationTestContext, ob
 			}
 		}
 		return res == expectResult
+	}, 30*time.Second).Should(BeTrue())
+}
+
+func EnsureClusterAviLabelExists(ctx *builder.IntegrationTestContext, key client.ObjectKey, label string, exists bool) {
+	Eventually(func() bool {
+		obj := &clusterv1.Cluster{}
+		err := ctx.Client.Get(ctx.Context, key, obj)
+		if err != nil {
+			return false
+		}
+		_, ok := obj.Labels[label]
+		return ok == exists
 	}).Should(BeTrue())
+}
+
+func EnsureClusterAviLabelMatchExpectation(ctx *builder.IntegrationTestContext, key client.ObjectKey, label, expectVal string) {
+	Eventually(func() bool {
+		obj := &clusterv1.Cluster{}
+		err := ctx.Client.Get(ctx.Context, key, obj)
+		if err != nil {
+			return false
+		}
+		val, ok := obj.Labels[label]
+		return ok && val == expectVal
+	}).Should(BeTrue())
+}
+
+func UpdateObjectLabels(ctx *builder.IntegrationTestContext, key client.ObjectKey, labels map[string]string) {
+	Eventually(func() error {
+		var cluster = new(clusterv1.Cluster)
+
+		if err := ctx.Client.Get(ctx, client.ObjectKey{
+			Name:      key.Name,
+			Namespace: key.Namespace,
+		}, cluster); err != nil {
+			return err
+		}
+		cluster.Labels = labels
+		if err := ctx.Client.Update(ctx, cluster, &client.UpdateOptions{}); err != nil {
+			return err
+		}
+		return nil
+	}).Should(Succeed())
 }
