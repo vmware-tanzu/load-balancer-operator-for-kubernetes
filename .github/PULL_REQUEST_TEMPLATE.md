@@ -30,4 +30,4 @@ if there is anything in this PR that is worthy of mention in the next release.
 - [ ] Use good commit [messages](https://github.com/vmware-tanzu/tanzu-framework/blob/main/CONTRIBUTING.md)
 - [ ] Squash the commits in this branch before merge to preserve our git history
 - [ ] If this PR is just an idea or POC, use a [Draft PR](https://docs.github.com/en/github/collaborating-with-issues-and-pull-requests/about-pull-requests#draft-pull-requests) instead of a full PR
-- [ ] Add appropriate [labels](https://github.com/vmware-samples/load-balancer-operator-for-kubernetes/labels) according to what type of issue is being addressed.
+- [ ] Add appropriate [labels](https://github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/labels) according to what type of issue is being addressed.

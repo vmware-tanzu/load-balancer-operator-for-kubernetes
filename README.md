@@ -1,6 +1,6 @@
 # Load Balancer Operator for Kubernetes
 
-[![Load Balancer Operator for Kubernetes Checks](https://github.com/vmware-samples/load-balancer-operator-for-kubernetes/actions/workflows/actions.yml/badge.svg)](https://github.com/vmware-samples/load-balancer-operator-for-kubernetes/actions/workflows/actions.yml)
+[![Load Balancer Operator for Kubernetes Checks](https://github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/actions/workflows/actions.yml/badge.svg)](https://github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/actions/workflows/actions.yml)
 
 ## Overview
 

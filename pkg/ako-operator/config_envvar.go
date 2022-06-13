@@ -4,7 +4,7 @@
 package ako_operator
 
 import (
-	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
 
 	"os"
 	"strconv"

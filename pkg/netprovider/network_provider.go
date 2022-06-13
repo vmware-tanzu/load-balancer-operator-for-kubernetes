@@ -5,7 +5,7 @@ package netprovider
 
 import (
 	"github.com/pkg/errors"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/aviclient"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/aviclient"
 	"github.com/vmware/alb-sdk/go/models"
 )
 
