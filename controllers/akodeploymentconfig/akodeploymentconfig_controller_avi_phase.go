@@ -20,15 +20,15 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/phases"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/user"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/aviclient"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/haprovider"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/phases"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/user"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/aviclient"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/haprovider"
 
-	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
 
-	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
+	ako_operator "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 )
 
 func getAviCAFromADC(c client.Client, ctx context.Context,

@@ -4,15 +4,16 @@
 package cluster_test
 
 import (
-	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	"path/filepath"
 	"testing"
 
+	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
+
 	. "github.com/onsi/ginkgo"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/cluster"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/aviclient"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/builder"
-	testutil "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/util"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/controllers/cluster"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/aviclient"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/test/builder"
+	testutil "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/test/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 

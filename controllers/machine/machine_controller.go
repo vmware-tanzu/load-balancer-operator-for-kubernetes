@@ -6,13 +6,13 @@ package machine
 import (
 	"context"
 
-	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
+	ako_operator "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
-	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/handlers"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/haprovider"
+	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/handlers"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/haprovider"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"

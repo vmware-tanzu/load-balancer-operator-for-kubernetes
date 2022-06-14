@@ -10,7 +10,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/e2e/pkg/env"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/e2e/pkg/env"
 )
 
 func TestHandlers(t *testing.T) {

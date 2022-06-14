@@ -5,21 +5,23 @@ package configmap_test
 
 import (
 	"fmt"
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
-	testutil "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/util"
+	testutil "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/test/util"
 	"github.com/vmware/alb-sdk/go/models"
 	"github.com/vmware/alb-sdk/go/session"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 
-	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/builder"
+	"os"
+
+	ako_operator "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/test/builder"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"os"
 )
 
 func intgTestEnsureUsableNetworkAddedInBootstrapCluster() {

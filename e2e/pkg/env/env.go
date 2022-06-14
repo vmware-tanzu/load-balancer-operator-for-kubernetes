@@ -9,7 +9,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/aviclient"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/aviclient"
 )
 
 var testEnv TestEnvSpec

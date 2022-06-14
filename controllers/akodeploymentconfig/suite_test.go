@@ -9,9 +9,9 @@ import (
 
 	. "github.com/onsi/ginkgo"
 
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/builder"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/funcs"
-	testutil "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/util"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/test/builder"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/test/funcs"
+	testutil "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/test/util"
 )
 
 // suite is used for unit and integration testing this controller.

@@ -9,9 +9,9 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/builder"
-	testutil "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/util"
+	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/test/builder"
+	testutil "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/test/util"
 )
 
 func intgTestCanSelectedByDefaultADCWithNonEmptySelectors() {

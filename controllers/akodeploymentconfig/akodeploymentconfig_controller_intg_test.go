@@ -22,11 +22,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako"
-	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/builder"
-	testutil "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/util"
+	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako"
+	ako_operator "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/test/builder"
+	testutil "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/test/util"
 )
 
 func intgTestAkoDeploymentConfigController() {
@@ -684,7 +684,7 @@ func intgTestAkoDeploymentConfigController() {
 					DefaultADC: defaultAkoDeploymentConfig,
 				},
 				{
-					// This test case covers the bug https://github.com/vmware-samples/load-balancer-operator-for-kubernetes/pull/81
+					// This test case covers the bug https://github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pull/81
 					// The bug was triggerred when the default workload ADC install-ako-for-all has non-empty cluster selector
 					Name:       "there is default ADC with non-empty clusterSelector",
 					DefaultADC: defaultAkoDeploymentConfigWithNonEmptyClusterSelector,

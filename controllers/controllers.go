@@ -4,11 +4,11 @@
 package controllers
 
 import (
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/cluster"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/configmap"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/controllers/machine"
-	akoo "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/controllers/cluster"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/controllers/configmap"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/controllers/machine"
+	akoo "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 

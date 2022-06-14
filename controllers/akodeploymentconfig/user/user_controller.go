@@ -8,9 +8,9 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
-	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/aviclient"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/utils"
+	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/aviclient"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/utils"
 	"github.com/vmware/alb-sdk/go/models"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"

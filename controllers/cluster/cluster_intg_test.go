@@ -4,18 +4,19 @@
 package cluster_test
 
 import (
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/haprovider"
 	"os"
+
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/haprovider"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	ako_operator "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/ako-operator"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/builder"
-	testutil "github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/test/util"
+	ako_operator "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/test/builder"
+	testutil "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/test/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	akoov1alpha1 "github.com/vmware-samples/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"

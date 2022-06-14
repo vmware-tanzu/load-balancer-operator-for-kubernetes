@@ -4,10 +4,11 @@
 package utils_test
 
 import (
+	"strings"
+
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/vmware-samples/load-balancer-operator-for-kubernetes/pkg/utils"
-	"strings"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/utils"
 )
 
 var _ = ginkgo.Describe("Test password generate", func() {
