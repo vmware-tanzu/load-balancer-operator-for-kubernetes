@@ -52,8 +52,15 @@ jobs:
           go-version: '1.16' # The Go version to download (if necessary) and use.
       - name: Build hack tools for unit testing
         run: cd hack/tools && make controller-gen etcd ginkgo kustomize
-      - name: Perform unit tests
-        run: make test
+
+      - name: Perform unit tests and output coverage
+        run: make cover
+
+      - name: Upload coverage reports to Codecov with GitHub Action
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.txt,./cover.out
+
 
   intg_test:
     name: integration-test
