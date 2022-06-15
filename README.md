@@ -1,5 +1,6 @@
 # Load Balancer Operator for Kubernetes
 
+[![codecov](https://codecov.io/gh/vmware-tanzu/load-balancer-operator-for-kubernetes/branch/main/graph/badge.svg?token=JwXHlUeDcB)](https://codecov.io/gh/vmware-tanzu/load-balancer-operator-for-kubernetes)
 [![Load Balancer Operator for Kubernetes Checks](https://github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/actions/workflows/actions.yml/badge.svg)](https://github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/actions/workflows/actions.yml)
 
 ## Overview
