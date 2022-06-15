@@ -48,20 +48,8 @@ func (r *AKODeploymentConfig) ValidateCreate() error {
 	akoDeploymentConfigLog.Info("validate create", "name", r.Name)
 
 	var allErrs field.ErrorList
-	selector, err := metav1.LabelSelectorAsSelector(&r.Spec.ClusterSelector)
-	if err != nil {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "ClusterSelector"),
-			r.Spec.ClusterSelector,
-			err.Error()))
-	}
-	// non default ADC (a.k.a name is not install-ako-for-all), should have non-empty cluster selector
-	if r.ObjectMeta.Name != WorkloadClusterAkoDeploymentConfig && selector.Empty() {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "ClusterSelector"),
-			r.Spec.ClusterSelector,
-			"field should not be empty for non-default ADC"))
-	}
-
-	allErrs = append(allErrs, r.validateAVI()...)
+	allErrs = append(allErrs, r.validateCluserSelector(nil)...)
+	allErrs = append(allErrs, r.validateAVI(nil)...)
 	if len(allErrs) == 0 {
 		return nil
 	}
@@ -71,28 +59,15 @@ func (r *AKODeploymentConfig) ValidateCreate() error {
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *AKODeploymentConfig) ValidateUpdate(old runtime.Object) error {
 	akoDeploymentConfigLog.Info("validate update", "name", r.Name)
-
-	var allErrs field.ErrorList
 	oldADC, ok := old.(*AKODeploymentConfig)
 	if !ok {
 		return apierrors.NewBadRequest(fmt.Sprintf("expected a AKODeploymentConfig but got a %T", old))
 	}
-
+	var allErrs field.ErrorList
 	if oldADC != nil {
-		if (oldADC.Spec.ControlPlaneNetwork.CIDR != r.Spec.ControlPlaneNetwork.CIDR) ||
-			(oldADC.Spec.ControlPlaneNetwork.Name != r.Spec.ControlPlaneNetwork.Name) {
-			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "ControlPlaneNetwork"),
-				r.Spec.ControlPlaneNetwork,
-				"field should not be changed"))
-		}
-
-		if oldADC.Spec.ClusterSelector.String() != r.Spec.ClusterSelector.String() {
-			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "ClusterSelector"),
-				r.Spec.ClusterSelector,
-				"field should not be changed"))
-		}
+		allErrs = append(allErrs, r.validateCluserSelector(oldADC)...)
+		allErrs = append(allErrs, r.validateAVI(oldADC)...)
 	}
-
 	if len(allErrs) == 0 {
 		return nil
 	}
@@ -105,50 +80,54 @@ func (r *AKODeploymentConfig) ValidateDelete() error {
 	return nil
 }
 
-func (r *AKODeploymentConfig) validateAVI() field.ErrorList {
+// validateCluserSelector checks AKODeploymentConfig object's cluster selector field input is valid or not
+// when old is nil, it is used for AKODeploymentConfig object create, otherwise it is used for AKODeploymentConfig
+// object update
+func (r *AKODeploymentConfig) validateCluserSelector(old *AKODeploymentConfig) field.ErrorList {
 	var allErrs field.ErrorList
-	// following fields are already required fileds in CRD, no need to validate here
-	// - adminCredentialRef
-	// - certificateAuthorityRef
-	// - cloudName
-	// - controller
-	// - dataNetwork
-	// - serviceEngineGroup
-	adminCredential := &corev1.Secret{}
-	if err := kclient.Get(context.Background(), client.ObjectKey{
-		Name:      r.Spec.AdminCredentialRef.Name,
-		Namespace: r.Spec.AdminCredentialRef.Namespace,
-	}, adminCredential); err != nil {
-		if apierrors.IsNotFound(err) {
-			allErrs = append(allErrs,
-				field.Invalid(field.NewPath("spec", "adminCredentialRef"),
-					r.Spec.AdminCredentialRef,
-					"can't find admin credential secret"))
-		} else {
-			allErrs = append(allErrs,
-				field.Invalid(field.NewPath("spec", "adminCredentialRef"),
-					r.Spec.AdminCredentialRef,
-					"failed to find admin credential secret:"+err.Error()))
+	// when update AKODeploymentConfig object, cluster selector should be immutable
+	if old != nil {
+		if old.Spec.ClusterSelector.String() != r.Spec.ClusterSelector.String() {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "ClusterSelector"),
+				r.Spec.ClusterSelector,
+				"field should not be changed"))
+			return allErrs
 		}
 	}
+	// convert cluster selector to label selector
+	selector, err := metav1.LabelSelectorAsSelector(&r.Spec.ClusterSelector)
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "ClusterSelector"),
+			r.Spec.ClusterSelector,
+			err.Error()))
+	}
+	// non default ADC (a.k.a name is not install-ako-for-all), should have non-empty cluster selector
+	if r.ObjectMeta.Name != WorkloadClusterAkoDeploymentConfig && selector.Empty() {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "ClusterSelector"),
+			r.Spec.ClusterSelector,
+			"field should not be empty for non-default ADC"))
+	}
+	return allErrs
+}
+
+// validateAVI checks all NSX Advanced Load Balancer related fields are valid or not
+// when old is nil, it is used for AKODeploymentConfig object create, otherwise it is used for AKODeploymentConfig
+// object update. Following fields are already required fileds in CRD, so no need to check if those fields are empty.
+// - adminCredentialRef
+// - certificateAuthorityRef
+// - cloudName
+// - controller
+// - dataNetwork
+// - serviceEngineGroup
+func (r *AKODeploymentConfig) validateAVI(old *AKODeploymentConfig) field.ErrorList {
+	var allErrs field.ErrorList
+
+	// check avi related secret
+	adminCredential := &corev1.Secret{}
+	allErrs = append(allErrs, r.validateAviSecret(adminCredential, r.Spec.AdminCredentialRef))
 
 	aviControllerCA := &corev1.Secret{}
-	if err := kclient.Get(context.Background(), client.ObjectKey{
-		Name:      r.Spec.CertificateAuthorityRef.Name,
-		Namespace: r.Spec.CertificateAuthorityRef.Name,
-	}, aviControllerCA); err != nil {
-		if apierrors.IsNotFound(err) {
-			allErrs = append(allErrs,
-				field.Invalid(field.NewPath("spec", "certificateAuthorityRef"),
-					r.Spec.CertificateAuthorityRef,
-					"can't find certificate secret"))
-		} else {
-			allErrs = append(allErrs,
-				field.Invalid(field.NewPath("spec", "certificateAuthorityRef"),
-					r.Spec.CertificateAuthorityRef,
-					"failed to find certificate secret:"+err.Error()))
-		}
-	}
+	allErrs = append(allErrs, r.validateAviSecret(aviControllerCA, r.Spec.CertificateAuthorityRef))
 
 	if len(allErrs) != 0 {
 		return allErrs
@@ -158,6 +137,67 @@ func (r *AKODeploymentConfig) validateAVI() field.ErrorList {
 	password := string(adminCredential.Data["password"][:])
 	certificate := string(aviControllerCA.Data["certificateAuthorityData"][:])
 
+	// init avi client using inputted fields
+	aviClient, err := r.validateAviClient(username, password, certificate)
+	allErrs = append(allErrs, err)
+	if len(allErrs) != 0 {
+		return allErrs
+	}
+
+	if old == nil {
+		// when old is nil, it is creating a new AKODeploymentConfig object, check following fields
+		allErrs = append(allErrs, r.validateAviCloud(*aviClient))
+		allErrs = append(allErrs, r.validateAviServiceEngineGroup(*aviClient))
+		allErrs = append(allErrs, r.validateAviControlPlaneNetworks(*aviClient)...)
+		allErrs = append(allErrs, r.validateAviDataNetworks(*aviClient)...)
+	} else {
+		// when old is not nil, it is updating an existing AKODeploymentConfig object,
+		// only check changed fields
+		if old.Spec.CloudName != r.Spec.CloudName {
+			allErrs = append(allErrs, r.validateAviCloud(*aviClient))
+
+		}
+		if old.Spec.ServiceEngineGroup != r.Spec.ServiceEngineGroup {
+			allErrs = append(allErrs, r.validateAviServiceEngineGroup(*aviClient))
+		}
+		// control plane network should be immutable since cluster control plane endpoint
+		// can't be updated
+		if (old.Spec.ControlPlaneNetwork.Name != r.Spec.ControlPlaneNetwork.Name) ||
+			(old.Spec.ControlPlaneNetwork.CIDR != r.Spec.ControlPlaneNetwork.CIDR) {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "ControlPlaneNetwork"),
+				r.Spec.ControlPlaneNetwork,
+				"field should not be changed"))
+		}
+		if (old.Spec.DataNetwork.Name != r.Spec.DataNetwork.Name) ||
+			(old.Spec.DataNetwork.CIDR != r.Spec.DataNetwork.CIDR) {
+			allErrs = append(allErrs, r.validateAviDataNetworks(*aviClient)...)
+		}
+	}
+	return allErrs
+}
+
+// validateAviSecret checks NSX Advanced Load Balancer related credentails or certificate secret is valid or not
+func (r *AKODeploymentConfig) validateAviSecret(secret *corev1.Secret, secretRef SecretReference) *field.Error {
+	if err := kclient.Get(context.Background(), client.ObjectKey{
+		Name:      secretRef.Name,
+		Namespace: secretRef.Namespace,
+	}, secret); err != nil {
+		if apierrors.IsNotFound(err) {
+			return field.Invalid(field.NewPath("spec", secretRef.Namespace+"/"+secretRef.Name),
+				secretRef.Name,
+				"can't find secret")
+		} else {
+			return field.Invalid(field.NewPath("spec", secretRef.Namespace+"/"+secretRef.Name),
+				secretRef.Name,
+				"failed to find secret:"+err.Error())
+		}
+	}
+	return nil
+}
+
+// validateAviClient checks if using AKODeploymentConfig object's input fields can successfully init an client which can
+// talk to remote NSX Advanced Load Balancer controller
+func (r *AKODeploymentConfig) validateAviClient(username, password, certificate string) (*clients.AviClient, *field.Error) {
 	var transport *http.Transport
 	if certificate != "" {
 		caCertPool := x509.NewCertPool()
@@ -168,29 +208,28 @@ func (r *AKODeploymentConfig) validateAVI() field.ErrorList {
 			},
 		}
 	}
+
+	controlerVersion := AVI_VERSION
+	if r.Spec.ControllerVersion != "" {
+		controlerVersion = r.Spec.ControllerVersion
+	}
+
 	options := []func(*session.AviSession) error{
 		session.SetPassword(password),
 		session.SetTransport(transport),
-		session.SetVersion(r.Spec.ControllerVersion),
+		session.SetVersion(controlerVersion),
 	}
+
 	aviClient, err := clients.NewAviClient(r.Spec.Controller, username, options...)
 	if err != nil {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "controller"),
+		return nil, field.Invalid(field.NewPath("spec", "controller"),
 			r.Spec.Controller,
-			"failed to init avi client:"+err.Error()))
-		return allErrs
+			"failed to init avi client connect to avi controller:"+err.Error())
 	}
-
-	allErrs = append(allErrs, r.validateAviCloud(*aviClient))
-	allErrs = append(allErrs, r.validateAviServiceEngineGroup(*aviClient))
-	allErrs = append(allErrs, r.validateAviControlPlaneNetworks(*aviClient)...)
-	allErrs = append(allErrs, r.validateAviDataNetworks(*aviClient)...)
-	if len(allErrs) != 0 {
-		return allErrs
-	}
-	return nil
+	return aviClient, nil
 }
 
+// validateAviCloud checks input Cloud Name field valid or not
 func (r *AKODeploymentConfig) validateAviCloud(aviClient clients.AviClient) *field.Error {
 	if cloud, err := aviClient.Cloud.GetByName(r.Spec.CloudName); err != nil {
 		return field.Invalid(field.NewPath("spec", "cloudName"), r.Spec.CloudName,
@@ -202,6 +241,7 @@ func (r *AKODeploymentConfig) validateAviCloud(aviClient clients.AviClient) *fie
 	return nil
 }
 
+// validateAviServiceEngineGroup checks input Servcie Engine Group valid or not
 func (r *AKODeploymentConfig) validateAviServiceEngineGroup(aviClient clients.AviClient) *field.Error {
 	if _, err := aviClient.ServiceEngineGroup.GetByName(r.Spec.ServiceEngineGroup); err != nil {
 		return field.Invalid(field.NewPath("spec", "serviceEngineGroup"), r.Spec.ServiceEngineGroup,
@@ -210,24 +250,29 @@ func (r *AKODeploymentConfig) validateAviServiceEngineGroup(aviClient clients.Av
 	return nil
 }
 
+// validateAviControlPlaneNetworks checks input Control Plane Network name existing or not, CIDR format valid or not
 func (r *AKODeploymentConfig) validateAviControlPlaneNetworks(aviClient clients.AviClient) field.ErrorList {
 	var allErrs field.ErrorList
-	// check data network name
+	// check control plane network name
 	if _, err := aviClient.Network.GetByName(r.Spec.ControlPlaneNetwork.Name); err != nil {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "controlPlaneNetwork", "name"),
 			r.Spec.ControlPlaneNetwork.Name,
-			"failed to get data plane network "+r.Spec.ControlPlaneNetwork.Name+" from avi controller:"+err.Error()))
+			"failed to get control plane network "+r.Spec.ControlPlaneNetwork.Name+" from avi controller:"+err.Error()))
 	}
 	// check network cidr validate or not
 	_, _, err := net.ParseCIDR(r.Spec.ControlPlaneNetwork.CIDR)
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "controlPlaneNetwork", "cidr"),
 			r.Spec.ControlPlaneNetwork.CIDR,
-			"data plane network cidr "+r.Spec.ControlPlaneNetwork.CIDR+" is not valid:"+err.Error()))
+			"control plane network cidr "+r.Spec.ControlPlaneNetwork.CIDR+" is not valid:"+err.Error()))
 	}
 	return allErrs
 }
 
+// validateAviDataNetworks checks input
+// Data Plane Network name existing or not
+// CIDR format valid or not
+// IPPools format valid or not
 func (r *AKODeploymentConfig) validateAviDataNetworks(aviClient clients.AviClient) field.ErrorList {
 	var allErrs field.ErrorList
 	// check data network name
@@ -236,7 +281,7 @@ func (r *AKODeploymentConfig) validateAviDataNetworks(aviClient clients.AviClien
 			r.Spec.DataNetwork.Name,
 			"failed to get data plane network "+r.Spec.DataNetwork.Name+" from avi controller:"+err.Error()))
 	}
-	// check network cidr validate or not
+	// check network cidr
 	_, cidr, err := net.ParseCIDR(r.Spec.DataNetwork.CIDR)
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "dataNetwork", "cidr"),
