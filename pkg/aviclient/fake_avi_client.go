@@ -10,6 +10,7 @@ import (
 
 // FakeAviClient -- an API Client for Avi Controller for intg test of AkoDeploymentConfig
 type FakeAviClient struct {
+	ServiceEngineGroup     *ServiceEngineGroupClient
 	Network                *NetworkClient
 	Cloud                  *CloudClient
 	IPAMDNSProviderProfile *IPAMDNSProviderProfileClient
@@ -22,6 +23,7 @@ type FakeAviClient struct {
 
 func NewFakeAviClient() *FakeAviClient {
 	return &FakeAviClient{
+		ServiceEngineGroup:     &ServiceEngineGroupClient{},
 		Network:                &NetworkClient{},
 		Cloud:                  &CloudClient{},
 		IPAMDNSProviderProfile: &IPAMDNSProviderProfileClient{},
@@ -29,6 +31,10 @@ func NewFakeAviClient() *FakeAviClient {
 		Tenant:                 &TenantClient{},
 		Role:                   &RoleClient{},
 	}
+}
+
+func (r *FakeAviClient) ServiceEngineGroupGetByName(name string, options ...session.ApiOptionsParams) (*models.ServiceEngineGroup, error) {
+	return r.ServiceEngineGroup.GetByName(name)
 }
 
 func (r *FakeAviClient) NetworkGetByName(name string, options ...session.ApiOptionsParams) (*models.Network, error) {
@@ -88,6 +94,17 @@ func (r *FakeAviClient) PoolGetByName(name string, options ...session.ApiOptions
 
 func (r *FakeAviClient) AviCertificateConfig() (string, error) {
 	return "", nil
+}
+
+// ServiceEngineGroup Client
+type ServiceEngineGroupClient struct {
+	getByNameFn GetByNameSEGFunc
+}
+
+type GetByNameSEGFunc func(name string, options ...session.ApiOptionsParams) (*models.ServiceEngineGroup, error)
+
+func (client *ServiceEngineGroupClient) GetByName(name string, options ...session.ApiOptionsParams) (*models.ServiceEngineGroup, error) {
+	return client.getByNameFn(name)
 }
 
 // Network Client

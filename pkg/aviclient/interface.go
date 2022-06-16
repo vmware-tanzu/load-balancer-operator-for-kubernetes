@@ -8,6 +8,8 @@ import (
 )
 
 type Client interface {
+	ServiceEngineGroupGetByName(name string, options ...session.ApiOptionsParams) (*models.ServiceEngineGroup, error)
+
 	NetworkGetByName(name string, options ...session.ApiOptionsParams) (*models.Network, error)
 	NetworkUpdate(obj *models.Network, options ...session.ApiOptionsParams) (*models.Network, error)
 

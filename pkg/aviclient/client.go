@@ -193,6 +193,10 @@ func IsAviRoleNonExistentError(err error) bool {
 	return err == nil && matched
 }
 
+func (r *realAviClient) ServiceEngineGroupGetByName(name string, options ...session.ApiOptionsParams) (*models.ServiceEngineGroup, error) {
+	return r.ServiceEngineGroup.GetByName(name)
+}
+
 func (r *realAviClient) NetworkGetByName(name string, options ...session.ApiOptionsParams) (*models.Network, error) {
 	return r.Network.GetByName(name)
 }
