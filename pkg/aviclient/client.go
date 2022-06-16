@@ -10,12 +10,12 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
-	ako_operator "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -24,6 +24,9 @@ import (
 	"github.com/vmware/alb-sdk/go/models"
 	"github.com/vmware/alb-sdk/go/session"
 )
+
+const AVIControllerVersion = "avi_controller_version"
+const DEFAULT_AVI_CONTROLLER_VERSION = "20.1.3"
 
 type realAviClient struct {
 	config *AviClientConfig
@@ -92,7 +95,7 @@ func NewAviClientFromSecrets(c client.Client, ctx context.Context, log logr.Logg
 		Username: string(adminCredential.Data["username"][:]),
 		Password: string(adminCredential.Data["password"][:]),
 		CA:       string(aviControllerCA.Data["certificateAuthorityData"][:]),
-	}, ako_operator.GetAVIControllerVersion())
+	}, GetAVIControllerVersion())
 	if err != nil {
 		log.Error(err, "Failed to initialize AVI Controller Client, requeue the request")
 		return nil, err
@@ -139,6 +142,15 @@ func NewAviClient(config *AviClientConfig, version string) (*realAviClient, erro
 		AviClient: c,
 		config:    config,
 	}, nil
+}
+
+// GetAVIControllerVersion get AVI controller version current ako operator using
+func GetAVIControllerVersion() string {
+	version, set := os.LookupEnv(AVIControllerVersion)
+	if set && version != "" {
+		return version
+	}
+	return DEFAULT_AVI_CONTROLLER_VERSION
 }
 
 // GetUUIDFromRef takes a AVI Ref, parses it as a classic URL and returns the
