@@ -6,11 +6,8 @@ package v1alpha1
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 	"net"
-	"net/http"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -22,13 +19,14 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	"github.com/vmware/alb-sdk/go/clients"
-	"github.com/vmware/alb-sdk/go/session"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/aviclient"
 )
 
 // log is for logging in this package.
 var akoDeploymentConfigLog = logf.Log.WithName("akodeploymentconfig-resource")
 var kclient client.Client
+var aviClient aviclient.Client
+var runTest bool
 
 func (r *AKODeploymentConfig) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	kclient = mgr.GetClient()
@@ -133,32 +131,41 @@ func (r *AKODeploymentConfig) validateAVI(old *AKODeploymentConfig) field.ErrorL
 		return allErrs
 	}
 
-	username := string(adminCredential.Data["username"][:])
-	password := string(adminCredential.Data["password"][:])
-	certificate := string(aviControllerCA.Data["certificateAuthorityData"][:])
+	controlerVersion := "20.1.3"
+	if r.Spec.ControllerVersion != "" {
+		controlerVersion = r.Spec.ControllerVersion
+	}
 
-	// init avi client using inputted fields
-	aviClient, err := r.validateAviClient(username, password, certificate)
-	allErrs = append(allErrs, err)
-	if len(allErrs) != 0 {
-		return allErrs
+	if runTest {
+		aviClient = aviclient.NewFakeAviClient()
+	} else {
+		client, err := aviclient.NewAviClient(&aviclient.AviClientConfig{
+			ServerIP: r.Spec.Controller,
+			Username: string(adminCredential.Data["username"][:]),
+			Password: string(adminCredential.Data["password"][:]),
+			CA:       string(aviControllerCA.Data["certificateAuthorityData"][:]),
+		}, controlerVersion)
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "Controller"), r.Spec.Controller, "failed to init avi client for controller:"+err.Error()))
+		if len(allErrs) != 0 {
+			return allErrs
+		}
+		aviClient = client
 	}
 
 	if old == nil {
 		// when old is nil, it is creating a new AKODeploymentConfig object, check following fields
-		allErrs = append(allErrs, r.validateAviCloud(*aviClient))
-		allErrs = append(allErrs, r.validateAviServiceEngineGroup(*aviClient))
-		allErrs = append(allErrs, r.validateAviControlPlaneNetworks(*aviClient)...)
-		allErrs = append(allErrs, r.validateAviDataNetworks(*aviClient)...)
+		allErrs = append(allErrs, r.validateAviCloud())
+		allErrs = append(allErrs, r.validateAviServiceEngineGroup())
+		allErrs = append(allErrs, r.validateAviControlPlaneNetworks()...)
+		allErrs = append(allErrs, r.validateAviDataNetworks()...)
 	} else {
 		// when old is not nil, it is updating an existing AKODeploymentConfig object,
 		// only check changed fields
 		if old.Spec.CloudName != r.Spec.CloudName {
-			allErrs = append(allErrs, r.validateAviCloud(*aviClient))
-
+			allErrs = append(allErrs, r.validateAviCloud())
 		}
 		if old.Spec.ServiceEngineGroup != r.Spec.ServiceEngineGroup {
-			allErrs = append(allErrs, r.validateAviServiceEngineGroup(*aviClient))
+			allErrs = append(allErrs, r.validateAviServiceEngineGroup())
 		}
 		// control plane network should be immutable since cluster control plane endpoint
 		// can't be updated
@@ -170,7 +177,7 @@ func (r *AKODeploymentConfig) validateAVI(old *AKODeploymentConfig) field.ErrorL
 		}
 		if (old.Spec.DataNetwork.Name != r.Spec.DataNetwork.Name) ||
 			(old.Spec.DataNetwork.CIDR != r.Spec.DataNetwork.CIDR) {
-			allErrs = append(allErrs, r.validateAviDataNetworks(*aviClient)...)
+			allErrs = append(allErrs, r.validateAviDataNetworks()...)
 		}
 	}
 	return allErrs
@@ -195,43 +202,9 @@ func (r *AKODeploymentConfig) validateAviSecret(secret *corev1.Secret, secretRef
 	return nil
 }
 
-// validateAviClient checks if using AKODeploymentConfig object's input fields can successfully init an client which can
-// talk to remote NSX Advanced Load Balancer controller
-func (r *AKODeploymentConfig) validateAviClient(username, password, certificate string) (*clients.AviClient, *field.Error) {
-	var transport *http.Transport
-	if certificate != "" {
-		caCertPool := x509.NewCertPool()
-		caCertPool.AppendCertsFromPEM([]byte(certificate))
-		transport = &http.Transport{
-			TLSClientConfig: &tls.Config{
-				RootCAs: caCertPool,
-			},
-		}
-	}
-
-	controlerVersion := AVI_VERSION
-	if r.Spec.ControllerVersion != "" {
-		controlerVersion = r.Spec.ControllerVersion
-	}
-
-	options := []func(*session.AviSession) error{
-		session.SetPassword(password),
-		session.SetTransport(transport),
-		session.SetVersion(controlerVersion),
-	}
-
-	aviClient, err := clients.NewAviClient(r.Spec.Controller, username, options...)
-	if err != nil {
-		return nil, field.Invalid(field.NewPath("spec", "controller"),
-			r.Spec.Controller,
-			"failed to init avi client connect to avi controller:"+err.Error())
-	}
-	return aviClient, nil
-}
-
 // validateAviCloud checks input Cloud Name field valid or not
-func (r *AKODeploymentConfig) validateAviCloud(aviClient clients.AviClient) *field.Error {
-	if cloud, err := aviClient.Cloud.GetByName(r.Spec.CloudName); err != nil {
+func (r *AKODeploymentConfig) validateAviCloud() *field.Error {
+	if cloud, err := aviClient.CloudGetByName(r.Spec.CloudName); err != nil {
 		return field.Invalid(field.NewPath("spec", "cloudName"), r.Spec.CloudName,
 			"failed to get cloud from avi controller:"+err.Error())
 	} else if cloud.IPAMProviderRef == nil {
@@ -242,8 +215,8 @@ func (r *AKODeploymentConfig) validateAviCloud(aviClient clients.AviClient) *fie
 }
 
 // validateAviServiceEngineGroup checks input Servcie Engine Group valid or not
-func (r *AKODeploymentConfig) validateAviServiceEngineGroup(aviClient clients.AviClient) *field.Error {
-	if _, err := aviClient.ServiceEngineGroup.GetByName(r.Spec.ServiceEngineGroup); err != nil {
+func (r *AKODeploymentConfig) validateAviServiceEngineGroup() *field.Error {
+	if _, err := aviClient.ServiceEngineGroupGetByName(r.Spec.ServiceEngineGroup); err != nil {
 		return field.Invalid(field.NewPath("spec", "serviceEngineGroup"), r.Spec.ServiceEngineGroup,
 			"failed to get service engine group from avi controller:"+err.Error())
 	}
@@ -251,10 +224,10 @@ func (r *AKODeploymentConfig) validateAviServiceEngineGroup(aviClient clients.Av
 }
 
 // validateAviControlPlaneNetworks checks input Control Plane Network name existing or not, CIDR format valid or not
-func (r *AKODeploymentConfig) validateAviControlPlaneNetworks(aviClient clients.AviClient) field.ErrorList {
+func (r *AKODeploymentConfig) validateAviControlPlaneNetworks() field.ErrorList {
 	var allErrs field.ErrorList
 	// check control plane network name
-	if _, err := aviClient.Network.GetByName(r.Spec.ControlPlaneNetwork.Name); err != nil {
+	if _, err := aviClient.NetworkGetByName(r.Spec.ControlPlaneNetwork.Name); err != nil {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "controlPlaneNetwork", "name"),
 			r.Spec.ControlPlaneNetwork.Name,
 			"failed to get control plane network "+r.Spec.ControlPlaneNetwork.Name+" from avi controller:"+err.Error()))
@@ -273,10 +246,10 @@ func (r *AKODeploymentConfig) validateAviControlPlaneNetworks(aviClient clients.
 // Data Plane Network name existing or not
 // CIDR format valid or not
 // IPPools format valid or not
-func (r *AKODeploymentConfig) validateAviDataNetworks(aviClient clients.AviClient) field.ErrorList {
+func (r *AKODeploymentConfig) validateAviDataNetworks() field.ErrorList {
 	var allErrs field.ErrorList
 	// check data network name
-	if _, err := aviClient.Network.GetByName(r.Spec.DataNetwork.Name); err != nil {
+	if _, err := aviClient.NetworkGetByName(r.Spec.DataNetwork.Name); err != nil {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "dataNetwork", "name"),
 			r.Spec.DataNetwork.Name,
 			"failed to get data plane network "+r.Spec.DataNetwork.Name+" from avi controller:"+err.Error()))
