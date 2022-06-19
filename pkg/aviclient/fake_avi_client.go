@@ -37,8 +37,22 @@ func (r *FakeAviClient) ServiceEngineGroupGetByName(name string, options ...sess
 	return r.ServiceEngineGroup.GetByName(name)
 }
 
+func (r *FakeAviClient) ServiceEngineGroupCreate(obj *models.ServiceEngineGroup, options ...session.ApiOptionsParams) (*models.ServiceEngineGroup, error) {
+	r.ServiceEngineGroup.SetGetByNameFn(func(name string, options ...session.ApiOptionsParams) (*models.ServiceEngineGroup, error) {
+		return obj, nil
+	})
+	return obj, nil
+}
+
 func (r *FakeAviClient) NetworkGetByName(name string, options ...session.ApiOptionsParams) (*models.Network, error) {
 	return r.Network.GetByName(name)
+}
+
+func (r *FakeAviClient) NetworkCreate(obj *models.Network, options ...session.ApiOptionsParams) (*models.Network, error) {
+	r.Network.SetGetByNameFn(func(name string, options ...session.ApiOptionsParams) (*models.Network, error) {
+		return obj, nil
+	})
+	return obj, nil
 }
 
 func (r *FakeAviClient) NetworkUpdate(obj *models.Network, options ...session.ApiOptionsParams) (*models.Network, error) {
@@ -47,6 +61,13 @@ func (r *FakeAviClient) NetworkUpdate(obj *models.Network, options ...session.Ap
 
 func (r *FakeAviClient) CloudGetByName(name string, options ...session.ApiOptionsParams) (*models.Cloud, error) {
 	return r.Cloud.GetByName(name)
+}
+
+func (r *FakeAviClient) CloudCreate(obj *models.Cloud, options ...session.ApiOptionsParams) (*models.Cloud, error) {
+	r.Cloud.SetGetByNameCloudFunc(func(name string, options ...session.ApiOptionsParams) (*models.Cloud, error) {
+		return obj, nil
+	})
+	return obj, nil
 }
 
 func (r *FakeAviClient) IPAMDNSProviderProfileGet(uuid string, options ...session.ApiOptionsParams) (*models.IPAMDNSProviderProfile, error) {
@@ -102,6 +123,10 @@ type ServiceEngineGroupClient struct {
 }
 
 type GetByNameSEGFunc func(name string, options ...session.ApiOptionsParams) (*models.ServiceEngineGroup, error)
+
+func (client *ServiceEngineGroupClient) SetGetByNameFn(fn GetByNameSEGFunc) {
+	client.getByNameFn = fn
+}
 
 func (client *ServiceEngineGroupClient) GetByName(name string, options ...session.ApiOptionsParams) (*models.ServiceEngineGroup, error) {
 	return client.getByNameFn(name)

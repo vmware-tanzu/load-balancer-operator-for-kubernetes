@@ -197,8 +197,16 @@ func (r *realAviClient) ServiceEngineGroupGetByName(name string, options ...sess
 	return r.ServiceEngineGroup.GetByName(name)
 }
 
+func (r *realAviClient) ServiceEngineGroupCreate(obj *models.ServiceEngineGroup, options ...session.ApiOptionsParams) (*models.ServiceEngineGroup, error) {
+	return r.ServiceEngineGroup.Create(obj)
+}
+
 func (r *realAviClient) NetworkGetByName(name string, options ...session.ApiOptionsParams) (*models.Network, error) {
 	return r.Network.GetByName(name)
+}
+
+func (r *realAviClient) NetworkCreate(obj *models.Network, options ...session.ApiOptionsParams) (*models.Network, error) {
+	return r.Network.Create(obj)
 }
 
 func (r *realAviClient) NetworkUpdate(obj *models.Network, options ...session.ApiOptionsParams) (*models.Network, error) {
@@ -207,6 +215,10 @@ func (r *realAviClient) NetworkUpdate(obj *models.Network, options ...session.Ap
 
 func (r *realAviClient) CloudGetByName(name string, options ...session.ApiOptionsParams) (*models.Cloud, error) {
 	return r.Cloud.GetByName(name)
+}
+
+func (r *realAviClient) CloudCreate(obj *models.Cloud, options ...session.ApiOptionsParams) (*models.Cloud, error) {
+	return r.Cloud.Create(obj)
 }
 
 func (r *realAviClient) IPAMDNSProviderProfileGet(uuid string, options ...session.ApiOptionsParams) (*models.IPAMDNSProviderProfile, error) {

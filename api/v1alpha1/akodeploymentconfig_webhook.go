@@ -122,10 +122,14 @@ func (r *AKODeploymentConfig) validateAVI(old *AKODeploymentConfig) field.ErrorL
 
 	// check avi related secret
 	adminCredential := &corev1.Secret{}
-	allErrs = append(allErrs, r.validateAviSecret(adminCredential, r.Spec.AdminCredentialRef))
+	if err := r.validateAviSecret(adminCredential, r.Spec.AdminCredentialRef); err != nil {
+		allErrs = append(allErrs, err)
+	}
 
 	aviControllerCA := &corev1.Secret{}
-	allErrs = append(allErrs, r.validateAviSecret(aviControllerCA, r.Spec.CertificateAuthorityRef))
+	if err := r.validateAviSecret(aviControllerCA, r.Spec.CertificateAuthorityRef); err != nil {
+		allErrs = append(allErrs, err)
+	}
 
 	if len(allErrs) != 0 {
 		return allErrs
@@ -136,9 +140,7 @@ func (r *AKODeploymentConfig) validateAVI(old *AKODeploymentConfig) field.ErrorL
 		controlerVersion = r.Spec.ControllerVersion
 	}
 
-	if runTest {
-		aviClient = aviclient.NewFakeAviClient()
-	} else {
+	if !runTest {
 		client, err := aviclient.NewAviClient(&aviclient.AviClientConfig{
 			ServerIP: r.Spec.Controller,
 			Username: string(adminCredential.Data["username"][:]),
@@ -154,18 +156,30 @@ func (r *AKODeploymentConfig) validateAVI(old *AKODeploymentConfig) field.ErrorL
 
 	if old == nil {
 		// when old is nil, it is creating a new AKODeploymentConfig object, check following fields
-		allErrs = append(allErrs, r.validateAviCloud())
-		allErrs = append(allErrs, r.validateAviServiceEngineGroup())
-		allErrs = append(allErrs, r.validateAviControlPlaneNetworks()...)
-		allErrs = append(allErrs, r.validateAviDataNetworks()...)
+		if err := r.validateAviCloud(); err != nil {
+			allErrs = append(allErrs, err)
+		}
+		if err := r.validateAviServiceEngineGroup(); err != nil {
+			allErrs = append(allErrs, err)
+		}
+		if err := r.validateAviControlPlaneNetworks(); err != nil {
+			allErrs = append(allErrs, err...)
+		}
+		if err := r.validateAviDataNetworks(); err != nil {
+			allErrs = append(allErrs, err...)
+		}
 	} else {
 		// when old is not nil, it is updating an existing AKODeploymentConfig object,
 		// only check changed fields
 		if old.Spec.CloudName != r.Spec.CloudName {
-			allErrs = append(allErrs, r.validateAviCloud())
+			if err := r.validateAviCloud(); err != nil {
+				allErrs = append(allErrs, err)
+			}
 		}
 		if old.Spec.ServiceEngineGroup != r.Spec.ServiceEngineGroup {
-			allErrs = append(allErrs, r.validateAviServiceEngineGroup())
+			if err := r.validateAviServiceEngineGroup(); err != nil {
+				allErrs = append(allErrs, err)
+			}
 		}
 		// control plane network should be immutable since cluster control plane endpoint
 		// can't be updated
@@ -177,7 +191,9 @@ func (r *AKODeploymentConfig) validateAVI(old *AKODeploymentConfig) field.ErrorL
 		}
 		if (old.Spec.DataNetwork.Name != r.Spec.DataNetwork.Name) ||
 			(old.Spec.DataNetwork.CIDR != r.Spec.DataNetwork.CIDR) {
-			allErrs = append(allErrs, r.validateAviDataNetworks()...)
+			if err := r.validateAviDataNetworks(); err != nil {
+				allErrs = append(allErrs, err...)
+			}
 		}
 	}
 	return allErrs
