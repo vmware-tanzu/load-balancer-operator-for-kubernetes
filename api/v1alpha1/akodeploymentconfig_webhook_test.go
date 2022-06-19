@@ -300,24 +300,151 @@ func TestCreateNewAKODeploymentConfig(t *testing.T) {
 }
 
 func TestUpdateExistingAKODeploymentConfig(t *testing.T) {
-	_, _, _, g := beforeAll(t)
-
+	staticAdminSecret, staticCASecret, staticADC, g := beforeAll(t)
 	testcases := []struct {
-		name      string
-		old       AKODeploymentConfig
-		new       AKODeploymentConfig
-		expectErr bool
-		expectMsg string
-	}{}
+		name              string
+		adminSecret       *corev1.Secret
+		certificateSecret *corev1.Secret
+		old               *AKODeploymentConfig
+		new               *AKODeploymentConfig
+		customizeInput    ModifyTestCaseInputFunc
+		expectErr         bool
+	}{
+		{
+			name:              "valid akodeployment update should pass webhook validation",
+			adminSecret:       staticAdminSecret.DeepCopy(),
+			certificateSecret: staticCASecret.DeepCopy(),
+			old:               staticADC.DeepCopy(),
+			new:               staticADC.DeepCopy(),
+			customizeInput: func(adminSecret, certificateSecret *corev1.Secret, adc *AKODeploymentConfig) (*corev1.Secret, *corev1.Secret, *AKODeploymentConfig) {
+				aviClient.CloudCreate(&models.Cloud{
+					Name:            pointer.StringPtr("fake-new-cloud"),
+					IPAMProviderRef: pointer.StringPtr("https://10.0.0.x/api/ipamdnsproviderprofile/test"),
+				})
+				aviClient.ServiceEngineGroupCreate(&models.ServiceEngineGroup{
+					Name: pointer.StringPtr("fake-seg"),
+				})
+				aviClient.NetworkCreate(&models.Network{
+					Name: pointer.StringPtr("fake-new-data-plane"),
+				})
+				adc.Spec.CloudName = "fake-new-cloud"
+				adc.Spec.ServiceEngineGroup = "fake-new-seg"
+				adc.Spec.DataNetwork = DataNetwork{
+					Name: "fake-new-data-plane",
+					CIDR: "11.0.0.0/24",
+					IPPools: []IPPool{
+						{
+							Start: "11.0.0.1",
+							End:   "11.0.0.10",
+							Type:  "V4",
+						},
+					},
+				}
+				return adminSecret, certificateSecret, adc
+			},
+			expectErr: false,
+		},
+		{
+			name:              "akodeployment should not update cluster selector",
+			adminSecret:       staticAdminSecret.DeepCopy(),
+			certificateSecret: staticCASecret.DeepCopy(),
+			old:               staticADC.DeepCopy(),
+			new:               staticADC.DeepCopy(),
+			customizeInput: func(adminSecret, certificateSecret *corev1.Secret, adc *AKODeploymentConfig) (*corev1.Secret, *corev1.Secret, *AKODeploymentConfig) {
+				adc.Spec.ClusterSelector = v1.LabelSelector{
+					MatchLabels: map[string]string{
+						"test": "bar",
+					},
+				}
+				return adminSecret, certificateSecret, adc
+			},
+			expectErr: true,
+		},
+		{
+			name:              "akodeployment should not update cluster selector",
+			adminSecret:       staticAdminSecret.DeepCopy(),
+			certificateSecret: staticCASecret.DeepCopy(),
+			old:               staticADC.DeepCopy(),
+			new:               staticADC.DeepCopy(),
+			customizeInput: func(adminSecret, certificateSecret *corev1.Secret, adc *AKODeploymentConfig) (*corev1.Secret, *corev1.Secret, *AKODeploymentConfig) {
+				adc.Spec.ClusterSelector = v1.LabelSelector{
+					MatchLabels: map[string]string{
+						"test": "bar",
+					},
+				}
+				return adminSecret, certificateSecret, adc
+			},
+			expectErr: true,
+		},
+		{
+			name:              "akodeployment should not update control plane network",
+			adminSecret:       staticAdminSecret.DeepCopy(),
+			certificateSecret: staticCASecret.DeepCopy(),
+			old:               staticADC.DeepCopy(),
+			new:               staticADC.DeepCopy(),
+			customizeInput: func(adminSecret, certificateSecret *corev1.Secret, adc *AKODeploymentConfig) (*corev1.Secret, *corev1.Secret, *AKODeploymentConfig) {
+				adc.Spec.ControlPlaneNetwork = ControlPlaneNetwork{
+					Name: "fake-new-control-plane",
+					CIDR: "12.0.0.0/24",
+				}
+				return adminSecret, certificateSecret, adc
+			},
+			expectErr: true,
+		},
+		{
+			name:              "akodeployment should not update to invalid cloud, seg and data plane",
+			adminSecret:       staticAdminSecret.DeepCopy(),
+			certificateSecret: staticCASecret.DeepCopy(),
+			old:               staticADC.DeepCopy(),
+			new:               staticADC.DeepCopy(),
+			customizeInput: func(adminSecret, certificateSecret *corev1.Secret, adc *AKODeploymentConfig) (*corev1.Secret, *corev1.Secret, *AKODeploymentConfig) {
+				aviClient.CloudCreate(nil)
+				aviClient.NetworkCreate(nil)
+				aviClient.ServiceEngineGroupCreate(nil)
+
+				adc.Spec.CloudName = "fake-new-cloud"
+				adc.Spec.ServiceEngineGroup = "fake-new-seg"
+				adc.Spec.DataNetwork = DataNetwork{
+					Name: "fake-new-data-plane",
+					CIDR: "11.0.0.0/24",
+					IPPools: []IPPool{
+						{
+							Start: "test",
+							End:   "test",
+							Type:  "V4",
+						},
+					},
+				}
+				return adminSecret, certificateSecret, adc
+			},
+			expectErr: true,
+		},
+	}
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := tc.new.ValidateUpdate(&tc.old)
-
+			tc.adminSecret, tc.certificateSecret, tc.new = tc.customizeInput(tc.adminSecret, tc.certificateSecret, tc.new)
+			if tc.adminSecret != nil {
+				err := kclient.Create(context.Background(), tc.adminSecret)
+				g.Expect(err).ShouldNot(HaveOccurred())
+			}
+			if tc.certificateSecret != nil {
+				err := kclient.Create(context.Background(), tc.certificateSecret)
+				g.Expect(err).ShouldNot(HaveOccurred())
+			}
+			err := tc.new.ValidateUpdate(tc.old)
 			if !tc.expectErr {
-				g.Expect(err).To(BeNil())
+				g.Expect(err).ShouldNot(HaveOccurred())
 			} else {
 				g.Expect(err).Should(HaveOccurred())
+			}
+			if tc.adminSecret != nil {
+				err := kclient.Delete(context.Background(), tc.adminSecret)
+				g.Expect(err).ShouldNot(HaveOccurred())
+			}
+			if tc.certificateSecret != nil {
+				err := kclient.Delete(context.Background(), tc.certificateSecret)
+				g.Expect(err).ShouldNot(HaveOccurred())
 			}
 		})
 	}

@@ -2,3 +2,21 @@
 coverage:
   precision: 2
   round: down
+
+  status:
+    project:
+      default:
+        target: auto # automatically calculate coverage target - should increase
+        threshold: 1% # allow for 1% reduction without failing
+        if_ci_failed: error
+        only_pulls: false
+    patch:
+      default:
+        target: auto
+        if_ci_failed: error
+        only_pulls: false
+    changes: false
+ignore:
+  - "config"
+  - "docs"
+  - "e2e"
