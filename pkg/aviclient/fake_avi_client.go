@@ -4,6 +4,8 @@
 package aviclient
 
 import (
+	"errors"
+
 	"github.com/vmware/alb-sdk/go/models"
 	"github.com/vmware/alb-sdk/go/session"
 )
@@ -39,6 +41,9 @@ func (r *FakeAviClient) ServiceEngineGroupGetByName(name string, options ...sess
 
 func (r *FakeAviClient) ServiceEngineGroupCreate(obj *models.ServiceEngineGroup, options ...session.ApiOptionsParams) (*models.ServiceEngineGroup, error) {
 	r.ServiceEngineGroup.SetGetByNameFn(func(name string, options ...session.ApiOptionsParams) (*models.ServiceEngineGroup, error) {
+		if obj == nil {
+			return nil, errors.New("can't find service engine group")
+		}
 		return obj, nil
 	})
 	return obj, nil
@@ -50,6 +55,9 @@ func (r *FakeAviClient) NetworkGetByName(name string, options ...session.ApiOpti
 
 func (r *FakeAviClient) NetworkCreate(obj *models.Network, options ...session.ApiOptionsParams) (*models.Network, error) {
 	r.Network.SetGetByNameFn(func(name string, options ...session.ApiOptionsParams) (*models.Network, error) {
+		if obj == nil {
+			return nil, errors.New("can't find network")
+		}
 		return obj, nil
 	})
 	return obj, nil
@@ -65,6 +73,9 @@ func (r *FakeAviClient) CloudGetByName(name string, options ...session.ApiOption
 
 func (r *FakeAviClient) CloudCreate(obj *models.Cloud, options ...session.ApiOptionsParams) (*models.Cloud, error) {
 	r.Cloud.SetGetByNameCloudFunc(func(name string, options ...session.ApiOptionsParams) (*models.Cloud, error) {
+		if obj == nil {
+			return nil, errors.New("can't find cloud")
+		}
 		return obj, nil
 	})
 	return obj, nil
