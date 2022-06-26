@@ -147,8 +147,8 @@ func (r *AKODeploymentConfig) validateAVI(old *AKODeploymentConfig) field.ErrorL
 			Password: string(adminCredential.Data["password"][:]),
 			CA:       string(aviControllerCA.Data["certificateAuthorityData"][:]),
 		}, controlerVersion)
-		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "Controller"), r.Spec.Controller, "failed to init avi client for controller:"+err.Error()))
-		if len(allErrs) != 0 {
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "Controller"), r.Spec.Controller, "failed to init avi client for controller:"+err.Error()))
 			return allErrs
 		}
 		aviClient = client
@@ -299,7 +299,7 @@ func (r *AKODeploymentConfig) validateAviDataNetworks() field.ErrorList {
 		if bytes.Compare(ipStart, ipEnd) > 0 {
 			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "dataNetwork", "ipPools"),
 				r.Spec.DataNetwork.IPPools,
-				ipPool.Start+"is greater than"+ipPool.End))
+				ipPool.Start+" is greater than "+ipPool.End))
 		}
 		// TODO:(xudongl) will wait for AKO support v6 address to uncomment this
 		// if ippool.Type != addrType {
