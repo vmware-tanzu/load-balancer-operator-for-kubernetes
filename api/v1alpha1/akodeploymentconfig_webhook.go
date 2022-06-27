@@ -46,7 +46,7 @@ func (r *AKODeploymentConfig) ValidateCreate() error {
 	akoDeploymentConfigLog.Info("validate create", "name", r.Name)
 
 	var allErrs field.ErrorList
-	allErrs = append(allErrs, r.validateCluserSelector(nil)...)
+	allErrs = append(allErrs, r.validateClusterSelector(nil)...)
 	allErrs = append(allErrs, r.validateAVI(nil)...)
 	if len(allErrs) == 0 {
 		return nil
@@ -63,7 +63,7 @@ func (r *AKODeploymentConfig) ValidateUpdate(old runtime.Object) error {
 	}
 	var allErrs field.ErrorList
 	if oldADC != nil {
-		allErrs = append(allErrs, r.validateCluserSelector(oldADC)...)
+		allErrs = append(allErrs, r.validateClusterSelector(oldADC)...)
 		allErrs = append(allErrs, r.validateAVI(oldADC)...)
 	}
 	if len(allErrs) == 0 {
@@ -78,10 +78,10 @@ func (r *AKODeploymentConfig) ValidateDelete() error {
 	return nil
 }
 
-// validateCluserSelector checks AKODeploymentConfig object's cluster selector field input is valid or not
+// validateClusterSelector checks AKODeploymentConfig object's cluster selector field input is valid or not
 // when old is nil, it is used for AKODeploymentConfig object create, otherwise it is used for AKODeploymentConfig
 // object update
-func (r *AKODeploymentConfig) validateCluserSelector(old *AKODeploymentConfig) field.ErrorList {
+func (r *AKODeploymentConfig) validateClusterSelector(old *AKODeploymentConfig) field.ErrorList {
 	var allErrs field.ErrorList
 	// when update AKODeploymentConfig object, cluster selector should be immutable
 	if old != nil {
@@ -199,7 +199,7 @@ func (r *AKODeploymentConfig) validateAVI(old *AKODeploymentConfig) field.ErrorL
 	return allErrs
 }
 
-// validateAviSecret checks NSX Advanced Load Balancer related credentails or certificate secret is valid or not
+// validateAviSecret checks NSX Advanced Load Balancer related credentials or certificate secret is valid or not
 func (r *AKODeploymentConfig) validateAviSecret(secret *corev1.Secret, secretRef SecretReference) *field.Error {
 	if err := kclient.Get(context.Background(), client.ObjectKey{
 		Name:      secretRef.Name,
