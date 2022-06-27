@@ -8,10 +8,15 @@ import (
 )
 
 type Client interface {
+	ServiceEngineGroupGetByName(name string, options ...session.ApiOptionsParams) (*models.ServiceEngineGroup, error)
+	ServiceEngineGroupCreate(obj *models.ServiceEngineGroup, options ...session.ApiOptionsParams) (*models.ServiceEngineGroup, error)
+
 	NetworkGetByName(name string, options ...session.ApiOptionsParams) (*models.Network, error)
+	NetworkCreate(obj *models.Network, options ...session.ApiOptionsParams) (*models.Network, error)
 	NetworkUpdate(obj *models.Network, options ...session.ApiOptionsParams) (*models.Network, error)
 
 	CloudGetByName(name string, options ...session.ApiOptionsParams) (*models.Cloud, error)
+	CloudCreate(obj *models.Cloud, options ...session.ApiOptionsParams) (*models.Cloud, error)
 
 	UserGetByName(name string, options ...session.ApiOptionsParams) (*models.User, error)
 	UserDeleteByName(name string, options ...session.ApiOptionsParams) error
