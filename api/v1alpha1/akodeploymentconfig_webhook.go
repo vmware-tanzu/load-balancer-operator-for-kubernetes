@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"regexp"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -27,6 +28,8 @@ var akoDeploymentConfigLog = logf.Log.WithName("akodeploymentconfig-resource")
 var kclient client.Client
 var aviClient aviclient.Client
 var runTest bool
+
+const controllerVersionRegex = `^\d+(\.\d+)*$`
 
 func (r *AKODeploymentConfig) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	kclient = mgr.GetClient()
@@ -75,6 +78,12 @@ func (r *AKODeploymentConfig) ValidateUpdate(old runtime.Object) error {
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *AKODeploymentConfig) ValidateDelete() error {
 	akoDeploymentConfigLog.Info("validate delete", "name", r.Name)
+	// should not delete the akodeploymentconfig selects management cluster
+	if r.Name == ManagementClusterAkoDeploymentConfig {
+		return field.Invalid(field.NewPath("spec", "ClusterSelector"),
+			r.Spec.ClusterSelector,
+			"can't delete akodeploymentconfig object for management cluster")
+	}
 	return nil
 }
 
@@ -135,9 +144,10 @@ func (r *AKODeploymentConfig) validateAVI(old *AKODeploymentConfig) field.ErrorL
 		return allErrs
 	}
 
-	controlerVersion := "20.1.3"
-	if r.Spec.ControllerVersion != "" {
-		controlerVersion = r.Spec.ControllerVersion
+	// check avi controller version format
+	controllerVersion, err := r.validateAviControllerVersion()
+	if err != nil {
+		allErrs = append(allErrs, err)
 	}
 
 	if !runTest {
@@ -146,7 +156,7 @@ func (r *AKODeploymentConfig) validateAVI(old *AKODeploymentConfig) field.ErrorL
 			Username: string(adminCredential.Data["username"][:]),
 			Password: string(adminCredential.Data["password"][:]),
 			CA:       string(aviControllerCA.Data["certificateAuthorityData"][:]),
-		}, controlerVersion)
+		}, controllerVersion)
 		if err != nil {
 			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "Controller"), r.Spec.Controller, "failed to init avi client for controller:"+err.Error()))
 			return allErrs
@@ -216,6 +226,21 @@ func (r *AKODeploymentConfig) validateAviSecret(secret *corev1.Secret, secretRef
 		}
 	}
 	return nil
+}
+
+// validateAviControllerVersion checks NSX Advanced Load Balancer controller version valid or not
+func (r *AKODeploymentConfig) validateAviControllerVersion() (string, *field.Error) {
+	controllerVersion := AVI_VERSION
+	if r.Spec.ControllerVersion != "" {
+		controllerVersion = r.Spec.ControllerVersion
+	}
+	var re = regexp.MustCompile(controllerVersionRegex)
+	if !re.MatchString(controllerVersion) {
+		return controllerVersion, field.Invalid(field.NewPath("spec", "ControllerVersion"),
+			r.Spec.ControllerVersion,
+			"invalid controller version format, example valid controller version: 20.1.3")
+	}
+	return controllerVersion, nil
 }
 
 // validateAviCloud checks input Cloud Name field valid or not

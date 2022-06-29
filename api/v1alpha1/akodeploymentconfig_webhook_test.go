@@ -22,19 +22,7 @@ func beforeAll(t *testing.T) (staticAdminSecret, staticCASecret *corev1.Secret, 
 	runTest = true
 	kclient = fake.NewClientBuilder().Build()
 	aviClient = aviclient.NewFakeAviClient()
-	aviClient.ServiceEngineGroupCreate(&models.ServiceEngineGroup{
-		Name: pointer.StringPtr("fake-seg"),
-	})
-	aviClient.CloudCreate(&models.Cloud{
-		Name:            pointer.StringPtr("fake-cloud"),
-		IPAMProviderRef: pointer.StringPtr("https://10.0.0.x/api/ipamdnsproviderprofile/test"),
-	})
-	aviClient.NetworkCreate(&models.Network{
-		Name: pointer.StringPtr("fake-control-plane"),
-	})
-	aviClient.NetworkCreate(&models.Network{
-		Name: pointer.StringPtr("fake-data-plane"),
-	})
+	configureAVIController()
 
 	staticAdminSecret = &corev1.Secret{
 		ObjectMeta: v1.ObjectMeta{
@@ -100,6 +88,35 @@ func beforeAll(t *testing.T) (staticAdminSecret, staticCASecret *corev1.Secret, 
 	return staticAdminSecret, staticCASecret, staticADC, g
 }
 
+func afterEach(adminSecret, certificateSecret *corev1.Secret, g *WithT) {
+	if adminSecret != nil {
+		err := kclient.Delete(context.Background(), adminSecret)
+		g.Expect(err).ShouldNot(HaveOccurred())
+	}
+	if certificateSecret != nil {
+		err := kclient.Delete(context.Background(), certificateSecret)
+		g.Expect(err).ShouldNot(HaveOccurred())
+	}
+	// restore avi client configuration
+	configureAVIController()
+}
+
+func configureAVIController() {
+	aviClient.ServiceEngineGroupCreate(&models.ServiceEngineGroup{
+		Name: pointer.StringPtr("fake-seg"),
+	})
+	aviClient.CloudCreate(&models.Cloud{
+		Name:            pointer.StringPtr("fake-cloud"),
+		IPAMProviderRef: pointer.StringPtr("https://10.0.0.x/api/ipamdnsproviderprofile/test"),
+	})
+	aviClient.NetworkCreate(&models.Network{
+		Name: pointer.StringPtr("fake-control-plane"),
+	})
+	aviClient.NetworkCreate(&models.Network{
+		Name: pointer.StringPtr("fake-data-plane"),
+	})
+}
+
 func TestCreateNewAKODeploymentConfig(t *testing.T) {
 	staticAdminSecret, staticCASecret, staticADC, g := beforeAll(t)
 	testcases := []struct {
@@ -119,6 +136,28 @@ func TestCreateNewAKODeploymentConfig(t *testing.T) {
 				return adminSecret, certificateSecret, adc
 			},
 			expectErr: false,
+		},
+		{
+			name:              "default controller version should pass webhook validation",
+			adminSecret:       staticAdminSecret.DeepCopy(),
+			certificateSecret: staticCASecret.DeepCopy(),
+			adc:               staticADC.DeepCopy(),
+			customizeInput: func(adminSecret, certificateSecret *corev1.Secret, adc *AKODeploymentConfig) (*corev1.Secret, *corev1.Secret, *AKODeploymentConfig) {
+				adc.Spec.ControllerVersion = ""
+				return adminSecret, certificateSecret, adc
+			},
+			expectErr: false,
+		},
+		{
+			name:              "wrong controller version formt should return error",
+			adminSecret:       staticAdminSecret.DeepCopy(),
+			certificateSecret: staticCASecret.DeepCopy(),
+			adc:               staticADC.DeepCopy(),
+			customizeInput: func(adminSecret, certificateSecret *corev1.Secret, adc *AKODeploymentConfig) (*corev1.Secret, *corev1.Secret, *AKODeploymentConfig) {
+				adc.Spec.ControllerVersion = "test adc version"
+				return adminSecret, certificateSecret, adc
+			},
+			expectErr: true,
 		},
 		{
 			name:              "cluster selector should not be empty for non-default adc",
@@ -287,14 +326,8 @@ func TestCreateNewAKODeploymentConfig(t *testing.T) {
 			} else {
 				g.Expect(err).Should(HaveOccurred())
 			}
-			if tc.adminSecret != nil {
-				err := kclient.Delete(context.Background(), tc.adminSecret)
-				g.Expect(err).ShouldNot(HaveOccurred())
-			}
-			if tc.certificateSecret != nil {
-				err := kclient.Delete(context.Background(), tc.certificateSecret)
-				g.Expect(err).ShouldNot(HaveOccurred())
-			}
+
+			afterEach(tc.adminSecret, tc.certificateSecret, g)
 		})
 	}
 }
@@ -438,14 +471,66 @@ func TestUpdateExistingAKODeploymentConfig(t *testing.T) {
 			} else {
 				g.Expect(err).Should(HaveOccurred())
 			}
+
+			afterEach(tc.adminSecret, tc.certificateSecret, g)
+		})
+	}
+}
+
+func TestDeleteAKODeploymentConfig(t *testing.T) {
+	staticAdminSecret, staticCASecret, staticADC, g := beforeAll(t)
+
+	testcases := []struct {
+		name              string
+		adminSecret       *corev1.Secret
+		certificateSecret *corev1.Secret
+		adc               *AKODeploymentConfig
+		customizeInput    ModifyTestCaseInputFunc
+		expectErr         bool
+	}{
+		{
+			name:              "valid akodeployment config should pass webhook validation",
+			adminSecret:       staticAdminSecret.DeepCopy(),
+			certificateSecret: staticCASecret.DeepCopy(),
+			adc:               staticADC.DeepCopy(),
+			customizeInput: func(adminSecret, certificateSecret *corev1.Secret, adc *AKODeploymentConfig) (*corev1.Secret, *corev1.Secret, *AKODeploymentConfig) {
+				return adminSecret, certificateSecret, adc
+			},
+			expectErr: false,
+		},
+		{
+			name:              "management cluster akodeployment object should not be deleted",
+			adminSecret:       staticAdminSecret.DeepCopy(),
+			certificateSecret: staticCASecret.DeepCopy(),
+			adc:               staticADC.DeepCopy(),
+			customizeInput: func(adminSecret, certificateSecret *corev1.Secret, adc *AKODeploymentConfig) (*corev1.Secret, *corev1.Secret, *AKODeploymentConfig) {
+				adc.Name = ManagementClusterAkoDeploymentConfig
+				return adminSecret, certificateSecret, adc
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.adminSecret, tc.certificateSecret, tc.adc = tc.customizeInput(tc.adminSecret, tc.certificateSecret, tc.adc)
 			if tc.adminSecret != nil {
-				err := kclient.Delete(context.Background(), tc.adminSecret)
+				err := kclient.Create(context.Background(), tc.adminSecret)
 				g.Expect(err).ShouldNot(HaveOccurred())
 			}
 			if tc.certificateSecret != nil {
-				err := kclient.Delete(context.Background(), tc.certificateSecret)
+				err := kclient.Create(context.Background(), tc.certificateSecret)
 				g.Expect(err).ShouldNot(HaveOccurred())
 			}
+
+			err := tc.adc.ValidateDelete()
+			if !tc.expectErr {
+				g.Expect(err).ShouldNot(HaveOccurred())
+			} else {
+				g.Expect(err).Should(HaveOccurred())
+			}
+
+			afterEach(tc.adminSecret, tc.certificateSecret, g)
 		})
 	}
 }
