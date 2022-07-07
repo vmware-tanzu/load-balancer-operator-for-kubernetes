@@ -120,15 +120,10 @@ func (r *ConfigMapReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	for _, vipNetwork := range vipNetworkList {
-		added, err := r.AddUsableNetwork(r.aviClient, cloudName, vipNetwork.NetworkName)
+		err := r.AddUsableNetwork(r.aviClient, cloudName, vipNetwork.NetworkName, log)
 		if err != nil {
 			log.Error(err, "Failed to add usable network", "network", vipNetwork.NetworkName)
 			return ctrl.Result{}, err
-		}
-		if added {
-			log.Info("Added Usable Network", "network", vipNetwork.NetworkName)
-		} else {
-			log.Info("Network is already one of the cloud's usable network", "network", vipNetwork.NetworkName)
 		}
 	}
 	return ctrl.Result{}, nil
