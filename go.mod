@@ -10,7 +10,8 @@ require (
 	github.com/onsi/gomega v1.18.1
 	github.com/pkg/errors v0.9.1
 	github.com/satori/go.uuid v1.2.0
-	github.com/vmware-tanzu/tanzu-framework v0.23.0
+	github.com/vmware-tanzu/carvel-kapp-controller v0.38.4
+	github.com/vmware-tanzu/tanzu-framework v0.24.0
 	github.com/vmware/alb-sdk v0.0.0-20210721142023-8e96475b833b
 	github.com/vmware/load-balancer-and-ingress-services-for-kubernetes v0.0.0-20211102041403-f2ed902e4706
 	go.uber.org/zap v1.19.1
