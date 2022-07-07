@@ -10,6 +10,7 @@ import (
 	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako"
 	akoo "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
+	runv1alpha3 "github.com/vmware-tanzu/tanzu-framework/apis/run/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,6 +18,133 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+// func (r *ClusterReconciler) ReconcileClusterBootstrap(
+// 	ctx context.Context,
+// 	log logr.Logger,
+// 	cluster *clusterv1.Cluster,
+// 	obj *akoov1alpha1.AKODeploymentConfig,
+// 	obj2 *runv1alpha3.ClusterBootstrap,
+// ) (ctrl.Result, error) {
+
+// 	// @TODO:
+// 	// 	- get the cluster bootstrap  					 				  ☑
+// 	// 	- get the AKO package	 	 									  ☐
+// 	// 	- patch ClusterBootstrap.spec.additionalPackages with AKO package ☐
+
+// 	//  r.Update(context.Context ,cb.Spec.AdditionalPackages, ako_package.Spec.ExtraConfigs)
+
+// 	log.Info("Starts reconciling add on secret")
+// 	res := ctrl.Result{}
+// 	// obj2.Spec
+// 	// cluster bootstrap
+// 	cbSpec := obj2.Spec.AdditionalPackages
+
+// 	// AKO package
+// 	akop := obj.Spec.ExtraConfigs
+// 	// test := obj.Spec.ExtraConfigs
+// 	newAddonSecret, err := r.createAKOAddonSecret(cluster, obj, obj2)
+
+// 	r.
+
+// 	// cb :=
+// 	// adc := akoov1alpha1.AKODeploymentConfig{
+// 	// 	TypeMeta:   metav1.TypeMeta{},
+// 	// 	ObjectMeta: metav1.ObjectMeta{},
+// 	// 	Spec:       akoov1alpha1.AKODeploymentConfigSpec{},
+// 	// 	Status:     akoov1alpha1.AKODeploymentConfigStatus{},
+// 	// }
+// 	// adc2 := adc.DeepCopy()
+// 	// r.Update(ctx ,obj2, adc)
+// 	// r.Update(ctx, obj2, obj)
+
+// 	_, err := r.getClusterAviUserSecret(cluster, ctx)
+// 	if err != nil {
+// 		log.Info("Failed to get cluster avi user secret, requeue")
+// 		return res, err
+// 	}
+// }
+
+// _________
+// 1. client.list --list clusters
+// 2. get bootstrap cluster
+
+func (r *ClusterReconciler) ReconcileClusterBootstrap(
+	ctx context.Context,
+	log logr.Logger,
+	cluster *clusterv1.Cluster,
+	obj *akoov1alpha1.AKODeploymentConfig,
+
+) (ctrl.Result, error) {
+	log.Info("Starts reconciling add on secret")
+	res := ctrl.Result{}
+
+	aviSecret, err := r.getClusterAviUserSecret(cluster, ctx)
+	if err != nil {
+		log.Info("Failed to get cluster avi user secret, requeue")
+		return res, err
+	}
+
+	// get the bootstrap
+	bootstrap := &runv1alpha3.ClusterBootstrap{}
+	if err = r.Get(ctx, client.ObjectKey{
+		Name:      cluster.Namespace + "-" + cluster.Name,
+		Namespace: akoov1alpha1.TKGSystemNamespace,
+	}, bootstrap); err != nil {
+		log.Info("Failed to get cluster bootstrap, requeue")
+		return res, err
+	}
+	// packages := bootstrap.Spec.
+	// package := &runv1alpha3.ClusterBootstrapPackage{}
+	// when avi is ha provider and deploy ako in management cluster, need to wait for
+	// control plane load balancer type of service creating
+	if akoo.IsHAProvider() && cluster.Namespace == akoov1alpha1.TKGSystemNamespace {
+		svc := &corev1.Service{}
+		if err = r.Get(ctx, client.ObjectKey{
+			Name:      cluster.Namespace + "-" + cluster.Name + "-" + akoov1alpha1.HAServiceName,
+			Namespace: akoov1alpha1.TKGSystemNamespace,
+		}, svc); err != nil {
+			log.Info("Failed to get cluster control plane load balancer type of service, requeue")
+			return res, err
+		}
+	}
+
+	newAddonSecret, err := r.createAKOAddonSecret(cluster, obj, aviSecret)
+	if err != nil {
+		log.Info("Failed to convert AKO Deployment Config to add-on secret, requeue the request")
+		return res, err
+	}
+	secret := &corev1.Secret{}
+
+	if err = r.Get(ctx, client.ObjectKey{
+		Name:      r.akoAddonSecretName(cluster),
+		Namespace: cluster.Namespace,
+	}, secret); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Info("AKO add on secret doesn't exist, start creating it")
+			return res, r.Create(ctx, newAddonSecret)
+		}
+		log.Error(err, "Failed to get AKO Deployment Secret, requeue")
+		return res, err
+	}
+	// client.Patch
+	// mypkg := runv1alpha3.ClusterBootstrapPackage{
+	// 	RefName:    "",
+	// 	ValuesFrom: &runv1alpha3.ValuesFrom{
+	// 		Inline:      map[string]interface{}{},
+	// 		SecretRef:   "",
+	// 		ProviderRef: &corev1.TypedLocalObjectReference{},
+	// 	},
+	// }
+	secret = newAddonSecret.DeepCopy()
+	bootstrap.Spec.
+	return res, r.Update(ctx, secret)
+}
+
+// ===============================================================================================================================================
+// ===============================================================================================================================================
+// ===============================================================================================================================================
+// ===============================================================================================================================================
 
 func (r *ClusterReconciler) ReconcileAddonSecret(
 	ctx context.Context,
