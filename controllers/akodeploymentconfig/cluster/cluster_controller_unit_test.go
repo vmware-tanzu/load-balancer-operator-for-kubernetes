@@ -67,7 +67,7 @@ loadBalancerAndIngressService:
             auto_fqdn: ""
         controller_settings:
             service_engine_group_name: Default-SEG
-            controller_version: ""
+            controller_version: 20.1.3
             cloud_name: test-cloud
             controller_ip: 10.23.122.1
         nodeport_selector:

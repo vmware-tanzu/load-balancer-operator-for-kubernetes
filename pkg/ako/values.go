@@ -40,7 +40,7 @@ func NewValues(obj *akoov1alpha1.AKODeploymentConfig, clusterNameSpacedName stri
 		obj.Spec.ControllerVersion,
 		obj.Spec.ServiceEngineGroup,
 	)
-	l7Settings := NewL7Settings(&obj.Spec.ExtraConfigs.IngressConfigs)
+	l7Settings := NewL7Settings(&obj.Spec.ExtraConfigs.IngressConfigs, CNI(obj.Spec.ExtraConfigs.CniPlugin))
 	l4Settings := NewL4Settings(&obj.Spec.ExtraConfigs.L4Configs)
 	nodePortSelector := NewNodePortSelector(&obj.Spec.ExtraConfigs.NodePortSelector)
 	resources := DefaultResources()
@@ -132,7 +132,7 @@ type AKOSettings struct {
 	DeleteConfig           string            `yaml:"delete_config"`             // Has to be set to true in configmap if user wants to delete AKO created objects from AVI
 	DisableStaticRouteSync string            `yaml:"disable_static_route_sync"` // If the POD networks are reachable from the Avi SE, set this knob to true.
 	ClusterName            string            `yaml:"cluster_name"`              // A unique identifier for the kubernetes cluster, that helps distinguish the objects for this cluster in the avi controller. // MUST-EDIT
-	CniPlugin              string            `yaml:"cni_plugin"`                // Set the string if your CNI is calico or openshift. enum: calico|canal|flannel|openshift
+	CniPlugin              string            `yaml:"cni_plugin"`                // Set the string if your CNI is calico or openshift. enum: antrea|calico|canal|flannel|openshift
 	SyncNamespace          string            `yaml:"sync_namespace"`
 	EnableEVH              string            `yaml:"enable_EVH"`   // This enables the Enhanced Virtual Hosting Model in Avi Controller for the Virtual Services
 	Layer7Only             string            `yaml:"layer_7_only"` // If this flag is switched on, then AKO will only do layer 7 loadbalancing
@@ -141,6 +141,16 @@ type AKOSettings struct {
 	VIPPerNamespace        string            `yaml:"vip_per_namespace"`
 	NamespaceSector        NamespaceSelector `yaml:"namespace_selector"`
 }
+
+type CNI string
+
+const (
+	Antrea    CNI = "antrea"
+	Calico    CNI = "calico"
+	Canal     CNI = "canal"
+	Flannel   CNI = "flannel"
+	Openshift CNI = "openshift"
+)
 
 // DefaultAKOSettings returns the default AKOSettings
 func DefaultAKOSettings() *AKOSettings {
@@ -297,21 +307,35 @@ type L7Settings struct {
 	NoPGForSNI           bool   `yaml:"no_pg_for_SNI"`
 }
 
+type ServiceType string
+
+const (
+	NodePort      ServiceType = "NodePort"
+	ClusterIP     ServiceType = "ClusterIP"
+	NodePortLocal ServiceType = "NodePortLocal"
+)
+
 // DefaultL7Settings returns the default L7Settings
-func DefaultL7Settings() *L7Settings {
+func DefaultL7Settings(cni CNI) *L7Settings {
+	// If antrea is the cluster cni implementation,
+	// the default service will be set to NPL
+	serviceType := NodePort
+	if cni == Antrea {
+		serviceType = NodePortLocal
+	}
 	return &L7Settings{
-		DefaultIngController: false,
-		ServiceType:          "NodePort",
-		ShardVSSize:          "SMALL",
-		// L7ShardingScheme: don't set, use default value in AKO
-		// PassthroughShardSize: don't set, use default value in AKO
+		ServiceType: string(serviceType),
+		// DefaultIngController  don't set, populate in runtime
+		// ShardVSSize:          don't set, populate in runtime
+		// L7ShardingScheme: 	 don't set, populate in runtime
+		// PassthroughShardSize: don't set, populate in runtime
 	}
 }
 
 // NewL7Settings returns a customized L7Settings after parsing the v1alpha1.AKOIngressConfig
 // it only modifies ServiceType and ShardVSSize when instructed by the ingressConfig
-func NewL7Settings(config *akoov1alpha1.AKOIngressConfig) *L7Settings {
-	settings := DefaultL7Settings()
+func NewL7Settings(config *akoov1alpha1.AKOIngressConfig, cni CNI) *L7Settings {
+	settings := DefaultL7Settings(cni)
 	if config.DisableIngressClass != nil {
 		settings.DisableIngressClass = *config.DisableIngressClass
 	}
@@ -373,11 +397,11 @@ type ControllerSettings struct {
 // DefaultControllerSettings return the default ControllerSettings
 func DefaultControllerSettings() *ControllerSettings {
 	return &ControllerSettings{
+		// set controller version to the default one
+		ControllerVersion: akoov1alpha1.AVI_VERSION,
 		// ServiceEngineGroupName: populate in runtime
 		// CloudName: populate in runtime
 		// ControllerIP: populate in runtime
-		// ControllerVersion: don't set, depend on AKO to autodetect,
-		// also because we don't consider version skew in Calgary
 	}
 }
 
