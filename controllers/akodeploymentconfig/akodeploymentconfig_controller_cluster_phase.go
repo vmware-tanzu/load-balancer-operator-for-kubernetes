@@ -39,6 +39,7 @@ func (r *AKODeploymentConfigReconciler) reconcileClusters(
 		[]phases.ReconcileClusterPhase{
 			r.addClusterFinalizer,
 			r.ClusterReconciler.ReconcileAddonSecret,
+			r.ClusterReconciler.ReconcileClusterBootstrap,
 		},
 		[]phases.ReconcileClusterPhase{
 			r.ClusterReconciler.ReconcileAddonSecretDelete,

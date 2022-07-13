@@ -7,10 +7,10 @@ import (
 	"math/rand"
 	"time"
 
+	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	runv1alpha3 "github.com/vmware-tanzu/tanzu-framework/apis/run/v1alpha3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-
-	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
 )
 
 const (
@@ -30,7 +30,6 @@ func RandomString(n int) string {
 }
 
 // AKODeploymentConfig test data
-
 var DefaultAkoDeploymentConfigCommonSpec = akoov1alpha1.AKODeploymentConfigSpec{
 	DataNetwork: akoov1alpha1.DataNetwork{
 		Name: "integration-test-8ed12g",
@@ -126,4 +125,15 @@ func GetManagementCluster() *clusterv1.Cluster {
 		"cluster-role.tkg.tanzu.vmware.com/management": "",
 	}
 	return cluster
+}
+
+// ClusterBootstrap test data
+var DefaultClusterBootstrap = runv1alpha3.ClusterBootstrap{}
+
+func GetDefaultCB(cluster *clusterv1.Cluster) *runv1alpha3.ClusterBootstrap {
+
+	clusterBootstrap := DefaultClusterBootstrap.DeepCopy()
+	clusterBootstrap.Name = cluster.Name
+	clusterBootstrap.Namespace = cluster.Namespace
+	return clusterBootstrap
 }

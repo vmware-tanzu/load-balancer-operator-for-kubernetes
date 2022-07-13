@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"errors"
 
 	"github.com/go-logr/logr"
 	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
@@ -36,7 +37,8 @@ import (
 // ====================================================================================
 //  @TODO:
 // 	☑ get the cluster bootstrap
-// 	☐ get the AKO package
+// 	☑ get the AKO package
+//  ☐ convert AKO package to a CB package
 // 	☐ add akocbpkg to ClusterBootstrap.spec.additionalPackages
 //  ☐ update CB
 // ====================================================================================
@@ -51,16 +53,9 @@ func (r *ClusterReconciler) ReconcileClusterBootstrap(
 	log.Info("Starts reconciling add on secret")
 	res := ctrl.Result{}
 
-	// get avi user secret
-	aviSecret, err := r.getClusterAviUserSecret(cluster, ctx)
-	if err != nil {
-		log.Info("Failed to get cluster avi user secret, requeue")
-		return res, err
-	}
-
 	// get the bootstrap
 	bootstrap := &runv1alpha3.ClusterBootstrap{}
-	if err = r.Get(ctx, client.ObjectKey{
+	if err := r.Get(ctx, client.ObjectKey{
 		Name:      cluster.Name,
 		Namespace: cluster.Namespace,
 	}, bootstrap); err != nil {
@@ -69,53 +64,48 @@ func (r *ClusterReconciler) ReconcileClusterBootstrap(
 	}
 
 	packageList := &p.PackageList{}
-	listOps := &client.ListOptions{}
-	listOps.Namespace = cluster.Namespace
-	err = r.List(ctx, packageList, listOps)
-	if err != nil {
+	if err := r.List(ctx, packageList, &client.ListOptions{Namespace: cluster.Namespace}); err != nil {
 		log.Info("Failed to get ClusterBootstrap List, requeue")
 		return res, err
 	}
-
+	// akopkg := &p.Package{}
+	// get the items in the packagelist
 	// packages := packageList.Items
-	// _ = packages[0].Name
-
-	// when avi is ha provider and deploy ako in management cluster, need to wait for
-	// control plane load balancer type of service creating
-	if akoo.IsHAProvider() && cluster.Namespace == akoov1alpha1.TKGSystemNamespace {
-		svc := &corev1.Service{}
-		if err = r.Get(ctx, client.ObjectKey{
-			Name:      cluster.Namespace + "-" + cluster.Name + "-" + akoov1alpha1.HAServiceName,
-			Namespace: akoov1alpha1.TKGSystemNamespace,
-		}, svc); err != nil {
-			log.Info("Failed to get cluster control plane load balancer type of service, requeue")
-			return res, err
-		}
-	}
-
-	// DinF
-	newAddonSecret, err := r.createAKOAddonSecret(cluster, obj, aviSecret)
+	// pkgName = packages[0].Name
+	akopkg, err := getPackage(packageList)
 	if err != nil {
-		log.Info("Failed to convert AKO Deployment Config to add-on secret, requeue the request")
+		log.Info("Could not get AKO package")
 		return res, err
 	}
-	secret := &corev1.Secret{}
 
-	if err = r.Get(ctx, client.ObjectKey{
-		Name:      r.akoAddonSecretName(cluster),
-		Namespace: cluster.Namespace,
-	}, secret); err != nil {
-		if apierrors.IsNotFound(err) {
-			log.Info("AKO add on secret doesn't exist, start creating it")
-			return res, r.Create(ctx, newAddonSecret)
+	clusterBootstrapPackage := runv1alpha3.ClusterBootstrapPackage{
+		RefName: akopkg.Spec.RefName,
+		ValuesFrom: &runv1alpha3.ValuesFrom{
+			SecretRef: r.akoAddonSecretName(cluster),
+		},
+	}
+
+	bootstrap.Spec.AdditionalPackages = append(bootstrap.Spec.AdditionalPackages, &clusterBootstrapPackage)
+
+	clusterbootstrap := bootstrap.DeepCopy()
+	// cbp = clusterBootstrapPackage.DeepCopy()
+
+	return res, r.Update(ctx, clusterbootstrap)
+}
+
+var pkgRefName = "load-balancer-and-ingress-service.tanzu.vmware.com"
+
+func getPackage(pl *p.PackageList) (*p.Package, error) {
+	pkg := &p.Package{}
+	// err := *new(error)
+	for _, n := range pl.Items {
+		if n.Spec.RefName == pkgRefName {
+			pkg = n.DeepCopy()
+			return pkg, nil
 		}
-		log.Error(err, "Failed to get AKO Deployment Secret, requeue")
-		return res, err
 	}
-
-	secret = newAddonSecret.DeepCopy()
-
-	return res, r.Update(ctx, secret)
+	err := errors.New("Could not get AKO package")
+	return pkg, err
 }
 
 // func (r *ClusterReconciler) getClusterBootstrapPkg(cluster *clusterv1.Cluster) string {

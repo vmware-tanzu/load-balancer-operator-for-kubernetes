@@ -17,6 +17,7 @@ import (
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/controllers/cluster"
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/aviclient"
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/test/builder"
+
 	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
 )
 
@@ -41,6 +42,7 @@ var AddAllToSchemeFunc builder.AddToSchemeFunc = func(scheme *runtime.Scheme) (e
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -50,6 +52,7 @@ var AddAKODeploymentConfigAndClusterControllerToMgrFunc builder.AddToManagerFunc
 		Log:    ctrl.Log.WithName("controllers").WithName("AKODeploymentConfig"),
 		Scheme: mgr.GetScheme(),
 	}
+
 	builder.FakeAvi = aviclient.NewFakeAviClient()
 	rec.SetAviClient(builder.FakeAvi)
 
