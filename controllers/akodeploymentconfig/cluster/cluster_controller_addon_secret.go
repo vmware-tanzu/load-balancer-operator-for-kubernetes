@@ -65,7 +65,7 @@ func (r *ClusterReconciler) ReconcileClusterBootstrap(
 
 	packageList := &p.PackageList{}
 	if err := r.List(ctx, packageList, &client.ListOptions{Namespace: cluster.Namespace}); err != nil {
-		log.Info("Failed to get ClusterBootstrap List, requeue")
+		log.Info("Failed to get package list, requeue")
 		return res, err
 	}
 	// akopkg := &p.Package{}
@@ -108,12 +108,48 @@ func getPackage(pl *p.PackageList) (*p.Package, error) {
 	return pkg, err
 }
 
-// func (r *ClusterReconciler) getClusterBootstrapPkg(cluster *clusterv1.Cluster) string {
-// 	tester := v1alpha3.ClusterBootstrapPackage{}
-// 	tester.ValuesFrom
+// return new CB package list with AKO package removed
+func RemovePackage(cbpl []*runv1alpha3.ClusterBootstrapPackage) ([]*runv1alpha3.ClusterBootstrapPackage, error) {
+	for i, n := range cbpl {
+		if n.RefName == pkgRefName {
+			return append(cbpl[:i], cbpl[i+1:]...), nil
+		}
+	}
+	err := errors.New("AKO package not found in Cluster Bootstrap additional packages")
+	return cbpl, err
+}
 
-// 	return cluster.Name + "-avi-credentials"
-// }
+func (r *ClusterReconciler) ReconcileClusterBootstrapDelete(
+	ctx context.Context,
+	log logr.Logger,
+	cluster *clusterv1.Cluster,
+	obj *akoov1alpha1.AKODeploymentConfig,
+
+) (ctrl.Result, error) {
+	log.Info("Starts reconciling add on secret")
+	res := ctrl.Result{}
+
+	// get the bootstrap
+	bootstrap := &runv1alpha3.ClusterBootstrap{}
+	if err := r.Get(ctx, client.ObjectKey{
+		Name:      cluster.Name,
+		Namespace: cluster.Namespace,
+	}, bootstrap); err != nil {
+		log.Info("Failed to get cluster bootstrap, requeue")
+		return res, err
+	}
+
+	//  find and remove package from CB additional packages list
+	updatedBootstrapPackagelist, err := RemovePackage(bootstrap.Spec.AdditionalPackages)
+	if err != nil {
+		log.Info("Could not get Cluster Bootstrap package")
+		return res, err
+	}
+
+	bootstrap.Spec.AdditionalPackages = updatedBootstrapPackagelist
+	clusterbootstrap := bootstrap.DeepCopy()
+	return res, r.Update(ctx, clusterbootstrap)
+}
 
 // ===============================================================================================================================================
 // ===============================================================================================================================================

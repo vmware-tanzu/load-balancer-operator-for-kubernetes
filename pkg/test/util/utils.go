@@ -9,15 +9,15 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
+	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/test/builder"
+	runv1alpha3 "github.com/vmware-tanzu/tanzu-framework/apis/run/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog"
 	capi "sigs.k8s.io/cluster-api/api/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
-	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/test/builder"
 )
 
 type ExpectResult int
@@ -142,4 +142,25 @@ func UpdateObjectLabels(ctx *builder.IntegrationTestContext, key client.ObjectKe
 		}
 		return nil
 	}).Should(Succeed())
+}
+
+func EnsureClusterBootstrapPackagesMatchExpectation(ctx *builder.IntegrationTestContext, key client.ObjectKey, refName string, exists bool) {
+	Eventually(func() bool {
+		obj := &runv1alpha3.ClusterBootstrap{}
+		err := ctx.Client.Get(ctx.Context, key, obj)
+		if err != nil {
+			return false
+		}
+		found := findPkgByRef(obj.Spec.AdditionalPackages, refName)
+		return found == exists
+	}).Should(BeTrue())
+}
+
+func findPkgByRef(cbpl []*runv1alpha3.ClusterBootstrapPackage, refName string) bool {
+	for _, n := range cbpl {
+		if n.RefName == refName {
+			return true
+		}
+	}
+	return false
 }

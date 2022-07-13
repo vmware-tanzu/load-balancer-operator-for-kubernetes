@@ -33,8 +33,9 @@ func TestController(t *testing.T) {
 }
 
 func intgTests() {
-	Describe("Cluster not selected", intgTestClusterDisableAVIWithoutAnyADC)
-	Describe("Cluster selected by ADC", intgTestClusterCanBeSelectedByADC)
+	// Describe("Cluster not selected", intgTestClusterDisableAVIWithoutAnyADC)
+	// Describe("Cluster selected by ADC", intgTestClusterCanBeSelectedByADC)
+	Describe("Cluster Bootstrap Standard", bootstrapTest)
 }
 
 func unitTests() {

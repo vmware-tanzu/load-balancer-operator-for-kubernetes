@@ -105,6 +105,8 @@ integration-test: $(GINKGO) $(ETCD)
 	$(GINKGO) -v controllers/configmap -- -enable-integration-tests -enable-unit-tests=false
 	$(GINKGO) -v controllers/tests/cluster_for_akodeploymentconfig/default_adc -- -enable-integration-tests -enable-unit-tests=false -root-dir="../../../.."
 	$(GINKGO) -v controllers/tests/cluster_for_akodeploymentconfig/default_adc_non_empty_selectors -- -enable-integration-tests -enable-unit-tests=false -root-dir="../../../.."
+	$(GINKGO) -v controllers/tests/cluster_bootstrap/cluster_for_bootstrap_test -- -enable-integration-tests -enable-unit-tests=false -root-dir="../../../.."
+
 
 .PHONY: kind-e2e-test
 kind-e2e-test: $(KUSTOMIZE) $(KIND) $(KUBECTL) $(JQ) $(YTT)

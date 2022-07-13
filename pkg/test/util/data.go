@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"time"
 
+	p "github.com/vmware-tanzu/carvel-kapp-controller/pkg/apiserver/apis/datapackaging/v1alpha1"
 	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	runv1alpha3 "github.com/vmware-tanzu/tanzu-framework/apis/run/v1alpha3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -128,7 +129,10 @@ func GetManagementCluster() *clusterv1.Cluster {
 }
 
 // ClusterBootstrap test data
+
 var DefaultClusterBootstrap = runv1alpha3.ClusterBootstrap{}
+
+var DefaultAKOPackage = p.Package{}
 
 func GetDefaultCB(cluster *clusterv1.Cluster) *runv1alpha3.ClusterBootstrap {
 
@@ -136,4 +140,12 @@ func GetDefaultCB(cluster *clusterv1.Cluster) *runv1alpha3.ClusterBootstrap {
 	clusterBootstrap.Name = cluster.Name
 	clusterBootstrap.Namespace = cluster.Namespace
 	return clusterBootstrap
+}
+
+func GetDefaultAKOPackage(cluster *clusterv1.Cluster) *p.Package {
+	akoPackage := DefaultAKOPackage.DeepCopy()
+	akoPackage.ClusterName = cluster.Name
+	akoPackage.Namespace = cluster.Namespace
+	akoPackage.Spec.RefName = "load-balancer-and-ingress-service.tanzu.vmware.com"
+	return akoPackage
 }
