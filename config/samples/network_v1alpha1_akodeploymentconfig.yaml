@@ -24,16 +24,16 @@ spec:
         name: "VM Network 2"
         cidr: 10.192.192.0/19
     extraConfigs:
+        primaryInstance: "true"
         apiServerPort: 8080
         fullSyncFrequency: "1800"
         cniPlugin: antrea
-        disableStaticRouteSync: true
-        enableEVH: false
-        layer7Only: false
-        istioEnabled: false
-        vipPerNamespace: false
+        disableStaticRouteSync: "true"
+        enableEVH: "false"
+        layer7Only: "false"
+        vipPerNamespace: "false"
+        enableEvents: "false"
         l4Config:
-            advancedL4: false
             autoFQDN: "disabled"
             defaultDomain: "default"
         ingress:
@@ -42,6 +42,7 @@ spec:
             serviceType: NodePortLocal
             noPGForSNI: false
             shardVSSize: SMALL
+            enableMCI: "false"
             nodeNetworkList:
                 networkName: "VM Network"
                 cidrs:

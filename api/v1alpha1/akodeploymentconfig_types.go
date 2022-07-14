@@ -98,6 +98,12 @@ type AKODeploymentConfigSpec struct {
 
 // ExtraConfigs contains extra configurations for AKO Deployment
 type ExtraConfigs struct {
+	// Defines AKO instance is primary or not. Value `true` indicates that AKO instance is primary.
+	// In a multiple AKO deployment in a cluster, only one AKO instance should be primary.
+	// Default value: true.
+	// +optional
+	PrimaryInstance *bool `json:"primaryInstance,omitempty"`
+
 	// Log specifies the configuration for AKO logging
 	// +optional
 	Log AKOLogConfig `json:"log,omitempty"`
@@ -111,6 +117,10 @@ type ExtraConfigs struct {
 	// default port is 8080
 	// +optional
 	ApiServerPort *int `json:"apiServerPort,omitempty"`
+
+	// Defines Enable or disable Event broadcasting via AKO
+	// +optional
+	EnableEvents *bool `json:"enableEvents,omitempty"`
 
 	// DisableStaticRouteSync describes ako should sync static routing or not.
 	// If the POD networks are reachable from the Avi SE, this should be to true.
@@ -147,11 +157,6 @@ type ExtraConfigs struct {
 	// default value is false
 	// +optional
 	ServicesAPI *bool `json:"servicesAPI,omitempty"`
-
-	// This flag indicates to AKO that it should listen on Istio resources.
-	// default value is false
-	// +optional
-	IstioEnabled *bool `json:"istioEnabled,omitempty"`
 
 	// Enabling this flag would tell AKO to create Parent VS per Namespace in EVH mode
 	// default value is false
@@ -248,15 +253,14 @@ type AKOIngressConfig struct {
 	// Do not use this flag, if you don't want http caching, default value is false.
 	// +optional
 	NoPGForSNI *bool `json:"noPGForSNI,omitempty"`
+
+	// Enabling this flag would tell AKO to start processing multi-cluster ingress objects
+	// +optional
+	EnableMCI *bool `json:"enableMCI,omitempty"`
 }
 
 // AKOL4Config contains L4 load balancer configurations for AKO Deployment
 type AKOL4Config struct {
-	// AdvancedL4 controls the settings for the services API usage.
-	// default to not using services APIs: https://github.com/kubernetes-sigs/service-apis
-	// +optional
-	AdvancedL4 *bool `json:"advancedL4,omitempty"`
-
 	// DefaultDomain controls the default sub-domain to use for L4 VSes when multiple sub-domains
 	// are configured in the cloud.
 	// +optional
