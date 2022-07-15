@@ -217,6 +217,10 @@ spec:
                       Virtual Hosting Model in Avi Controller for the Virtual Services,
                       default value is false
                     type: boolean
+                  enableEvents:
+                    description: Defines Enable or disable Event broadcasting via
+                      AKO
+                    type: boolean
                   fullSyncFrequency:
                     description: FullSyncFrequency controls how often AKO polls the
                       Avi controller to update itself with cloud configurations. Default
@@ -234,6 +238,10 @@ spec:
                         description: DisableIngressClass will prevent AKO Operator
                           to install AKO IngressClass into workload clusters for old
                           version of K8s
+                        type: boolean
+                      enableMCI:
+                        description: Enabling this flag would tell AKO to start processing
+                          multi-cluster ingress objects
                         type: boolean
                       noPGForSNI:
                         description: NoPGForSNI describes if you want to get rid of
@@ -287,18 +295,10 @@ spec:
                         - DEDICATED
                         type: string
                     type: object
-                  istioEnabled:
-                    description: This flag indicates to AKO that it should listen
-                      on Istio resources. default value is false
-                    type: boolean
                   l4Config:
                     description: IngressConfigs specifies L4 load balancer configuration
                       for ako
                     properties:
-                      advancedL4:
-                        description: 'AdvancedL4 controls the settings for the services
-                          API usage. default to not using services APIs: https://github.com/kubernetes-sigs/service-apis'
-                        type: boolean
                       autoFQDN:
                         description: AutoFQDN controls the FQDN generation. Valid
                           value should be default(<svc>.<ns>.<subdomain>), flat (<svc>-<ns>.<subdomain>)
@@ -380,6 +380,12 @@ spec:
                       value:
                         type: string
                     type: object
+                  primaryInstance:
+                    description: 'Defines AKO instance is primary or not. Value `true`
+                      indicates that AKO instance is primary. In a multiple AKO deployment
+                      in a cluster, only one AKO instance should be primary. Default
+                      value: true.'
+                    type: boolean
                   rbac:
                     description: Rbac specifies the configuration for AKO Rbac
                     properties:
