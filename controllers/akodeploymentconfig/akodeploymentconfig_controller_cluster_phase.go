@@ -34,7 +34,6 @@ func (r *AKODeploymentConfigReconciler) reconcileClusters(
 	obj *akoov1alpha1.AKODeploymentConfig,
 ) (ctrl.Result, error) {
 	r.initCluster(log)
-
 	return phases.ReconcileClustersPhases(ctx, r.Client, log, obj,
 		[]phases.ReconcileClusterPhase{
 			r.addClusterFinalizer,
@@ -43,6 +42,7 @@ func (r *AKODeploymentConfigReconciler) reconcileClusters(
 		},
 		[]phases.ReconcileClusterPhase{
 			r.ClusterReconciler.ReconcileAddonSecretDelete,
+			r.ClusterReconciler.ReconcileClusterBootstrapDelete,
 			r.ClusterReconciler.ReconcileDelete,
 		},
 	)

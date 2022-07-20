@@ -20,8 +20,8 @@ var suite = builder.NewTestSuiteForController(
 	funcs.AddAllToSchemeFunc,
 	filepath.Join(testutil.FindModuleDir("sigs.k8s.io/cluster-api"), "config", "crd", "bases"),
 	filepath.Join(testutil.FindModuleDir("github.com/vmware/load-balancer-and-ingress-services-for-kubernetes"), "helm", "ako", "crds"),
-	filepath.Join(testutil.FindModuleDir("github.com/vmware-tanzu/tanzu-framework/apis/run/v1alpha3"), "config", "crd", "bases"),
-	filepath.Join(testutil.FindModuleDir("github.com/vmware-tanzu/carvel-kapp-controller/pkg/apiserver/apis/datapackaging/v1alpha1"), "config", "crd", "bases"),
+	filepath.Join(testutil.FindModuleDir("github.com/vmware-tanzu/tanzu-framework"), "config", "crd", "bases"),
+	filepath.Join(testutil.FindModuleDir("github.com/vmware-tanzu/carvel-kapp-controller"), "config"),
 )
 
 var _ = BeforeSuite(suite.BeforeSuite)
@@ -29,7 +29,7 @@ var _ = BeforeSuite(suite.BeforeSuite)
 var _ = AfterSuite(suite.AfterSuite)
 
 func TestController(t *testing.T) {
-	suite.Register(t, "AKO Operator Controllers", intgTests, unitTests)
+	suite.Register(t, "ClusterBootstrap", intgTests, unitTests)
 }
 
 func intgTests() {

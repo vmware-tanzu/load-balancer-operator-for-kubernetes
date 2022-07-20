@@ -8,9 +8,9 @@ import (
 	"errors"
 
 	"github.com/go-logr/logr"
-	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
-	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako"
-	akoo "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
+	p "github.com/vmware-tanzu/carvel-kapp-controller/pkg/apiserver/apis/datapackaging/v1alpha1"
+
+	// testutil "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/test/util"
 	runv1alpha3 "github.com/vmware-tanzu/tanzu-framework/apis/run/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -19,29 +19,13 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	p "github.com/vmware-tanzu/carvel-kapp-controller/pkg/apiserver/apis/datapackaging/v1alpha1"
+	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako"
+	akoo "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 )
 
-// ============================
-// for copy and paste reasons:
-// checked box:       ☑
-// unchecked box:     ☐
-// ============================
-
-// ======================================================
-// refs:
-// 1) https://github.com/kubernetes-sigs/controller-runtime/blob/master/pkg/client/example_test.go
-// 2) https://github.com/vmware-tanzu/tanzu-framework/tree/main/addons
-// ======================================================
-
-// ====================================================================================
-//  @TODO:
-// 	☑ get the cluster bootstrap
-// 	☑ get the AKO package
-//  ☐ convert AKO package to a CB package
-// 	☐ add akocbpkg to ClusterBootstrap.spec.additionalPackages
-//  ☐ update CB
-// ====================================================================================
+const AkoPackageName = "TestPackage"
+const AkoSecretref = "TestingRef"
 
 func (r *ClusterReconciler) ReconcileClusterBootstrap(
 	ctx context.Context,
@@ -50,9 +34,8 @@ func (r *ClusterReconciler) ReconcileClusterBootstrap(
 	obj *akoov1alpha1.AKODeploymentConfig,
 
 ) (ctrl.Result, error) {
-	log.Info("Starts reconciling add on secret")
+	log.Info("Starts reconciling cluster bootstrap")
 	res := ctrl.Result{}
-
 	// get the bootstrap
 	bootstrap := &runv1alpha3.ClusterBootstrap{}
 	if err := r.Get(ctx, client.ObjectKey{
@@ -63,33 +46,20 @@ func (r *ClusterReconciler) ReconcileClusterBootstrap(
 		return res, err
 	}
 
-	packageList := &p.PackageList{}
-	if err := r.List(ctx, packageList, &client.ListOptions{Namespace: cluster.Namespace}); err != nil {
-		log.Info("Failed to get package list, requeue")
-		return res, err
-	}
-	// akopkg := &p.Package{}
-	// get the items in the packagelist
-	// packages := packageList.Items
-	// pkgName = packages[0].Name
-	akopkg, err := getPackage(packageList)
-	if err != nil {
-		log.Info("Could not get AKO package")
-		return res, err
-	}
+	// ------------------------------------------------
+	//  Temporary for testing
 
 	clusterBootstrapPackage := runv1alpha3.ClusterBootstrapPackage{
-		RefName: akopkg.Spec.RefName,
+		RefName: AkoPackageName,
 		ValuesFrom: &runv1alpha3.ValuesFrom{
-			SecretRef: r.akoAddonSecretName(cluster),
+			SecretRef: AkoSecretref,
 		},
 	}
+	// ------------------------------------------------
 
 	bootstrap.Spec.AdditionalPackages = append(bootstrap.Spec.AdditionalPackages, &clusterBootstrapPackage)
 
 	clusterbootstrap := bootstrap.DeepCopy()
-	// cbp = clusterBootstrapPackage.DeepCopy()
-
 	return res, r.Update(ctx, clusterbootstrap)
 }
 
@@ -97,15 +67,13 @@ var pkgRefName = "load-balancer-and-ingress-service.tanzu.vmware.com"
 
 func getPackage(pl *p.PackageList) (*p.Package, error) {
 	pkg := &p.Package{}
-	// err := *new(error)
 	for _, n := range pl.Items {
 		if n.Spec.RefName == pkgRefName {
 			pkg = n.DeepCopy()
 			return pkg, nil
 		}
 	}
-	err := errors.New("Could not get AKO package")
-	return pkg, err
+	return pkg, errors.New("Could not get AKO package")
 }
 
 // return new CB package list with AKO package removed
@@ -162,6 +130,7 @@ func (r *ClusterReconciler) ReconcileAddonSecret(
 	cluster *clusterv1.Cluster,
 	obj *akoov1alpha1.AKODeploymentConfig,
 ) (ctrl.Result, error) {
+
 	log.Info("Starts reconciling add on secret")
 	res := ctrl.Result{}
 	aviSecret, err := r.getClusterAviUserSecret(cluster, ctx)

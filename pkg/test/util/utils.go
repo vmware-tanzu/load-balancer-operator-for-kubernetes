@@ -9,6 +9,7 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
+	p "github.com/vmware-tanzu/carvel-kapp-controller/pkg/apiserver/apis/datapackaging/v1alpha1"
 	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/test/builder"
 	runv1alpha3 "github.com/vmware-tanzu/tanzu-framework/apis/run/v1alpha3"
@@ -83,6 +84,15 @@ func ensureRuntimeObjectCreated(ctx *builder.IntegrationTestContext, o client.Ob
 	case *akoov1alpha1.AKODeploymentConfig:
 		obj = o.(*akoov1alpha1.AKODeploymentConfig)
 		EnsureRuntimeObjectMatchExpectation(ctx, client.ObjectKey{Name: obj.Name, Namespace: obj.Namespace}, obj, EXIST)
+	case *runv1alpha3.ClusterBootstrap:
+		obj = o.(*runv1alpha3.ClusterBootstrap)
+		EnsureRuntimeObjectMatchExpectation(ctx, client.ObjectKey{Name: obj.Name, Namespace: obj.Namespace}, obj, EXIST)
+	case *p.Package:
+		obj = o.(*p.Package)
+		EnsureRuntimeObjectMatchExpectation(ctx, client.ObjectKey{Name: obj.Name, Namespace: obj.Namespace}, obj, EXIST)
+	case *corev1.Secret:
+		obj = o.(*corev1.Secret)
+		EnsureRuntimeObjectMatchExpectation(ctx, client.ObjectKey{Name: obj.Name, Namespace: obj.Namespace}, obj, EXIST)
 	default:
 		klog.Fatal("Unknown type object")
 	}
@@ -151,13 +161,13 @@ func EnsureClusterBootstrapPackagesMatchExpectation(ctx *builder.IntegrationTest
 		if err != nil {
 			return false
 		}
-		found := findPkgByRef(obj.Spec.AdditionalPackages, refName)
+		found := findPkgByRef(obj, refName)
 		return found == exists
 	}).Should(BeTrue())
 }
 
-func findPkgByRef(cbpl []*runv1alpha3.ClusterBootstrapPackage, refName string) bool {
-	for _, n := range cbpl {
+func findPkgByRef(cb *runv1alpha3.ClusterBootstrap, refName string) bool {
+	for _, n := range cb.Spec.AdditionalPackages {
 		if n.RefName == refName {
 			return true
 		}

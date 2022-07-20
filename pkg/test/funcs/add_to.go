@@ -10,22 +10,19 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlmgr "sigs.k8s.io/controller-runtime/pkg/manager"
 
+	p "github.com/vmware-tanzu/carvel-kapp-controller/pkg/apiserver/apis/datapackaging/v1alpha1"
+	runv1alpha3 "github.com/vmware-tanzu/tanzu-framework/apis/run/v1alpha3"
+	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
+
 	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
-	networkv1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig"
 	adccluster "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/cluster"
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/controllers/cluster"
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/aviclient"
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/test/builder"
-
-	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
 )
 
 var AddAllToSchemeFunc builder.AddToSchemeFunc = func(scheme *runtime.Scheme) (err error) {
-	err = networkv1alpha1.AddToScheme(scheme)
-	if err != nil {
-		return err
-	}
 	err = akoov1alpha1.AddToScheme(scheme)
 	if err != nil {
 		return err
@@ -39,6 +36,14 @@ var AddAllToSchemeFunc builder.AddToSchemeFunc = func(scheme *runtime.Scheme) (e
 		return err
 	}
 	err = clusterv1.AddToScheme(scheme)
+	if err != nil {
+		return err
+	}
+	err = runv1alpha3.AddToScheme(scheme)
+	if err != nil {
+		return err
+	}
+	err = p.AddToScheme(scheme)
 	if err != nil {
 		return err
 	}
