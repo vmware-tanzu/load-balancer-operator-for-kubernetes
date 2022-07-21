@@ -214,14 +214,15 @@ func GetDefaultCB(cluster *clusterv1.Cluster) *runv1alpha3.ClusterBootstrap {
 	return clusterBootstrap
 }
 
-func GetDefaultAKOPackage(cluster *clusterv1.Cluster) *p.Package {
-	akoPackage := DefaultAKOPackage.DeepCopy()
-	akoPackage.ClusterName = cluster.Name
-	akoPackage.Namespace = cluster.Namespace
-	akoPackage.Spec.RefName = "load-balancer-and-ingress-service.tanzu.vmware.com"
+// func GetDefaultAKOPackage(cluster *clusterv1.Cluster) *p.Package {
+// 	akoPackage := DefaultAKOPackage.DeepCopy()
+// 	akoPackage.
 
-	return akoPackage
-}
+// 	akoPackage.Namespace = cluster.Namespace
+// 	akoPackage.Spec.RefName = "load-balancer-and-ingress-service.tanzu.vmware.com"
+
+// 	return akoPackage
+// }
 
 var cbp = runv1alpha3.ClusterBootstrapPackage{
 	RefName:    "testCBP",
