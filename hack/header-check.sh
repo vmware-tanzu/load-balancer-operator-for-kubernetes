@@ -50,7 +50,7 @@ for file in $(all-files); do
   fi
 
   if [[ "${file#*.}" == "deepcopy.go" ]]; then
-	  increment=2
+	  increment=3
   fi
 
   for count in $(seq 1 ${#HEADER[@]}); do
@@ -74,15 +74,15 @@ for file in $(all-files); do
       # based on file type fix the copyright
       case "$ext" in
         go)
-          cat "$(dirname "$0")"/boilerplate.go.txt "${file}" > "${file}".new
+          cat "$(dirname "$0")"/VMware-Copyright "${file}" > "${file}".new
           ;;
         sh)
           head -1 "${file}" > "${file}".new
-          sed 's/\/\//\#/1' < "$(dirname "$0")"/boilerplate.go.txt >> "${file}".new
+          sed 's/\/\//\#/1' < "$(dirname "$0")"/VMware-Copyright >> "${file}".new
           grep -v '#!/bin/bash' "${file}" >> "${file}".new
           ;;
         *)
-          sed 's/\/\//\#/1' < "$(dirname "$0")"/boilerplate.go.txt > "${file}".new
+          sed 's/\/\//\#/1' < "$(dirname "$0")"/VMware-Copyright > "${file}".new
           cat "${file}" >> "${file}".new
           ;;
       esac
