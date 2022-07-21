@@ -8,9 +8,8 @@ import (
 	"errors"
 
 	"github.com/go-logr/logr"
-	p "github.com/vmware-tanzu/carvel-kapp-controller/pkg/apiserver/apis/datapackaging/v1alpha1"
+	datapackagingv1alpha1 "github.com/vmware-tanzu/carvel-kapp-controller/pkg/apiserver/apis/datapackaging/v1alpha1"
 
-	// testutil "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/test/util"
 	runv1alpha3 "github.com/vmware-tanzu/tanzu-framework/apis/run/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -46,29 +45,25 @@ func (r *ClusterReconciler) ReconcileClusterBootstrap(
 		return res, err
 	}
 
-	// ------------------------------------------------
-	//  Temporary for testing
-
 	clusterBootstrapPackage := runv1alpha3.ClusterBootstrapPackage{
 		RefName: AkoPackageName,
 		ValuesFrom: &runv1alpha3.ValuesFrom{
 			SecretRef: AkoSecretref,
 		},
 	}
-	// ------------------------------------------------
 
 	bootstrap.Spec.AdditionalPackages = append(bootstrap.Spec.AdditionalPackages, &clusterBootstrapPackage)
 
-	clusterbootstrap := bootstrap.DeepCopy()
-	return res, r.Update(ctx, clusterbootstrap)
+	clusterBootstrap := bootstrap.DeepCopy()
+	return res, r.Update(ctx, clusterBootstrap)
 }
 
 var pkgRefName = "load-balancer-and-ingress-service.tanzu.vmware.com"
 
-func getPackage(pl *p.PackageList) (*p.Package, error) {
-	pkg := &p.Package{}
+func getPackage(pl *datapackagingv1alpha1.PackageList, refName string) (*datapackagingv1alpha1.Package, error) {
+	pkg := &datapackagingv1alpha1.Package{}
 	for _, n := range pl.Items {
-		if n.Spec.RefName == pkgRefName {
+		if n.Spec.RefName == refName {
 			pkg = n.DeepCopy()
 			return pkg, nil
 		}
@@ -76,8 +71,14 @@ func getPackage(pl *p.PackageList) (*p.Package, error) {
 	return pkg, errors.New("Could not get AKO package")
 }
 
-// return new CB package list with AKO package removed
-func RemovePackage(cbpl []*runv1alpha3.ClusterBootstrapPackage) ([]*runv1alpha3.ClusterBootstrapPackage, error) {
+// AddPackageToCB returns a new CB with package added to its AdditionalPackages
+func AddPackageToCB(cb *runv1alpha3.ClusterBootstrap, bootstrapPackage *runv1alpha3.ClusterBootstrapPackage) *runv1alpha3.ClusterBootstrap {
+	cb.Spec.AdditionalPackages = append(cb.Spec.AdditionalPackages, bootstrapPackage)
+	return cb.DeepCopy()
+}
+
+// RemovePackageFromCB returns new CB package list with AKO package removed
+func RemovePackageFromCB(cbpl []*runv1alpha3.ClusterBootstrapPackage) ([]*runv1alpha3.ClusterBootstrapPackage, error) {
 	for i, n := range cbpl {
 		if n.RefName == pkgRefName {
 			return append(cbpl[:i], cbpl[i+1:]...), nil
@@ -108,7 +109,7 @@ func (r *ClusterReconciler) ReconcileClusterBootstrapDelete(
 	}
 
 	//  find and remove package from CB additional packages list
-	updatedBootstrapPackagelist, err := RemovePackage(bootstrap.Spec.AdditionalPackages)
+	updatedBootstrapPackagelist, err := RemovePackageFromCB(bootstrap.Spec.AdditionalPackages)
 	if err != nil {
 		log.Info("Could not get Cluster Bootstrap package")
 		return res, err
@@ -119,18 +120,12 @@ func (r *ClusterReconciler) ReconcileClusterBootstrapDelete(
 	return res, r.Update(ctx, clusterbootstrap)
 }
 
-// ===============================================================================================================================================
-// ===============================================================================================================================================
-// ===============================================================================================================================================
-// ===============================================================================================================================================
-
 func (r *ClusterReconciler) ReconcileAddonSecret(
 	ctx context.Context,
 	log logr.Logger,
 	cluster *clusterv1.Cluster,
 	obj *akoov1alpha1.AKODeploymentConfig,
 ) (ctrl.Result, error) {
-
 	log.Info("Starts reconciling add on secret")
 	res := ctrl.Result{}
 	aviSecret, err := r.getClusterAviUserSecret(cluster, ctx)

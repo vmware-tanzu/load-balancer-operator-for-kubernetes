@@ -31,7 +31,6 @@ type IntegrationTestContext struct {
 }
 
 func (*IntegrationTestContext) GetLogger() logr.Logger {
-	// return logr.DiscardLogger{}
 	return logr.Discard()
 }
 

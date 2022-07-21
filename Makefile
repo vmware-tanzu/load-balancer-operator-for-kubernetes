@@ -79,7 +79,7 @@ header-check:
 
 # Generate code
 generate: $(CONTROLLER_GEN)
-	$(CONTROLLER_GEN) object:headerFile="hack/VMware-Copyright" paths="./..."
+	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 # Build the docker image
 docker-build: test

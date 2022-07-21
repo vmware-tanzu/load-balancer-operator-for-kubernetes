@@ -161,12 +161,12 @@ func EnsureClusterBootstrapPackagesMatchExpectation(ctx *builder.IntegrationTest
 		if err != nil {
 			return false
 		}
-		found := findPkgByRef(obj, refName)
+		found := findPkgByRefinCB(obj, refName)
 		return found == exists
 	}).Should(BeTrue())
 }
 
-func findPkgByRef(cb *runv1alpha3.ClusterBootstrap, refName string) bool {
+func findPkgByRefinCB(cb *runv1alpha3.ClusterBootstrap, refName string) bool {
 	for _, n := range cb.Spec.AdditionalPackages {
 		if n.RefName == refName {
 			return true

@@ -74,15 +74,15 @@ for file in $(all-files); do
       # based on file type fix the copyright
       case "$ext" in
         go)
-          cat "$(dirname "$0")"/VMware-Copyright "${file}" > "${file}".new
+          cat "$(dirname "$0")"/VMware-copyright "${file}" > "${file}".new
           ;;
         sh)
           head -1 "${file}" > "${file}".new
-          sed 's/\/\//\#/1' < "$(dirname "$0")"/VMware-Copyright >> "${file}".new
+          sed 's/\/\//\#/1' < "$(dirname "$0")"/boilerplate.go.txt >> "${file}".new
           grep -v '#!/bin/bash' "${file}" >> "${file}".new
           ;;
         *)
-          sed 's/\/\//\#/1' < "$(dirname "$0")"/VMware-Copyright > "${file}".new
+          sed 's/\/\//\#/1' < "$(dirname "$0")"/boilerplate.go.txt > "${file}".new
           cat "${file}" >> "${file}".new
           ;;
       esac
