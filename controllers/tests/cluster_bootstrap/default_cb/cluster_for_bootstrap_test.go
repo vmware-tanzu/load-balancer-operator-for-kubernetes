@@ -40,13 +40,6 @@ func bootstrapTest() {
 		})
 
 		It("Tests packages", func() {
-			// By("setting cluster labels", func() {
-			// 	testutil.UpdateObjectLabels(ctx, client.ObjectKey{
-			// 		Name:      staticCluster.Name,
-			// 		Namespace: staticCluster.Namespace,
-			// 	}, testutil.CustomizedADCLabels)
-			// })
-
 			By("making sure AKO is in CB's additional packages", func() {
 				testutil.EnsureClusterBootstrapPackagesMatchExpectation(ctx, client.ObjectKey{
 					Name:      staticCluster.Name,
@@ -54,24 +47,6 @@ func bootstrapTest() {
 				}, cluster.AkoPackageName, true)
 			})
 
-			By("Unsetting cluster labels", func() {
-				testutil.UpdateObjectLabels(ctx, client.ObjectKey{
-					Name:      staticCluster.Name,
-					Namespace: staticCluster.Namespace,
-				}, map[string]string{})
-			})
-
-			By("Updating Status", func() {
-				testutil.UpdateObjectsStatus(ctx, staticCluster)
-			})
-			// staticCluster.Labels = make(map[string]string)
-
-			By("Making sure package has been removed", func() {
-				testutil.EnsureClusterBootstrapPackagesMatchExpectation(ctx, client.ObjectKey{
-					Name:      staticCluster.Name,
-					Namespace: staticCluster.Namespace,
-				}, cluster.AkoPackageName, false)
-			})
 		})
 	})
 }
