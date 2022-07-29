@@ -19,15 +19,14 @@ import (
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/aviclient"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
-	"k8s.io/klog"
-	"k8s.io/klog/klogr"
+	"k8s.io/klog/v2"
+	"k8s.io/klog/v2/klogr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	ctrlmgr "sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // AddToScheme is the function TestSuite calls to register schemes for a manager
@@ -35,7 +34,7 @@ type AddToSchemeFunc func(*runtime.Scheme) error
 
 // AddToManagerFunc is the function controller calls to register itself with the
 // manager passed in
-type AddToManagerFunc func(ctrlmgr.Manager) error
+type AddToManagerFunc func(manager.Manager) error
 
 // Reconciler is a base type for builder's reconcilers
 type Reconciler interface{}
