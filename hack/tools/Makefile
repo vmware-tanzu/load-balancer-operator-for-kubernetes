@@ -60,7 +60,7 @@ controller-gen: ## Build controller-gen
 $(CONTROLLER_GEN):
 	go build -tags=tools -o $@ sigs.k8s.io/controller-tools/cmd/controller-gen
 
-golangci-lint: $(GOLANGCI_LINT) $(SRCS) 
+golangci-lint: $(GOLANGCI_LINT) $(SRCS)
 golangci-lint: ## Build golangci-lint
 $(GOLANGCI_LINT):
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.43.0
@@ -86,7 +86,7 @@ $(KIND):
 	go build -tags=tools -o $@ sigs.k8s.io/kind
 
 jq: $(JQ) ## Install jq
-$(JQ):  
+$(JQ):
 	curl -o $(@) -L https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 && \
 		chmod a+x $(@)
 

@@ -1,6 +1,6 @@
 module github.com/vmware-tanzu/load-balancer-operator-for-kubernetes
 
-go 1.16
+go 1.17
 
 require (
 	github.com/bitly/go-simplejson v0.5.0
