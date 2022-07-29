@@ -31,7 +31,7 @@ type IntegrationTestContext struct {
 }
 
 func (*IntegrationTestContext) GetLogger() logr.Logger {
-	return logr.DiscardLogger{}
+	return logr.Discard()
 }
 
 // AfterEach should be invoked by ginkgo.AfterEach to destroy the test namespace

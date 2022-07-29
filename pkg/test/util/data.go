@@ -7,10 +7,15 @@ import (
 	"math/rand"
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-
+	p "github.com/vmware-tanzu/carvel-kapp-controller/pkg/apiserver/apis/datapackaging/v1alpha1"
 	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	runv1alpha3 "github.com/vmware-tanzu/tanzu-framework/apis/run/v1alpha3"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	// "k8s.io/apimachinery/pkg/runtime/schema"
+	// "k8s.io/apimachinery/pkg/types"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
 const (
@@ -30,7 +35,6 @@ func RandomString(n int) string {
 }
 
 // AKODeploymentConfig test data
-
 var DefaultAkoDeploymentConfigCommonSpec = akoov1alpha1.AKODeploymentConfigSpec{
 	DataNetwork: akoov1alpha1.DataNetwork{
 		Name: "integration-test-8ed12g",
@@ -102,6 +106,14 @@ func GetCustomizedADC(labels map[string]string) *akoov1alpha1.AKODeploymentConfi
 	}
 }
 
+// var test = corev1.Secret{
+// 	TypeMeta:   metav1.TypeMeta{},
+// 	ObjectMeta: metav1.ObjectMeta{},
+// 	Immutable:  new(bool),
+// 	Data:       map[string][]byte{},
+// 	StringData: map[string]string{},
+// 	Type:       "",
+// }
 // Cluster test data
 
 var DefaultCluster = clusterv1.Cluster{
@@ -126,4 +138,101 @@ func GetManagementCluster() *clusterv1.Cluster {
 		"cluster-role.tkg.tanzu.vmware.com/management": "",
 	}
 	return cluster
+}
+
+// ClusterBootstrap test data
+
+var DefaultSecret = &corev1.Secret{
+	TypeMeta:   metav1.TypeMeta{},
+	ObjectMeta: metav1.ObjectMeta{},
+	Immutable:  new(bool),
+	Data:       map[string][]byte{},
+	StringData: map[string]string{},
+	Type:       "",
+}
+
+var testSecret = corev1.Secret{
+	TypeMeta:   metav1.TypeMeta{},
+	ObjectMeta: metav1.ObjectMeta{},
+	Immutable:  new(bool),
+	Data:       map[string][]byte{},
+	StringData: map[string]string{},
+	Type:       "",
+}
+
+var startingBootstrapPackage = runv1alpha3.ClusterBootstrapPackage{
+	RefName: "Initial-Package",
+	ValuesFrom: &runv1alpha3.ValuesFrom{
+		SecretRef: "Initial-SecretRef",
+	},
+}
+
+var cbSpec = runv1alpha3.ClusterBootstrapTemplateSpec{
+	Paused:             false,
+	CNI:                &runv1alpha3.ClusterBootstrapPackage{},
+	CSI:                &runv1alpha3.ClusterBootstrapPackage{},
+	CPI:                &runv1alpha3.ClusterBootstrapPackage{},
+	Kapp:               &runv1alpha3.ClusterBootstrapPackage{},
+	AdditionalPackages: []*runv1alpha3.ClusterBootstrapPackage{},
+}
+
+// type TestPackage struct {
+// 	Name      string
+// 	Namespace string
+// 	RefName   string
+// }
+
+var DefaultClusterBootstrap = runv1alpha3.ClusterBootstrap{}
+
+var DefaultAKOPackage = p.Package{
+	TypeMeta:   metav1.TypeMeta{},
+	ObjectMeta: metav1.ObjectMeta{},
+	Spec:       p.PackageSpec{},
+}
+
+// func GetTestPackage(cluster *clusterv1.Cluster) *TestPackage {
+// 	testpkg := TestPackage{
+// 		Name:      cluster.Name,
+// 		Namespace: cluster.Namespace,
+// 		RefName:   "Testing-Package",
+// 	}
+// 	return &testpkg
+// }
+
+func GetDefaultSecret(cluster *clusterv1.Cluster) *corev1.Secret {
+	secret := DefaultSecret.DeepCopy()
+	secret.SetName(cluster.Name + "-load-balancer-and-ingress-service-addon")
+	secret.SetNamespace(cluster.Namespace)
+	return secret
+}
+
+func GetDefaultCB(cluster *clusterv1.Cluster) *runv1alpha3.ClusterBootstrap {
+	clusterBootstrap := DefaultClusterBootstrap.DeepCopy()
+	clusterBootstrap.Name = cluster.Name
+	clusterBootstrap.Namespace = cluster.Namespace
+	clusterBootstrap.Spec = &cbSpec
+	return clusterBootstrap
+}
+
+// func GetDefaultAKOPackage(cluster *clusterv1.Cluster) *p.Package {
+// 	akoPackage := DefaultAKOPackage.DeepCopy()
+// 	akoPackage.
+
+// 	akoPackage.Namespace = cluster.Namespace
+// 	akoPackage.Spec.RefName = "load-balancer-and-ingress-service.tanzu.vmware.com"
+
+// 	return akoPackage
+// }
+
+var cbp = runv1alpha3.ClusterBootstrapPackage{
+	RefName:    "testCBP",
+	ValuesFrom: &runv1alpha3.ValuesFrom{},
+}
+
+func GetDefaultCBP(cluster *clusterv1.Cluster) *runv1alpha3.ClusterBootstrap {
+
+	clusterBootstrapPackage := DefaultClusterBootstrap.DeepCopy()
+	clusterBootstrapPackage.Name = cluster.Name
+	clusterBootstrapPackage.Namespace = cluster.Namespace
+	return clusterBootstrapPackage
 }
