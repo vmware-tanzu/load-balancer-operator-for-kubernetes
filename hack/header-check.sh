@@ -50,7 +50,7 @@ for file in $(all-files); do
   fi
 
   if [[ "${file#*.}" == "deepcopy.go" ]]; then
-	  increment=2
+	  increment=3
   fi
 
   for count in $(seq 1 ${#HEADER[@]}); do
