@@ -81,6 +81,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	err = ako_operator.UpdateExistingAKODeploymentConfig(mgr)
+	if err != nil {
+		setupLog.Error(err, "Unable to update existing AKODeploymentConfig")
+		os.Exit(1)
+	}
+
 	err = controllers.SetupReconcilers(mgr)
 	if err != nil {
 		setupLog.Error(err, "Unable to setup reconcilers")

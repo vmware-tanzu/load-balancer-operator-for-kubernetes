@@ -167,6 +167,8 @@ func (r *AKODeploymentConfig) validateAVI(old *AKODeploymentConfig) field.ErrorL
 			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "Controller"), r.Spec.Controller, "failed to get avi controller version:"+err.Error()))
 			return allErrs
 		}
+
+		akoDeploymentConfigLog.Info("detected the avi_controller_version: ", version, " set it inside ADC: ", r.Namespace, r.Name)
 		r.Spec.ControllerVersion = version
 		aviClient = client
 	}
