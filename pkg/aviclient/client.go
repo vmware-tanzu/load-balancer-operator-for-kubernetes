@@ -10,7 +10,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"net/http"
-	"os"
 	"regexp"
 	"strings"
 
@@ -24,9 +23,6 @@ import (
 	"github.com/vmware/alb-sdk/go/models"
 	"github.com/vmware/alb-sdk/go/session"
 )
-
-const AVIControllerVersion = "avi_controller_version"
-const DEFAULT_AVI_CONTROLLER_VERSION = "20.1.3"
 
 type realAviClient struct {
 	config *AviClientConfig
@@ -52,7 +48,7 @@ var ErrEmptyInput = errors.New("input is empty")
 
 // NewAviClientFromSecrets creates a Client from two secrets, adminCredential and CA
 func NewAviClientFromSecrets(c client.Client, ctx context.Context, log logr.Logger,
-	controllerIP, credName, credNamespace, caName, caNamespace string) (*realAviClient, error) {
+	controllerIP, credName, credNamespace, caName, caNamespace, version string) (*realAviClient, error) {
 	if controllerIP == "" {
 		log.Error(ErrEmptyInput, "controllerIP is empty", "controllerIP", controllerIP)
 		return nil, ErrEmptyInput
@@ -95,7 +91,7 @@ func NewAviClientFromSecrets(c client.Client, ctx context.Context, log logr.Logg
 		Username: string(adminCredential.Data["username"][:]),
 		Password: string(adminCredential.Data["password"][:]),
 		CA:       string(aviControllerCA.Data["certificateAuthorityData"][:]),
-	}, GetAVIControllerVersion())
+	}, version)
 	if err != nil {
 		log.Error(err, "Failed to initialize AVI Controller Client, requeue the request")
 		return nil, err
@@ -128,8 +124,12 @@ func NewAviClient(config *AviClientConfig, version string) (*realAviClient, erro
 	options := []func(*session.AviSession) error{
 		session.SetPassword(config.Password),
 		session.SetTransport(transport),
-		session.SetVersion(version),
 	}
+
+	if version != "" {
+		options = append(options, session.SetVersion(version))
+	}
+
 	if config.CA == "" {
 		options = append(options, session.SetInsecure)
 	}
@@ -142,15 +142,6 @@ func NewAviClient(config *AviClientConfig, version string) (*realAviClient, erro
 		AviClient: c,
 		config:    config,
 	}, nil
-}
-
-// GetAVIControllerVersion get AVI controller version current ako operator using
-func GetAVIControllerVersion() string {
-	version, set := os.LookupEnv(AVIControllerVersion)
-	if set && version != "" {
-		return version
-	}
-	return DEFAULT_AVI_CONTROLLER_VERSION
 }
 
 // GetUUIDFromRef takes a AVI Ref, parses it as a classic URL and returns the
@@ -191,6 +182,10 @@ func IsAviRoleNonExistentError(err error) bool {
 	}
 	matched, err := regexp.Match(`No object of type role with name .*is found`, []byte(err.Error()))
 	return err == nil && matched
+}
+
+func (r *realAviClient) GetControllerVersion() (string, error) {
+	return r.AviSession.GetControllerVersion()
 }
 
 func (r *realAviClient) ServiceEngineGroupGetByName(name string, options ...session.ApiOptionsParams) (*models.ServiceEngineGroup, error) {
