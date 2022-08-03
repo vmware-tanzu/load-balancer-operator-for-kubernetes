@@ -116,6 +116,7 @@ func unitTestAKODeploymentYaml() {
 					Spec: akoov1alpha1.AKODeploymentConfigSpec{
 						CloudName:          "test-cloud",
 						Controller:         "10.23.122.1",
+						ControllerVersion:  "20.1.3",
 						ServiceEngineGroup: "Default-SEG",
 						DataNetwork: akoov1alpha1.DataNetwork{
 							Name: "test-akdc",

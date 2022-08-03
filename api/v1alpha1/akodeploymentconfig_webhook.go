@@ -156,7 +156,7 @@ func (r *AKODeploymentConfig) validateAVI(old *AKODeploymentConfig) field.ErrorL
 			Username: string(adminCredential.Data["username"][:]),
 			Password: string(adminCredential.Data["password"][:]),
 			CA:       string(aviControllerCA.Data["certificateAuthorityData"][:]),
-		}, controllerVersion)
+		}, "")
 		if err != nil {
 			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "Controller"), r.Spec.Controller, "failed to init avi client for controller:"+err.Error()))
 			return allErrs
@@ -230,15 +230,15 @@ func (r *AKODeploymentConfig) validateAviSecret(secret *corev1.Secret, secretRef
 
 // validateAviControllerVersion checks NSX Advanced Load Balancer controller version valid or not
 func (r *AKODeploymentConfig) validateAviControllerVersion() (string, *field.Error) {
-	controllerVersion := AVI_VERSION
+	controllerVersion := ""
 	if r.Spec.ControllerVersion != "" {
-		controllerVersion = r.Spec.ControllerVersion
-	}
-	var re = regexp.MustCompile(controllerVersionRegex)
-	if !re.MatchString(controllerVersion) {
-		return controllerVersion, field.Invalid(field.NewPath("spec", "ControllerVersion"),
-			r.Spec.ControllerVersion,
-			"invalid controller version format, example valid controller version: 20.1.3")
+		controllerVersion := r.Spec.ControllerVersion
+		var re = regexp.MustCompile(controllerVersionRegex)
+		if !re.MatchString(controllerVersion) {
+			return controllerVersion, field.Invalid(field.NewPath("spec", "ControllerVersion"),
+				r.Spec.ControllerVersion,
+				"invalid controller version format, example valid controller version: 20.1.3")
+		}
 	}
 	return controllerVersion, nil
 }

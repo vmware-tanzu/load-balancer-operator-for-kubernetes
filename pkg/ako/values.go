@@ -398,7 +398,7 @@ type ControllerSettings struct {
 func DefaultControllerSettings() *ControllerSettings {
 	return &ControllerSettings{
 		// set controller version to the default one
-		ControllerVersion: akoov1alpha1.AVI_VERSION,
+		// ControllerVersion: populate in runtime,
 		// ServiceEngineGroupName: populate in runtime
 		// CloudName: populate in runtime
 		// ControllerIP: populate in runtime
@@ -414,9 +414,7 @@ func NewControllerSettings(cloudName, controllerIP, controllerVersion, serviceEn
 	setting.ControllerIP = controllerIP
 	setting.ServiceEngineGroupName = serviceEngineGroup
 	setting.TenantName = tenantName
-	if controllerVersion != "" {
-		setting.ControllerVersion = controllerVersion
-	}
+	setting.ControllerVersion = controllerVersion
 	return
 }
 

@@ -36,4 +36,6 @@ type Client interface {
 	PoolGetByName(name string, options ...session.ApiOptionsParams) (*models.Pool, error)
 
 	AviCertificateConfig() (string, error)
+
+	GetControllerVersion() (string, error)
 }
