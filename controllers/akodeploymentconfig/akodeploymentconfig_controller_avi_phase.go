@@ -107,6 +107,7 @@ func (r *AKODeploymentConfigReconciler) reconcileAVI(
 		r.reconcileNetworkSubnets,
 		r.reconcileCloudUsableNetwork,
 		r.reconcileAviInfraSetting,
+		r.reconcileControllerVersion,
 		func(ctx context.Context, log logr.Logger, obj *akoov1alpha1.AKODeploymentConfig) (ctrl.Result, error) {
 			return phases.ReconcileClustersPhases(ctx, r.Client, log, obj,
 				[]phases.ReconcileClusterPhase{
@@ -149,6 +150,27 @@ func (r *AKODeploymentConfigReconciler) reconcileAVIDelete(
 		},
 	})
 
+}
+
+// reconcileControllerVersion ensures the controller version is in sync with avi controller
+func (r *AKODeploymentConfigReconciler) reconcileControllerVersion(
+	ctx context.Context,
+	log logr.Logger,
+	obj *akoov1alpha1.AKODeploymentConfig,
+) (ctrl.Result, error) {
+	log = log.WithValues("cloud", obj.Spec.CloudName)
+	log.Info("Start reconciling AVI cloud usable network")
+
+	version, err := r.aviClient.GetControllerVersion()
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	// patch the adc if the version doesn't match
+	if obj.Spec.ControllerVersion != version {
+		obj.Spec.ControllerVersion = version
+	}
+
+	return ctrl.Result{}, nil
 }
 
 // reconcileNetworkSubnets ensures the Datanetwork configuration is in sync with
