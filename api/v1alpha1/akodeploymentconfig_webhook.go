@@ -156,20 +156,11 @@ func (r *AKODeploymentConfig) validateAVI(old *AKODeploymentConfig) field.ErrorL
 			Username: string(adminCredential.Data["username"][:]),
 			Password: string(adminCredential.Data["password"][:]),
 			CA:       string(aviControllerCA.Data["certificateAuthorityData"][:]),
-		}, controllerVersion)
+		}, "")
 		if err != nil {
 			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "Controller"), r.Spec.Controller, "failed to init avi client for controller:"+err.Error()))
 			return allErrs
 		}
-		// update to actual avi controller version
-		version, err := client.GetControllerVersion()
-		if err != nil {
-			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "Controller"), r.Spec.Controller, "failed to get avi controller version:"+err.Error()))
-			return allErrs
-		}
-
-		akoDeploymentConfigLog.Info("detected the avi_controller_version: ", version, " set it inside ADC: ", r.Namespace, r.Name)
-		r.Spec.ControllerVersion = version
 		aviClient = client
 	}
 

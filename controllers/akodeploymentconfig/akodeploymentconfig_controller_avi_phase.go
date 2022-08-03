@@ -158,8 +158,13 @@ func (r *AKODeploymentConfigReconciler) reconcileControllerVersion(
 	log logr.Logger,
 	obj *akoov1alpha1.AKODeploymentConfig,
 ) (ctrl.Result, error) {
-	log = log.WithValues("cloud", obj.Spec.CloudName)
-	log.Info("Start reconciling AVI cloud usable network")
+	log = log.WithValues("controllerVersion", obj.Spec.ControllerVersion)
+	log.Info("Start reconciling AVI controller version")
+
+	if r.aviClient == nil {
+		log.Info("AVI client not initialized, requeue")
+		return ctrl.Result{}, errors.New("AVI client not initialized")
+	}
 
 	version, err := r.aviClient.GetControllerVersion()
 	if err != nil {
