@@ -83,7 +83,7 @@ func main() {
 
 	err = ako_operator.UpdateExistingAKODeploymentConfig(mgr)
 	if err != nil {
-		setupLog.Error(err, "Unable to update existing AKODeploymentConfig")
+		setupLog.Error(err, "Unable to update existing AKODeploymentConfigs")
 		os.Exit(1)
 	}
 

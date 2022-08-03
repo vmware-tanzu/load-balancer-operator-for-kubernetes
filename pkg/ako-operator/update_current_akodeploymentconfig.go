@@ -16,18 +16,21 @@ import (
 func UpdateExistingAKODeploymentConfig(mgr ctrl.Manager) error {
 	log := ctrl.Log.WithName("one-time-process").WithName("ADCScanner")
 
+	log.Info("update existing ADCs controllerVersion")
+
 	c := mgr.GetClient()
 	ctx := context.Background()
-
-	// get current veresion
-
-	log.Info("AVI Client initialized successfully")
 
 	// get existing ADC
 	var adcs akoov1alpha1.AKODeploymentConfigList
 	if err := c.List(ctx, &adcs, []client.ListOption{}...); err != nil {
 		log.Error(err, "failed to list all AKODeploymentConfig objects")
 		return err
+	}
+
+	if len(adcs.Items) == 0 {
+		log.Info("no existing ADCs, skip")
+		return nil
 	}
 
 	var (
