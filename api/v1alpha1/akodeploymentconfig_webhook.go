@@ -145,31 +145,39 @@ func (r *AKODeploymentConfig) validateAVI(old *AKODeploymentConfig) field.ErrorL
 	}
 
 	// check avi controller version format
-	controllerVersion, err := r.validateAviControllerVersion()
+	_, err := r.validateAviControllerVersion()
 	if err != nil {
 		allErrs = append(allErrs, err)
 	}
 
 	if !runTest {
-		client, err := aviclient.NewAviClient(&aviclient.AviClientConfig{
-			ServerIP: r.Spec.Controller,
-			Username: string(adminCredential.Data["username"][:]),
-			Password: string(adminCredential.Data["password"][:]),
-			CA:       string(aviControllerCA.Data["certificateAuthorityData"][:]),
-		}, controllerVersion)
-		if err != nil {
-			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "Controller"), r.Spec.Controller, "failed to init avi client for controller:"+err.Error()))
+		username := string(adminCredential.Data["username"][:])
+		password := string(adminCredential.Data["password"][:])
+		certificate := string(aviControllerCA.Data["certificateAuthorityData"][:])
+
+		client, fieldErr := r.validateAviAccount(username, password, certificate, "")
+		if fieldErr != nil {
+			allErrs = append(allErrs, fieldErr)
 			return allErrs
 		}
-		// update to actual avi controller version
+		// get actual avi controller version
 		version, err := client.GetControllerVersion()
 		if err != nil {
 			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "Controller"), r.Spec.Controller, "failed to get avi controller version:"+err.Error()))
 			return allErrs
 		}
 
-		akoDeploymentConfigLog.Info("detected the avi_controller_version: ", version, " set it inside ADC: ", r.Namespace, r.Name)
-		r.Spec.ControllerVersion = version
+		if r.Spec.ControllerVersion != version {
+			// update controller version
+			r.Spec.ControllerVersion = version
+			// reinit client with the real controller version
+			client, fieldErr = r.validateAviAccount(username, password, certificate, version)
+			if fieldErr != nil {
+				allErrs = append(allErrs, fieldErr)
+				return allErrs
+			}
+		}
+
 		aviClient = client
 	}
 
@@ -250,6 +258,20 @@ func (r *AKODeploymentConfig) validateAviControllerVersion() (string, *field.Err
 		}
 	}
 	return controllerVersion, nil
+}
+
+// validateAviAccount checks if using inputs can connect to avi controller or not
+func (r *AKODeploymentConfig) validateAviAccount(username, password, certificate, version string) (aviclient.Client, *field.Error) {
+	aviClient, err := aviclient.NewAviClient(&aviclient.AviClientConfig{
+		ServerIP: r.Spec.Controller,
+		Username: username,
+		Password: password,
+		CA:       certificate,
+	}, version)
+	if err != nil {
+		return nil, field.Invalid(field.NewPath("spec", "Controller"), r.Spec.Controller, "failed to init avi client for controller:"+err.Error())
+	}
+	return aviClient, nil
 }
 
 // validateAviCloud checks input Cloud Name field valid or not
