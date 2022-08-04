@@ -72,12 +72,34 @@ func (r *AKODeploymentConfigReconciler) initAVI(
 		var err error
 		r.aviClient, err = aviclient.NewAviClientFromSecrets(r.Client, ctx, log, obj.Spec.Controller,
 			obj.Spec.AdminCredentialRef.Name, obj.Spec.AdminCredentialRef.Namespace,
-			obj.Spec.CertificateAuthorityRef.Name, obj.Spec.CertificateAuthorityRef.Namespace)
+			obj.Spec.CertificateAuthorityRef.Name, obj.Spec.CertificateAuthorityRef.Namespace,
+			obj.Spec.ControllerVersion)
 
 		if err != nil {
 			log.Error(err, "Cannot init AVI clients from secrets")
 			return res, err
 		}
+
+		version, err := r.aviClient.GetControllerVersion()
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		if obj.Spec.ControllerVersion != version {
+			// patch the adc if the version doesn't match
+			obj.Spec.ControllerVersion = version
+			// re-init aviClient with real version
+			r.aviClient, err = aviclient.NewAviClientFromSecrets(r.Client, ctx, log, obj.Spec.Controller,
+				obj.Spec.AdminCredentialRef.Name, obj.Spec.AdminCredentialRef.Namespace,
+				obj.Spec.CertificateAuthorityRef.Name, obj.Spec.CertificateAuthorityRef.Namespace,
+				obj.Spec.ControllerVersion)
+
+			if err != nil {
+				log.Error(err, "Cannot init AVI clients with actual avi controller version")
+				return res, err
+			}
+		}
+
 		log.Info("AVI Client initialized successfully")
 	}
 

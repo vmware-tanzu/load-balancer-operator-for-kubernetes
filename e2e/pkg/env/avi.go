@@ -9,8 +9,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/aviclient"
-
-	ako_operator "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 )
 
 func NewAviRunner(runner *KubectlRunner) aviclient.Client {
@@ -20,7 +18,7 @@ func NewAviRunner(runner *KubectlRunner) aviclient.Client {
 		Username: GetAviObject(runner, "secret", "controller-credentials", "data", "username"),
 		Password: GetAviObject(runner, "secret", "controller-credentials", "data", "password"),
 		CA:       GetAviObject(runner, "secret", "controller-ca", "data", "certificateAuthorityData"),
-	}, ako_operator.GetAVIControllerVersion())
+	}, "")
 
 	return aviClient
 }

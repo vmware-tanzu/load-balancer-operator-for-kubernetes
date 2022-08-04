@@ -35,7 +35,6 @@ const (
 	AkoConfigMapControllerIPKey   = "controllerIP"
 	AkoConfigMapVipNetworkListKey = "vipNetworkList"
 
-	AVI_VERSION                                                  = "20.1.3"
 	AviClusterLabel                                              = "networking.tkg.tanzu.vmware.com/avi"
 	AviClusterDeleteConfigLabel                                  = "networking.tkg.tanzu.vmware.com/avi-config-delete"
 	AviClusterSecretType                                         = "avi.cluster.x-k8s.io/secret"

@@ -8,7 +8,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
 )
 
 var _ = Describe("AKO Operator", func() {
@@ -50,32 +49,6 @@ var _ = Describe("AKO Operator", func() {
 			})
 			It("should return port 6443", func() {
 				Expect(GetControlPlaneEndpointPort()).Should(Equal(int32(6443)))
-			})
-		})
-	})
-
-	Context("Get AVI Controller Version", func() {
-		When("avi controller version is successfully set", func() {
-			BeforeEach(func() {
-				os.Setenv(AVIControllerVersion, "20.1.1")
-			})
-			It("should return version 20.1.1", func() {
-				Expect(GetAVIControllerVersion()).Should(Equal("20.1.1"))
-			})
-		})
-
-		When("avi controller version is set but the value is empty", func() {
-			BeforeEach(func() {
-				os.Setenv(AVIControllerVersion, "")
-			})
-			It("should return default avi controller version", func() {
-				Expect(GetAVIControllerVersion()).Should(Equal(akoov1alpha1.AVI_VERSION))
-			})
-		})
-
-		When("avi controller version is not set", func() {
-			It("should return default avi controller version", func() {
-				Expect(GetAVIControllerVersion()).Should(Equal(akoov1alpha1.AVI_VERSION))
 			})
 		})
 	})
