@@ -16,7 +16,6 @@ import (
 	//nolint
 	. "github.com/onsi/gomega"
 
-	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/aviclient"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
@@ -27,6 +26,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/aviclient"
 )
 
 // AddToScheme is the function TestSuite calls to register schemes for a manager

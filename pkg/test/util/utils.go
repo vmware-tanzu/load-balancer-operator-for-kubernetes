@@ -9,15 +9,16 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
+	p "github.com/vmware-tanzu/carvel-kapp-controller/pkg/apiserver/apis/datapackaging/v1alpha1"
+	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/test/builder"
+	runv1alpha3 "github.com/vmware-tanzu/tanzu-framework/apis/run/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
 	capi "sigs.k8s.io/cluster-api/api/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
-	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/test/builder"
 )
 
 type ExpectResult int
@@ -83,6 +84,15 @@ func ensureRuntimeObjectCreated(ctx *builder.IntegrationTestContext, o client.Ob
 	case *akoov1alpha1.AKODeploymentConfig:
 		obj = o.(*akoov1alpha1.AKODeploymentConfig)
 		EnsureRuntimeObjectMatchExpectation(ctx, client.ObjectKey{Name: obj.Name, Namespace: obj.Namespace}, obj, EXIST)
+	case *runv1alpha3.ClusterBootstrap:
+		obj = o.(*runv1alpha3.ClusterBootstrap)
+		EnsureRuntimeObjectMatchExpectation(ctx, client.ObjectKey{Name: obj.Name, Namespace: obj.Namespace}, obj, EXIST)
+	case *p.Package:
+		obj = o.(*p.Package)
+		EnsureRuntimeObjectMatchExpectation(ctx, client.ObjectKey{Name: obj.Name, Namespace: obj.Namespace}, obj, EXIST)
+	case *corev1.Secret:
+		obj = o.(*corev1.Secret)
+		EnsureRuntimeObjectMatchExpectation(ctx, client.ObjectKey{Name: obj.Name, Namespace: obj.Namespace}, obj, EXIST)
 	default:
 		klog.Fatal("Unknown type object")
 	}
@@ -142,4 +152,25 @@ func UpdateObjectLabels(ctx *builder.IntegrationTestContext, key client.ObjectKe
 		}
 		return nil
 	}).Should(Succeed())
+}
+
+func EnsureClusterBootstrapPackagesMatchExpectation(ctx *builder.IntegrationTestContext, key client.ObjectKey, refName string, exists bool) {
+	Eventually(func() bool {
+		obj := &runv1alpha3.ClusterBootstrap{}
+		err := ctx.Client.Get(ctx.Context, key, obj)
+		if err != nil {
+			return false
+		}
+		found := findPkgByRefinCB(obj, refName)
+		return found == exists
+	}).Should(BeTrue())
+}
+
+func findPkgByRefinCB(cb *runv1alpha3.ClusterBootstrap, refName string) bool {
+	for _, n := range cb.Spec.AdditionalPackages {
+		if n.RefName == refName {
+			return true
+		}
+	}
+	return false
 }

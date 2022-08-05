@@ -5,18 +5,120 @@ package cluster
 
 import (
 	"context"
+	"errors"
 
 	"github.com/go-logr/logr"
-	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
-	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako"
-	akoo "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
+	datapackagingv1alpha1 "github.com/vmware-tanzu/carvel-kapp-controller/pkg/apiserver/apis/datapackaging/v1alpha1"
+
+	runv1alpha3 "github.com/vmware-tanzu/tanzu-framework/apis/run/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako"
+	akoo "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 )
+
+const AkoPackageName = "TestPackage"
+const AkoSecretref = "TestingRef"
+
+func (r *ClusterReconciler) ReconcileClusterBootstrap(
+	ctx context.Context,
+	log logr.Logger,
+	cluster *clusterv1.Cluster,
+	obj *akoov1alpha1.AKODeploymentConfig,
+
+) (ctrl.Result, error) {
+	log.Info("Starts reconciling cluster bootstrap")
+	res := ctrl.Result{}
+	// get the bootstrap
+	bootstrap := &runv1alpha3.ClusterBootstrap{}
+	if err := r.Get(ctx, client.ObjectKey{
+		Name:      cluster.Name,
+		Namespace: cluster.Namespace,
+	}, bootstrap); err != nil {
+		log.Info("Failed to get cluster bootstrap, requeue")
+		return res, err
+	}
+
+	clusterBootstrapPackage := runv1alpha3.ClusterBootstrapPackage{
+		RefName: AkoPackageName,
+		ValuesFrom: &runv1alpha3.ValuesFrom{
+			SecretRef: AkoSecretref,
+		},
+	}
+
+	bootstrap.Spec.AdditionalPackages = append(bootstrap.Spec.AdditionalPackages, &clusterBootstrapPackage)
+
+	clusterBootstrap := bootstrap.DeepCopy()
+	return res, r.Update(ctx, clusterBootstrap)
+}
+
+var pkgRefName = "load-balancer-and-ingress-service.tanzu.vmware.com"
+
+func getPackage(pl *datapackagingv1alpha1.PackageList, refName string) (*datapackagingv1alpha1.Package, error) {
+	pkg := &datapackagingv1alpha1.Package{}
+	for _, n := range pl.Items {
+		if n.Spec.RefName == refName {
+			pkg = n.DeepCopy()
+			return pkg, nil
+		}
+	}
+	return pkg, errors.New("Could not get AKO package")
+}
+
+// AddPackageToCB returns a new CB with package added to its AdditionalPackages
+func AddPackageToCB(cb *runv1alpha3.ClusterBootstrap, bootstrapPackage *runv1alpha3.ClusterBootstrapPackage) *runv1alpha3.ClusterBootstrap {
+	cb.Spec.AdditionalPackages = append(cb.Spec.AdditionalPackages, bootstrapPackage)
+	return cb.DeepCopy()
+}
+
+// RemovePackageFromCB returns new CB package list with AKO package removed
+func RemovePackageFromCB(cbpl []*runv1alpha3.ClusterBootstrapPackage) ([]*runv1alpha3.ClusterBootstrapPackage, error) {
+	for i, n := range cbpl {
+		if n.RefName == pkgRefName {
+			return append(cbpl[:i], cbpl[i+1:]...), nil
+		}
+	}
+	err := errors.New("AKO package not found in Cluster Bootstrap additional packages")
+	return cbpl, err
+}
+
+func (r *ClusterReconciler) ReconcileClusterBootstrapDelete(
+	ctx context.Context,
+	log logr.Logger,
+	cluster *clusterv1.Cluster,
+	obj *akoov1alpha1.AKODeploymentConfig,
+
+) (ctrl.Result, error) {
+	log.Info("Starts reconciling add on secret")
+	res := ctrl.Result{}
+
+	// get the bootstrap
+	bootstrap := &runv1alpha3.ClusterBootstrap{}
+	if err := r.Get(ctx, client.ObjectKey{
+		Name:      cluster.Name,
+		Namespace: cluster.Namespace,
+	}, bootstrap); err != nil {
+		log.Info("Failed to get cluster bootstrap, requeue")
+		return res, err
+	}
+
+	//  find and remove package from CB additional packages list
+	updatedBootstrapPackagelist, err := RemovePackageFromCB(bootstrap.Spec.AdditionalPackages)
+	if err != nil {
+		log.Info("Could not get Cluster Bootstrap package")
+		return res, err
+	}
+
+	bootstrap.Spec.AdditionalPackages = updatedBootstrapPackagelist
+	clusterbootstrap := bootstrap.DeepCopy()
+	return res, r.Update(ctx, clusterbootstrap)
+}
 
 func (r *ClusterReconciler) ReconcileAddonSecret(
 	ctx context.Context,
