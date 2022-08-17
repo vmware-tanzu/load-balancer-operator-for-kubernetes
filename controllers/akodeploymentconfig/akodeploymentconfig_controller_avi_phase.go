@@ -256,9 +256,11 @@ func (r *AKODeploymentConfigReconciler) reconcileCloudUsableNetwork(
 	log = log.WithValues("cloud", obj.Spec.CloudName)
 	log.Info("Start reconciling AVI cloud usable network")
 
-	if err := r.AddUsableNetwork(r.aviClient, obj.Spec.CloudName, obj.Spec.ControlPlaneNetwork.Name, log); err != nil {
-		log.Error(err, "Failed to add usable network", "network", obj.Spec.ControlPlaneNetwork.Name)
-		return ctrl.Result{}, err
+	if obj.Spec.ControlPlaneNetwork.Name != "" && obj.Spec.ControlPlaneNetwork.CIDR != "" {
+		if err := r.AddUsableNetwork(r.aviClient, obj.Spec.CloudName, obj.Spec.ControlPlaneNetwork.Name, log); err != nil {
+			log.Error(err, "Failed to add usable network", "network", obj.Spec.ControlPlaneNetwork.Name)
+			return ctrl.Result{}, err
+		}
 	}
 
 	if err := r.AddUsableNetwork(r.aviClient, obj.Spec.CloudName, obj.Spec.DataNetwork.Name, log); err != nil {
