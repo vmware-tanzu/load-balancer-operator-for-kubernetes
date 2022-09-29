@@ -35,7 +35,7 @@ func NewFakeAviClient() *FakeAviClient {
 	}
 }
 
-func (r *FakeAviClient) ServiceEngineGroupGetByName(name string, options ...session.ApiOptionsParams) (*models.ServiceEngineGroup, error) {
+func (r *FakeAviClient) ServiceEngineGroupGetByName(name, cloudName string, options ...session.ApiOptionsParams) (*models.ServiceEngineGroup, error) {
 	return r.ServiceEngineGroup.GetByName(name)
 }
 
@@ -49,7 +49,7 @@ func (r *FakeAviClient) ServiceEngineGroupCreate(obj *models.ServiceEngineGroup,
 	return obj, nil
 }
 
-func (r *FakeAviClient) NetworkGetByName(name string, options ...session.ApiOptionsParams) (*models.Network, error) {
+func (r *FakeAviClient) NetworkGetByName(name, cloudName string, options ...session.ApiOptionsParams) (*models.Network, error) {
 	return r.Network.GetByName(name)
 }
 
