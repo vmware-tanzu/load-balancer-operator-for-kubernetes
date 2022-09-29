@@ -128,6 +128,10 @@ func (r *FakeAviClient) AviCertificateConfig() (string, error) {
 	return "", nil
 }
 
+func (r *FakeAviClient) GetControllerVersion() (string, error) {
+	return "", nil
+}
+
 // ServiceEngineGroup Client
 type ServiceEngineGroupClient struct {
 	getByNameFn GetByNameSEGFunc

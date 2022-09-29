@@ -39,8 +39,9 @@ func NewValues(obj *akoov1alpha1.AKODeploymentConfig, clusterNameSpacedName stri
 		obj.Spec.Controller,
 		obj.Spec.ControllerVersion,
 		obj.Spec.ServiceEngineGroup,
+		obj.Spec.Tenant.Name,
 	)
-	l7Settings := NewL7Settings(&obj.Spec.ExtraConfigs.IngressConfigs, CNI(obj.Spec.ExtraConfigs.CniPlugin))
+	l7Settings := NewL7Settings(&obj.Spec.ExtraConfigs.IngressConfigs)
 	l4Settings := NewL4Settings(&obj.Spec.ExtraConfigs.L4Configs)
 	nodePortSelector := NewNodePortSelector(&obj.Spec.ExtraConfigs.NodePortSelector)
 	resources := DefaultResources()
@@ -126,6 +127,7 @@ type NamespaceSelector struct {
 
 // AKOSettings provides the settings for AKO
 type AKOSettings struct {
+	PrimaryInstance        string            `yaml:"primary_instance"` // Defines AKO instance is primary or not. Value `true` indicates that AKO instance is primary.
 	LogLevel               string            `yaml:"log_level"`
 	FullSyncFrequency      string            `yaml:"full_sync_frequency"`       // This frequency controls how often AKO polls the Avi controller to update itself with cloud configurations.
 	ApiServerPort          int               `yaml:"api_server_port"`           // Specify the port for the API server, default is set as 8080 // EmptyAllowed: false
@@ -137,9 +139,9 @@ type AKOSettings struct {
 	EnableEVH              string            `yaml:"enable_EVH"`   // This enables the Enhanced Virtual Hosting Model in Avi Controller for the Virtual Services
 	Layer7Only             string            `yaml:"layer_7_only"` // If this flag is switched on, then AKO will only do layer 7 loadbalancing
 	ServicesAPI            string            `yaml:"services_api"` // Flag that enables AKO in services API mode. Currently implemented only for L4.
-	IstioEnabled           string            `yaml:"istio_enabled"`
 	VIPPerNamespace        string            `yaml:"vip_per_namespace"`
 	NamespaceSector        NamespaceSelector `yaml:"namespace_selector"`
+	EnableEvents           string            `yaml:"enable_events"` // Enables/disables Event broadcasting via AKO
 }
 
 type CNI string
@@ -171,6 +173,9 @@ func DefaultAKOSettings() *AKOSettings {
 func NewAKOSettings(clusterName string, obj *akoov1alpha1.AKODeploymentConfig) (settings *AKOSettings) {
 	settings = DefaultAKOSettings()
 	settings.ClusterName = clusterName
+	if obj.Spec.ExtraConfigs.PrimaryInstance != nil {
+		settings.PrimaryInstance = strconv.FormatBool(*obj.Spec.ExtraConfigs.PrimaryInstance)
+	}
 	if obj.Spec.ExtraConfigs.Log.LogLevel != "" {
 		settings.LogLevel = obj.Spec.ExtraConfigs.Log.LogLevel
 	}
@@ -192,11 +197,11 @@ func NewAKOSettings(clusterName string, obj *akoov1alpha1.AKODeploymentConfig) (
 	if obj.Spec.ExtraConfigs.Layer7Only != nil {
 		settings.EnableEVH = strconv.FormatBool(*obj.Spec.ExtraConfigs.Layer7Only)
 	}
+	if obj.Spec.ExtraConfigs.EnableEvents != nil {
+		settings.EnableEVH = strconv.FormatBool(*obj.Spec.ExtraConfigs.EnableEvents)
+	}
 	if obj.Spec.ExtraConfigs.ServicesAPI != nil {
 		settings.ServicesAPI = strconv.FormatBool(*obj.Spec.ExtraConfigs.ServicesAPI)
-	}
-	if obj.Spec.ExtraConfigs.IstioEnabled != nil {
-		settings.IstioEnabled = strconv.FormatBool(*obj.Spec.ExtraConfigs.IstioEnabled)
 	}
 	if obj.Spec.ExtraConfigs.VIPPerNamespace != nil {
 		settings.VIPPerNamespace = strconv.FormatBool(*obj.Spec.ExtraConfigs.VIPPerNamespace)
@@ -305,6 +310,7 @@ type L7Settings struct {
 	ShardVSSize          string `yaml:"shard_vs_size"`          // Use this to control the layer 7 VS numbers. This applies to both secure/insecure VSes but does not apply for passthrough. ENUMs: LARGE, MEDIUM, SMALL
 	PassthroughShardSize string `yaml:"pass_through_shardsize"` // Control the passthrough virtualservice numbers using this ENUM. ENUMs: LARGE, MEDIUM, SMALL
 	NoPGForSNI           bool   `yaml:"no_pg_for_SNI"`
+	EnableMCI            string `yaml:"enable_MCI"` // Enabling this flag would tell AKO to start processing multi-cluster ingress objects.
 }
 
 type ServiceType string
@@ -316,15 +322,9 @@ const (
 )
 
 // DefaultL7Settings returns the default L7Settings
-func DefaultL7Settings(cni CNI) *L7Settings {
-	// If antrea is the cluster cni implementation,
-	// the default service will be set to NPL
-	serviceType := NodePort
-	if cni == Antrea {
-		serviceType = NodePortLocal
-	}
+func DefaultL7Settings() *L7Settings {
 	return &L7Settings{
-		ServiceType: string(serviceType),
+		ServiceType: string(NodePort),
 		// DefaultIngController  don't set, populate in runtime
 		// ShardVSSize:          don't set, populate in runtime
 		// L7ShardingScheme: 	 don't set, populate in runtime
@@ -334,8 +334,8 @@ func DefaultL7Settings(cni CNI) *L7Settings {
 
 // NewL7Settings returns a customized L7Settings after parsing the v1alpha1.AKOIngressConfig
 // it only modifies ServiceType and ShardVSSize when instructed by the ingressConfig
-func NewL7Settings(config *akoov1alpha1.AKOIngressConfig, cni CNI) *L7Settings {
-	settings := DefaultL7Settings(cni)
+func NewL7Settings(config *akoov1alpha1.AKOIngressConfig) *L7Settings {
+	settings := DefaultL7Settings()
 	if config.DisableIngressClass != nil {
 		settings.DisableIngressClass = *config.DisableIngressClass
 	}
@@ -354,12 +354,14 @@ func NewL7Settings(config *akoov1alpha1.AKOIngressConfig, cni CNI) *L7Settings {
 	if config.NoPGForSNI != nil {
 		settings.NoPGForSNI = *config.NoPGForSNI
 	}
+	if config.EnableMCI != nil {
+		settings.EnableMCI = strconv.FormatBool(*config.EnableMCI)
+	}
 	return settings
 }
 
 // L4Settings outlines all the knobs  used to control Layer 4 loadbalancing settings in AKO.
 type L4Settings struct {
-	AdvancedL4    string `yaml:"advanced_l4"`    // Use this knob to control the settings for the services API usage.
 	DefaultDomain string `yaml:"default_domain"` // If multiple sub-domains are configured in the cloud, use this knob to set the default sub-domain to use for L4 VSes.
 	AutoFQDN      string `yaml:"auto_fqdn"`      // ENUM: default(<svc>.<ns>.<subdomain>), flat (<svc>-<ns>.<subdomain>), "disabled"
 }
@@ -374,9 +376,6 @@ func DefaultL4Settings() *L4Settings {
 // NewL4Settings returns a customized L4Settings after parsing the v1alpha1.AKOL4Config
 func NewL4Settings(config *akoov1alpha1.AKOL4Config) *L4Settings {
 	settings := DefaultL4Settings()
-	if config.AdvancedL4 != nil {
-		settings.AdvancedL4 = strconv.FormatBool(*config.AdvancedL4)
-	}
 	if config.DefaultDomain != "" {
 		settings.DefaultDomain = config.DefaultDomain
 	}
@@ -392,29 +391,30 @@ type ControllerSettings struct {
 	ControllerVersion      string `yaml:"controller_version"`        // The controller API version
 	CloudName              string `yaml:"cloud_name"`                // The configured cloud name on the Avi controller.
 	ControllerIP           string `yaml:"controller_ip"`
+	TenantName             string `yaml:"tenant_name"`
 }
 
 // DefaultControllerSettings return the default ControllerSettings
 func DefaultControllerSettings() *ControllerSettings {
 	return &ControllerSettings{
 		// set controller version to the default one
-		ControllerVersion: akoov1alpha1.AVI_VERSION,
+		// ControllerVersion: populate in runtime,
 		// ServiceEngineGroupName: populate in runtime
 		// CloudName: populate in runtime
 		// ControllerIP: populate in runtime
+		// TenantName: populate in runtime
 	}
 }
 
 // NewControllerSettings returns a ControllerSettings from default,
 // allow setting CloudName, ControllerIP, ControllerVersion and ServiceEngineGroupName
-func NewControllerSettings(cloudName, controllerIP, controllerVersion, serviceEngineGroup string) (setting *ControllerSettings) {
+func NewControllerSettings(cloudName, controllerIP, controllerVersion, serviceEngineGroup, tenantName string) (setting *ControllerSettings) {
 	setting = DefaultControllerSettings()
 	setting.CloudName = cloudName
 	setting.ControllerIP = controllerIP
 	setting.ServiceEngineGroupName = serviceEngineGroup
-	if controllerVersion != "" {
-		setting.ControllerVersion = controllerVersion
-	}
+	setting.TenantName = tenantName
+	setting.ControllerVersion = controllerVersion
 	return
 }
 

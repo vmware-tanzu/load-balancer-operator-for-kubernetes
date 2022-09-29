@@ -72,12 +72,32 @@ func (r *AKODeploymentConfigReconciler) initAVI(
 		var err error
 		r.aviClient, err = aviclient.NewAviClientFromSecrets(r.Client, ctx, log, obj.Spec.Controller,
 			obj.Spec.AdminCredentialRef.Name, obj.Spec.AdminCredentialRef.Namespace,
-			obj.Spec.CertificateAuthorityRef.Name, obj.Spec.CertificateAuthorityRef.Namespace)
+			obj.Spec.CertificateAuthorityRef.Name, obj.Spec.CertificateAuthorityRef.Namespace,
+			obj.Spec.ControllerVersion)
 
 		if err != nil {
 			log.Error(err, "Cannot init AVI clients from secrets")
 			return res, err
 		}
+
+		version, err := r.aviClient.GetControllerVersion()
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		if obj.Spec.ControllerVersion != version {
+			// re-init aviClient with real version
+			r.aviClient, err = aviclient.NewAviClientFromSecrets(r.Client, ctx, log, obj.Spec.Controller,
+				obj.Spec.AdminCredentialRef.Name, obj.Spec.AdminCredentialRef.Namespace,
+				obj.Spec.CertificateAuthorityRef.Name, obj.Spec.CertificateAuthorityRef.Namespace,
+				obj.Spec.ControllerVersion)
+
+			if err != nil {
+				log.Error(err, "Cannot init AVI clients with actual avi controller version")
+				return res, err
+			}
+		}
+
 		log.Info("AVI Client initialized successfully")
 	}
 
@@ -106,6 +126,7 @@ func (r *AKODeploymentConfigReconciler) reconcileAVI(
 		r.reconcileNetworkSubnets,
 		r.reconcileCloudUsableNetwork,
 		r.reconcileAviInfraSetting,
+		r.reconcileControllerVersion,
 		func(ctx context.Context, log logr.Logger, obj *akoov1alpha1.AKODeploymentConfig) (ctrl.Result, error) {
 			return phases.ReconcileClustersPhases(ctx, r.Client, log, obj,
 				[]phases.ReconcileClusterPhase{
@@ -148,6 +169,29 @@ func (r *AKODeploymentConfigReconciler) reconcileAVIDelete(
 		},
 	})
 
+}
+
+// reconcileControllerVersion update AKODeploymentConfig.spec.controllerVersion to the
+// actual version
+func (r *AKODeploymentConfigReconciler) reconcileControllerVersion(
+	ctx context.Context,
+	log logr.Logger,
+	obj *akoov1alpha1.AKODeploymentConfig,
+) (ctrl.Result, error) {
+	log = log.WithValues("controllerVersion", obj.Spec.ControllerVersion)
+	log.Info("Start reconciling AVI controller version")
+
+	version, err := r.aviClient.GetControllerVersion()
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// patch the adc if the version doesn't match
+	if obj.Spec.ControllerVersion != version {
+		obj.Spec.ControllerVersion = version
+	}
+
+	return ctrl.Result{}, nil
 }
 
 // reconcileNetworkSubnets ensures the Datanetwork configuration is in sync with
@@ -212,9 +256,11 @@ func (r *AKODeploymentConfigReconciler) reconcileCloudUsableNetwork(
 	log = log.WithValues("cloud", obj.Spec.CloudName)
 	log.Info("Start reconciling AVI cloud usable network")
 
-	if err := r.AddUsableNetwork(r.aviClient, obj.Spec.CloudName, obj.Spec.ControlPlaneNetwork.Name, log); err != nil {
-		log.Error(err, "Failed to add usable network", "network", obj.Spec.ControlPlaneNetwork.Name)
-		return ctrl.Result{}, err
+	if obj.Spec.ControlPlaneNetwork.Name != "" && obj.Spec.ControlPlaneNetwork.CIDR != "" {
+		if err := r.AddUsableNetwork(r.aviClient, obj.Spec.CloudName, obj.Spec.ControlPlaneNetwork.Name, log); err != nil {
+			log.Error(err, "Failed to add usable network", "network", obj.Spec.ControlPlaneNetwork.Name)
+			return ctrl.Result{}, err
+		}
 	}
 
 	if err := r.AddUsableNetwork(r.aviClient, obj.Spec.CloudName, obj.Spec.DataNetwork.Name, log); err != nil {

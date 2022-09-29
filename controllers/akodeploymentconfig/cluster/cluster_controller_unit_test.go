@@ -26,6 +26,7 @@ loadBalancerAndIngressService:
         is_cluster_service: ""
         replica_count: 1
         ako_settings:
+            primary_instance: ""
             log_level: INFO
             full_sync_frequency: "1800"
             api_server_port: 8080
@@ -37,11 +38,11 @@ loadBalancerAndIngressService:
             enable_EVH: ""
             layer_7_only: ""
             services_api: ""
-            istio_enabled: ""
             vip_per_namespace: ""
             namespace_selector:
                 label_key: ""
                 label_value: ""
+            enable_events: ""
         network_settings:
             subnet_ip: 10.0.0.0
             subnet_prefix: "24"
@@ -61,8 +62,8 @@ loadBalancerAndIngressService:
             shard_vs_size: MEDIUM
             pass_through_shardsize: ""
             no_pg_for_SNI: false
+            enable_MCI: ""
         l4_settings:
-            advanced_l4: ""
             default_domain: ""
             auto_fqdn: ""
         controller_settings:
@@ -70,6 +71,7 @@ loadBalancerAndIngressService:
             controller_version: 20.1.3
             cloud_name: test-cloud
             controller_ip: 10.23.122.1
+            tenant_name: ""
         nodeport_selector:
             key: ""
             value: ""
@@ -114,6 +116,7 @@ func unitTestAKODeploymentYaml() {
 					Spec: akoov1alpha1.AKODeploymentConfigSpec{
 						CloudName:          "test-cloud",
 						Controller:         "10.23.122.1",
+						ControllerVersion:  "20.1.3",
 						ServiceEngineGroup: "Default-SEG",
 						DataNetwork: akoov1alpha1.DataNetwork{
 							Name: "test-akdc",
