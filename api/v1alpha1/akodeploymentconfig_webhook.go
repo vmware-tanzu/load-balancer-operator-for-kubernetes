@@ -163,21 +163,18 @@ func (r *AKODeploymentConfig) validateAVI(old *AKODeploymentConfig) field.ErrorL
 		// get actual avi controller version
 		version, err := client.GetControllerVersion()
 		if err != nil {
-			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "Controller"), r.Spec.Controller, "failed to get avi controller version:"+err.Error()))
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "ControllerVersion"), r.Spec.Controller, "failed to get avi controller version:"+err.Error()))
 			return allErrs
 		}
 
-		if r.Spec.ControllerVersion != version {
-			// update controller version
-			r.Spec.ControllerVersion = version
-			// reinit client with the real controller version
-			client, fieldErr = r.validateAviAccount(username, password, certificate, version)
-			if fieldErr != nil {
-				allErrs = append(allErrs, fieldErr)
-				return allErrs
-			}
+		// update controller version
+		r.Spec.ControllerVersion = version
+		// reinit client with the real controller version
+		client, fieldErr = r.validateAviAccount(username, password, certificate, version)
+		if fieldErr != nil {
+			allErrs = append(allErrs, fieldErr)
+			return allErrs
 		}
-
 		aviClient = client
 	}
 
@@ -254,7 +251,7 @@ func (r *AKODeploymentConfig) validateAviControllerVersion() (string, *field.Err
 		if !re.MatchString(controllerVersion) {
 			return controllerVersion, field.Invalid(field.NewPath("spec", "ControllerVersion"),
 				r.Spec.ControllerVersion,
-				"invalid controller version format, example valid controller version: 20.1.3")
+				"invalid controller version format, example valid controller version: 21.1.4")
 		}
 	}
 	return controllerVersion, nil
@@ -288,7 +285,7 @@ func (r *AKODeploymentConfig) validateAviCloud() *field.Error {
 
 // validateAviServiceEngineGroup checks input Servcie Engine Group valid or not
 func (r *AKODeploymentConfig) validateAviServiceEngineGroup() *field.Error {
-	if _, err := aviClient.ServiceEngineGroupGetByName(r.Spec.ServiceEngineGroup); err != nil {
+	if _, err := aviClient.ServiceEngineGroupGetByName(r.Spec.ServiceEngineGroup, r.Spec.CloudName); err != nil {
 		return field.Invalid(field.NewPath("spec", "serviceEngineGroup"), r.Spec.ServiceEngineGroup,
 			"failed to get service engine group from avi controller:"+err.Error())
 	}
@@ -299,7 +296,7 @@ func (r *AKODeploymentConfig) validateAviServiceEngineGroup() *field.Error {
 func (r *AKODeploymentConfig) validateAviControlPlaneNetworks() field.ErrorList {
 	var allErrs field.ErrorList
 	// check control plane network name
-	if _, err := aviClient.NetworkGetByName(r.Spec.ControlPlaneNetwork.Name); err != nil {
+	if _, err := aviClient.NetworkGetByName(r.Spec.ControlPlaneNetwork.Name, r.Spec.CloudName); err != nil {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "controlPlaneNetwork", "name"),
 			r.Spec.ControlPlaneNetwork.Name,
 			"failed to get control plane network "+r.Spec.ControlPlaneNetwork.Name+" from avi controller:"+err.Error()))
@@ -321,7 +318,7 @@ func (r *AKODeploymentConfig) validateAviControlPlaneNetworks() field.ErrorList 
 func (r *AKODeploymentConfig) validateAviDataNetworks() field.ErrorList {
 	var allErrs field.ErrorList
 	// check data network name
-	if _, err := aviClient.NetworkGetByName(r.Spec.DataNetwork.Name); err != nil {
+	if _, err := aviClient.NetworkGetByName(r.Spec.DataNetwork.Name, r.Spec.CloudName); err != nil {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "dataNetwork", "name"),
 			r.Spec.DataNetwork.Name,
 			"failed to get data plane network "+r.Spec.DataNetwork.Name+" from avi controller:"+err.Error()))

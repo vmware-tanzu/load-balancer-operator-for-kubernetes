@@ -20,10 +20,6 @@ type UsableNetwork struct {
 type UsableNetworkProvider struct{}
 
 func (c *UsableNetworkProvider) AddUsableNetwork(client aviclient.Client, cloudName, networkName string, log logr.Logger) error {
-	network, err := client.NetworkGetByName(networkName)
-	if err != nil {
-		return errors.Wrapf(err, "Failed to get Data Network %s from AVI Controller\n", networkName)
-	}
 	cloud, err := client.CloudGetByName(cloudName)
 	if err != nil {
 		// Cannot find the configured cloud, requeue the request but
@@ -40,7 +36,10 @@ func (c *UsableNetworkProvider) AddUsableNetwork(client aviclient.Client, cloudN
 	if err != nil {
 		return errors.Wrap(err, "Failed to find IPAM profile")
 	}
-
+	network, err := client.NetworkGetByName(networkName, cloudName)
+	if err != nil {
+		return errors.Wrapf(err, "Failed to get Data Network %s from AVI Controller\n", networkName)
+	}
 	// Ensure network is added to the cloud's IPAM Profile as one of its
 	// usable Networks
 	for _, usableNetwork := range ipam.InternalProfile.UsableNetworks {
