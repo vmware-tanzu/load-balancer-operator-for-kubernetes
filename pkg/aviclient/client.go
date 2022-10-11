@@ -9,6 +9,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"net/http"
 	"regexp"
 	"strings"
@@ -188,16 +189,39 @@ func (r *realAviClient) GetControllerVersion() (string, error) {
 	return r.AviSession.GetControllerVersion()
 }
 
-func (r *realAviClient) ServiceEngineGroupGetByName(name string, options ...session.ApiOptionsParams) (*models.ServiceEngineGroup, error) {
-	return r.ServiceEngineGroup.GetByName(name)
+func (r *realAviClient) GetObjectByName(obj string, name string, cloudName string, result interface{}, options ...session.ApiOptionsParams) error {
+	uri := "/api/" + obj + "/?include_name&name=" + name + "&cloud_ref.name=" + cloudName
+	res, err := r.AviSession.GetCollectionRaw(uri, options...)
+	if err != nil {
+		return err
+	}
+	if res.Count == 0 {
+		return errors.New("No object of type " + obj + " with name " + name + " is found")
+	} else if res.Count > 1 {
+		return errors.New("More than one object of type " + obj + " with name " + name + " is found")
+	}
+	elems := make([]json.RawMessage, 1)
+	err = json.Unmarshal(res.Results, &elems)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(elems[0], &result)
+}
+
+func (r *realAviClient) ServiceEngineGroupGetByName(name, cloudName string, options ...session.ApiOptionsParams) (*models.ServiceEngineGroup, error) {
+	var obj *models.ServiceEngineGroup
+	err := r.GetObjectByName("serviceenginegroup", name, cloudName, &obj, options...)
+	return obj, err
 }
 
 func (r *realAviClient) ServiceEngineGroupCreate(obj *models.ServiceEngineGroup, options ...session.ApiOptionsParams) (*models.ServiceEngineGroup, error) {
 	return r.ServiceEngineGroup.Create(obj)
 }
 
-func (r *realAviClient) NetworkGetByName(name string, options ...session.ApiOptionsParams) (*models.Network, error) {
-	return r.Network.GetByName(name)
+func (r *realAviClient) NetworkGetByName(name, cloudName string, options ...session.ApiOptionsParams) (*models.Network, error) {
+	var obj *models.Network
+	err := r.GetObjectByName("network", name, cloudName, &obj, options...)
+	return obj, err
 }
 
 func (r *realAviClient) NetworkCreate(obj *models.Network, options ...session.ApiOptionsParams) (*models.Network, error) {
