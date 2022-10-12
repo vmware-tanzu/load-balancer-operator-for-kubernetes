@@ -295,6 +295,9 @@ func (r *AKODeploymentConfig) validateAviServiceEngineGroup() *field.Error {
 // validateAviControlPlaneNetworks checks input Control Plane Network name existing or not, CIDR format valid or not
 func (r *AKODeploymentConfig) validateAviControlPlaneNetworks() field.ErrorList {
 	var allErrs field.ErrorList
+	if r.Spec.ControlPlaneNetwork.Name == "" || r.Spec.ControlPlaneNetwork.CIDR == "" {
+		return allErrs
+	}
 	// check control plane network name
 	if _, err := aviClient.NetworkGetByName(r.Spec.ControlPlaneNetwork.Name, r.Spec.CloudName); err != nil {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "controlPlaneNetwork", "name"),
