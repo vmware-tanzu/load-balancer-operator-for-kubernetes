@@ -183,6 +183,17 @@ func TestCreateNewAKODeploymentConfig(t *testing.T) {
 			expectErr: false,
 		},
 		{
+			name:              "control plane network field can be empty",
+			adminSecret:       staticAdminSecret.DeepCopy(),
+			certificateSecret: staticCASecret.DeepCopy(),
+			adc:               staticADC.DeepCopy(),
+			customizeInput: func(adminSecret, certificateSecret *corev1.Secret, adc *AKODeploymentConfig) (*corev1.Secret, *corev1.Secret, *AKODeploymentConfig) {
+				adc.Spec.ControlPlaneNetwork = ControlPlaneNetwork{}
+				return adminSecret, certificateSecret, adc
+			},
+			expectErr: false,
+		},
+		{
 			name:              "should throw error if not find avi admin secret or certificate sercret",
 			adminSecret:       staticAdminSecret.DeepCopy(),
 			certificateSecret: staticCASecret.DeepCopy(),
