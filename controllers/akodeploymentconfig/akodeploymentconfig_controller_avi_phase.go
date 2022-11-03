@@ -90,7 +90,7 @@ func (r *AKODeploymentConfigReconciler) initAVI(
 			r.aviClient, err = aviclient.NewAviClientFromSecrets(r.Client, ctx, log, obj.Spec.Controller,
 				obj.Spec.AdminCredentialRef.Name, obj.Spec.AdminCredentialRef.Namespace,
 				obj.Spec.CertificateAuthorityRef.Name, obj.Spec.CertificateAuthorityRef.Namespace,
-				obj.Spec.ControllerVersion)
+				version)
 
 			if err != nil {
 				log.Error(err, "Cannot init AVI clients with actual avi controller version")
@@ -210,7 +210,7 @@ func (r *AKODeploymentConfigReconciler) reconcileNetworkSubnets(
 		return res, errors.New("AVI client not initialized")
 	}
 
-	network, err := r.aviClient.NetworkGetByName(obj.Spec.DataNetwork.Name)
+	network, err := r.aviClient.NetworkGetByName(obj.Spec.DataNetwork.Name, obj.Spec.CloudName)
 	if err != nil {
 		log.Info("[WARN] Failed to get the Data Network from AVI Controller")
 		return res, nil
