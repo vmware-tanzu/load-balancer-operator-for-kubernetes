@@ -16,6 +16,8 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	runv1alpha3 "github.com/vmware-tanzu/tanzu-framework/apis/run/v1alpha3"
 )
 
 func (r *ClusterReconciler) ReconcileAddonSecret(
@@ -63,7 +65,18 @@ func (r *ClusterReconciler) ReconcileAddonSecret(
 		return res, err
 	}
 	secret = newAddonSecret.DeepCopy()
-	return res, r.Update(ctx, secret)
+	if err := r.Update(ctx, secret); err != nil {
+		log.Error(err, "Failed to update ako add on secret, requeue")
+		return res, err
+	}
+
+	// patch cluster bootstrap here
+	if err := r.patchClusterBootstrap(ctx, cluster, log); err != nil {
+		log.Error(err, "Failed to patch cluster bootstrap, requeue")
+		return res, err
+	}
+
+	return res, nil
 }
 
 func (r *ClusterReconciler) ReconcileAddonSecretDelete(
@@ -87,7 +100,18 @@ func (r *ClusterReconciler) ReconcileAddonSecretDelete(
 		log.Error(err, "Failed to get AKO Deployment Secret, requeue")
 		return res, err
 	}
-	return res, r.Delete(ctx, secret)
+	if err := r.Delete(ctx, secret); err != nil {
+		log.Error(err, "Failed to delete ako add on secret, requeue")
+		return res, err
+	}
+
+	// remove cluster bootstrap correspondingly
+	if err := r.removeClusterBootstrap(ctx, cluster, log); err != nil {
+		log.Error(err, "Failed to remove cluster bootstrap, requeue")
+		return res, err
+	}
+
+	return res, nil
 }
 
 func (r *ClusterReconciler) aviUserSecretName(cluster *clusterv1.Cluster) string {
@@ -158,4 +182,47 @@ func (r *ClusterReconciler) getClusterAviUserSecret(cluster *clusterv1.Cluster, 
 		return secret, err
 	}
 	return secret, nil
+}
+
+// TODOs:(xudongl):
+// 1. mgmt cluster condition
+// 2. edge condtion
+// 3. test case, comment, document
+func (r *ClusterReconciler) patchClusterBootstrap(ctx context.Context, cluster *clusterv1.Cluster, log logr.Logger) error {
+	bootstrap := &runv1alpha3.ClusterBootstrap{}
+	if err := r.Get(ctx, client.ObjectKey{
+		Name:      cluster.Name,
+		Namespace: cluster.Namespace,
+	}, bootstrap); err != nil {
+		return err
+	}
+
+	akoClusterBootstrapPackage := &runv1alpha3.ClusterBootstrapPackage{
+		RefName: "load-balancer-and-ingress-service.tanzu.vmware.com",
+		ValuesFrom: &runv1alpha3.ValuesFrom{
+			SecretRef: r.akoAddonSecretName(cluster),
+		},
+	}
+
+	bootstrap.Spec.AdditionalPackages = append(bootstrap.Spec.AdditionalPackages, akoClusterBootstrapPackage)
+	return r.Update(ctx, bootstrap)
+}
+
+func (r *ClusterReconciler) removeClusterBootstrap(ctx context.Context, cluster *clusterv1.Cluster, log logr.Logger) error {
+	bootstrap := &runv1alpha3.ClusterBootstrap{}
+	if err := r.Get(ctx, client.ObjectKey{
+		Name:      cluster.Name,
+		Namespace: cluster.Namespace,
+	}, bootstrap); err != nil {
+		return err
+	}
+
+	for i, clusterBootstrapPackage := range bootstrap.Spec.AdditionalPackages {
+		if clusterBootstrapPackage.RefName == "load-balancer-and-ingress-service.tanzu.vmware.com" {
+			bootstrap.Spec.AdditionalPackages[i] = bootstrap.Spec.AdditionalPackages[len(bootstrap.Spec.AdditionalPackages)-1]
+			bootstrap.Spec.AdditionalPackages = bootstrap.Spec.AdditionalPackages[:len(bootstrap.Spec.AdditionalPackages)-1]
+		}
+	}
+
+	return r.Update(ctx, bootstrap)
 }
