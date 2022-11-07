@@ -56,6 +56,18 @@ func (r *ConfigMapReconciler) initAVI(ctx context.Context,
 			log.Error(err, "Cannot init AVI clients from secrets")
 			return res, err
 		}
+		version, err := r.aviClient.GetControllerVersion()
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		r.aviClient, err = aviclient.NewAviClientFromSecrets(r.Client, ctx, log, controllerIP,
+			v1alpha1.AviCredentialName, v1alpha1.TKGSystemNamespace,
+			v1alpha1.AviCAName, v1alpha1.TKGSystemNamespace, version)
+		if err != nil {
+			log.Error(err, "Cannot init AVI clients from secrets with avi controller version")
+			return res, err
+		}
 		log.Info("AVI Client initialized successfully")
 	}
 	return res, nil

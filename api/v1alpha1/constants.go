@@ -34,6 +34,7 @@ const (
 	AkoConfigMapCloudNameKey      = "cloudName"
 	AkoConfigMapControllerIPKey   = "controllerIP"
 	AkoConfigMapVipNetworkListKey = "vipNetworkList"
+	AkoClusterBootstrapRefName    = "load-balancer-and-ingress-service.tanzu.vmware.com"
 
 	AviClusterLabel                                              = "networking.tkg.tanzu.vmware.com/avi"
 	AviClusterDeleteConfigLabel                                  = "networking.tkg.tanzu.vmware.com/avi-config-delete"

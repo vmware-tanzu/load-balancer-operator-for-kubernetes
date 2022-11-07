@@ -453,7 +453,7 @@ func DefaultResources() *Resources {
 	return &Resources{
 		Requests: Requests{
 			Cpu:    "50m",
-			Memory: "100Mi",
+			Memory: "50Mi",
 		},
 	}
 }

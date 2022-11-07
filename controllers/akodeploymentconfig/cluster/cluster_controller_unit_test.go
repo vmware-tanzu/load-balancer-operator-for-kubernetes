@@ -77,8 +77,8 @@ loadBalancerAndIngressService:
             value: ""
         resources:
             request:
-                cpu: 100m
-                memory: 200Mi
+                cpu: 50m
+                memory: 50Mi
         rbac:
             psp_enabled: true
             psp_policy_api_version: test/1.2

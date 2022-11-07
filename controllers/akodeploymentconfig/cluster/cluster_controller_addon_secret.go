@@ -70,12 +70,13 @@ func (r *ClusterReconciler) ReconcileAddonSecret(
 		return res, err
 	}
 
-	// patch cluster bootstrap here
-	if err := r.patchClusterBootstrap(ctx, cluster, log); err != nil {
-		log.Error(err, "Failed to patch cluster bootstrap, requeue")
-		return res, err
+	if isClusterClassBasedCluster(cluster) {
+		// patch cluster bootstrap here
+		if err := r.patchAkoPackageRefToClusterBootstrap(ctx, cluster); err != nil {
+			log.Error(err, "Failed to patch ako package ref to cluster bootstrap, requeue")
+			return res, err
+		}
 	}
-
 	return res, nil
 }
 
@@ -105,12 +106,13 @@ func (r *ClusterReconciler) ReconcileAddonSecretDelete(
 		return res, err
 	}
 
-	// remove cluster bootstrap correspondingly
-	if err := r.removeClusterBootstrap(ctx, cluster, log); err != nil {
-		log.Error(err, "Failed to remove cluster bootstrap, requeue")
-		return res, err
+	if isClusterClassBasedCluster(cluster) {
+		// remove cluster bootstrap correspondingly
+		if err := r.removeAkoPackageRefFromClusterBootstrap(ctx, cluster); err != nil {
+			log.Error(err, "Failed to remove ako package ref from cluster bootstrap, requeue")
+			return res, err
+		}
 	}
-
 	return res, nil
 }
 
@@ -184,45 +186,56 @@ func (r *ClusterReconciler) getClusterAviUserSecret(cluster *clusterv1.Cluster, 
 	return secret, nil
 }
 
-// TODOs:(xudongl):
-// 1. mgmt cluster condition
-// 2. edge condtion
-// 3. test case, comment, document
-func (r *ClusterReconciler) patchClusterBootstrap(ctx context.Context, cluster *clusterv1.Cluster, log logr.Logger) error {
+// @TODOs:(xudongl): add test cases to cover following functions
+// getClusterBootstrap gets cluster's clusterbootstrap object
+func (r *ClusterReconciler) getClusterBootstrap(ctx context.Context, cluster *clusterv1.Cluster) (*runv1alpha3.ClusterBootstrap, error) {
 	bootstrap := &runv1alpha3.ClusterBootstrap{}
 	if err := r.Get(ctx, client.ObjectKey{
 		Name:      cluster.Name,
 		Namespace: cluster.Namespace,
 	}, bootstrap); err != nil {
+		return nil, err
+	}
+	return bootstrap, nil
+}
+
+// patchAkoPackageRefToClusterBootstrap adds ako package ref to the cluster's clusterbootstrap object
+func (r *ClusterReconciler) patchAkoPackageRefToClusterBootstrap(ctx context.Context, cluster *clusterv1.Cluster) error {
+	bootstrap, err := r.getClusterBootstrap(ctx, cluster)
+	if err != nil {
 		return err
 	}
 
 	akoClusterBootstrapPackage := &runv1alpha3.ClusterBootstrapPackage{
-		RefName: "load-balancer-and-ingress-service.tanzu.vmware.com",
+		RefName: akoov1alpha1.AkoClusterBootstrapRefName,
 		ValuesFrom: &runv1alpha3.ValuesFrom{
 			SecretRef: r.akoAddonSecretName(cluster),
 		},
 	}
-
+	// append ako package ref to cluster bootstrap package install
 	bootstrap.Spec.AdditionalPackages = append(bootstrap.Spec.AdditionalPackages, akoClusterBootstrapPackage)
 	return r.Update(ctx, bootstrap)
 }
 
-func (r *ClusterReconciler) removeClusterBootstrap(ctx context.Context, cluster *clusterv1.Cluster, log logr.Logger) error {
-	bootstrap := &runv1alpha3.ClusterBootstrap{}
-	if err := r.Get(ctx, client.ObjectKey{
-		Name:      cluster.Name,
-		Namespace: cluster.Namespace,
-	}, bootstrap); err != nil {
+// removeAkoPackageRefFromClusterBootstrap removes the ako package ref from cluster's clusterbootstrap object
+func (r *ClusterReconciler) removeAkoPackageRefFromClusterBootstrap(ctx context.Context, cluster *clusterv1.Cluster) error {
+	bootstrap, err := r.getClusterBootstrap(ctx, cluster)
+	if err != nil {
 		return err
 	}
 
 	for i, clusterBootstrapPackage := range bootstrap.Spec.AdditionalPackages {
-		if clusterBootstrapPackage.RefName == "load-balancer-and-ingress-service.tanzu.vmware.com" {
+		// remove ako package from cluster bootstrap additional packages
+		if clusterBootstrapPackage.RefName == akoov1alpha1.AkoClusterBootstrapRefName {
 			bootstrap.Spec.AdditionalPackages[i] = bootstrap.Spec.AdditionalPackages[len(bootstrap.Spec.AdditionalPackages)-1]
 			bootstrap.Spec.AdditionalPackages = bootstrap.Spec.AdditionalPackages[:len(bootstrap.Spec.AdditionalPackages)-1]
 		}
 	}
 
 	return r.Update(ctx, bootstrap)
+}
+
+// isClusterClassBasedCluster checks if a cluster is cluster class based cluster
+func isClusterClassBasedCluster(cluster *clusterv1.Cluster) bool {
+	return cluster.Spec.Topology != nil
 }
