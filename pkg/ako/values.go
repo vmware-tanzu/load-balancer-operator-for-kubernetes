@@ -445,27 +445,17 @@ func NewNodePortSelector(nodePortSelector *akoov1alpha1.NodePortSelector) *NodeP
 }
 
 type Resources struct {
-	Limits   Limits   `yaml:"limits"`
 	Requests Requests `yaml:"request"`
 }
 
 // DefaultResources returns the default configuration for Resources
 func DefaultResources() *Resources {
 	return &Resources{
-		Limits: Limits{
-			Cpu:    "350m",
-			Memory: "400Mi",
-		},
 		Requests: Requests{
-			Cpu:    "100m",
-			Memory: "200Mi",
+			Cpu:    "50m",
+			Memory: "100Mi",
 		},
 	}
-}
-
-type Limits struct {
-	Cpu    string `yaml:"cpu"`
-	Memory string `yaml:"memory"`
 }
 
 type Requests struct {

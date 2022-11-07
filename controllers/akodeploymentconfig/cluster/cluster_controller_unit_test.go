@@ -76,9 +76,6 @@ loadBalancerAndIngressService:
             key: ""
             value: ""
         resources:
-            limits:
-                cpu: 350m
-                memory: 400Mi
             request:
                 cpu: 100m
                 memory: 200Mi
