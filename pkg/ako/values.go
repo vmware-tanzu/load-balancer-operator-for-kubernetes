@@ -127,21 +127,25 @@ type NamespaceSelector struct {
 
 // AKOSettings provides the settings for AKO
 type AKOSettings struct {
-	PrimaryInstance        string            `yaml:"primary_instance"` // Defines AKO instance is primary or not. Value `true` indicates that AKO instance is primary.
-	LogLevel               string            `yaml:"log_level"`
-	FullSyncFrequency      string            `yaml:"full_sync_frequency"`       // This frequency controls how often AKO polls the Avi controller to update itself with cloud configurations.
-	ApiServerPort          int               `yaml:"api_server_port"`           // Specify the port for the API server, default is set as 8080 // EmptyAllowed: false
-	DeleteConfig           string            `yaml:"delete_config"`             // Has to be set to true in configmap if user wants to delete AKO created objects from AVI
-	DisableStaticRouteSync string            `yaml:"disable_static_route_sync"` // If the POD networks are reachable from the Avi SE, set this knob to true.
-	ClusterName            string            `yaml:"cluster_name"`              // A unique identifier for the kubernetes cluster, that helps distinguish the objects for this cluster in the avi controller. // MUST-EDIT
-	CniPlugin              string            `yaml:"cni_plugin"`                // Set the string if your CNI is calico or openshift. enum: antrea|calico|canal|flannel|openshift
-	SyncNamespace          string            `yaml:"sync_namespace"`
-	EnableEVH              string            `yaml:"enable_EVH"`   // This enables the Enhanced Virtual Hosting Model in Avi Controller for the Virtual Services
-	Layer7Only             string            `yaml:"layer_7_only"` // If this flag is switched on, then AKO will only do layer 7 loadbalancing
-	ServicesAPI            string            `yaml:"services_api"` // Flag that enables AKO in services API mode. Currently implemented only for L4.
-	VIPPerNamespace        string            `yaml:"vip_per_namespace"`
-	NamespaceSector        NamespaceSelector `yaml:"namespace_selector"`
-	EnableEvents           string            `yaml:"enable_events"` // Enables/disables Event broadcasting via AKO
+	PrimaryInstance          string            `yaml:"primary_instance"` // Defines AKO instance is primary or not. Value `true` indicates that AKO instance is primary.
+	LogLevel                 string            `yaml:"log_level"`
+	FullSyncFrequency        string            `yaml:"full_sync_frequency"`       // This frequency controls how often AKO polls the Avi controller to update itself with cloud configurations.
+	ApiServerPort            int               `yaml:"api_server_port"`           // Specify the port for the API server, default is set as 8080 // EmptyAllowed: false
+	DeleteConfig             string            `yaml:"delete_config"`             // Has to be set to true in configmap if user wants to delete AKO created objects from AVI
+	DisableStaticRouteSync   string            `yaml:"disable_static_route_sync"` // If the POD networks are reachable from the Avi SE, set this knob to true.
+	ClusterName              string            `yaml:"cluster_name"`              // A unique identifier for the kubernetes cluster, that helps distinguish the objects for this cluster in the avi controller. // MUST-EDIT
+	CniPlugin                string            `yaml:"cni_plugin"`                // Set the string if your CNI is calico or openshift. enum: antrea|calico|canal|flannel|openshift
+	SyncNamespace            string            `yaml:"sync_namespace"`
+	EnableEVH                string            `yaml:"enable_EVH"`   // This enables the Enhanced Virtual Hosting Model in Avi Controller for the Virtual Services
+	Layer7Only               string            `yaml:"layer_7_only"` // If this flag is switched on, then AKO will only do layer 7 loadbalancing
+	ServicesAPI              string            `yaml:"services_api"` // Flag that enables AKO in services API mode. Currently implemented only for L4.
+	VIPPerNamespace          string            `yaml:"vip_per_namespace"`
+	NamespaceSector          NamespaceSelector `yaml:"namespace_selector"`
+	EnableEvents             string            `yaml:"enable_events"` // Enables/disables Event broadcasting via AKO
+	IstioEnabled             string            `yaml:"istio_enabled"`
+	BlockedNamespaceList     []string          `yaml:"-"`
+	BlockedNamespaceListJson string            `yaml:"blocked_namespace_list"`
+	IpFamily                 string            `yaml:"ip_family"`
 }
 
 type CNI string
@@ -173,6 +177,7 @@ func DefaultAKOSettings() *AKOSettings {
 func NewAKOSettings(clusterName string, obj *akoov1alpha1.AKODeploymentConfig) (settings *AKOSettings) {
 	settings = DefaultAKOSettings()
 	settings.ClusterName = clusterName
+	settings.BlockedNamespaceList = obj.Spec.ExtraConfigs.BlockedNamespaceList
 	if obj.Spec.ExtraConfigs.PrimaryInstance != nil {
 		settings.PrimaryInstance = strconv.FormatBool(*obj.Spec.ExtraConfigs.PrimaryInstance)
 	}
@@ -211,6 +216,17 @@ func NewAKOSettings(clusterName string, obj *akoov1alpha1.AKODeploymentConfig) (
 	}
 	if obj.Spec.ExtraConfigs.NamespaceSelector.LabelValue != "" {
 		settings.NamespaceSector.LabelValue = obj.Spec.ExtraConfigs.NamespaceSelector.LabelValue
+	}
+	if obj.Spec.ExtraConfigs.IstioEnabled != nil {
+		settings.IstioEnabled = strconv.FormatBool(*obj.Spec.ExtraConfigs.IstioEnabled)
+	}
+	if obj.Spec.ExtraConfigs.IpFamily != "" {
+		settings.IpFamily = obj.Spec.ExtraConfigs.IpFamily
+	}
+	if len(settings.BlockedNamespaceList) != 0 {
+		// json marshal []string can't throw error
+		jsonBytes, _ := json.Marshal(settings.BlockedNamespaceList)
+		settings.BlockedNamespaceListJson = string(jsonBytes)
 	}
 	return
 }

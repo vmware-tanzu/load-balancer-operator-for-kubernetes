@@ -316,6 +316,16 @@ func (in *ExtraConfigs) DeepCopyInto(out *ExtraConfigs) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.IstioEnabled != nil {
+		in, out := &in.IstioEnabled, &out.IstioEnabled
+		*out = new(bool)
+		**out = **in
+	}
+	if in.BlockedNamespaceList != nil {
+		in, out := &in.BlockedNamespaceList, &out.BlockedNamespaceList
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	in.NetworksConfig.DeepCopyInto(&out.NetworksConfig)
 	in.IngressConfigs.DeepCopyInto(&out.IngressConfigs)
 	out.L4Configs = in.L4Configs

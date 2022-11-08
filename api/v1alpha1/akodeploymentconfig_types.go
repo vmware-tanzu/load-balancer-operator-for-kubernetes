@@ -27,7 +27,7 @@ type AKODeploymentConfigSpec struct {
 	Controller string `json:"controller"`
 
 	// ControllerVersion is the AVI Controller version which AKO Operator and AKO talks to.
-	// If not set, default version is 20.1.3
+	// this value can be auto detected and corrected.
 	ControllerVersion string `json:"controllerVersion,omitempty"`
 
 	// ServiceEngineGroup is the group name of Service Engine that's to be used by the set
@@ -162,6 +162,21 @@ type ExtraConfigs struct {
 	// default value is false
 	// +optional
 	VIPPerNamespace *bool `json:"vipPerNamespace,omitempty"`
+
+	// This flag needs to be enabled when AKO is be to brought up in an Istio environment
+	// default value is false
+	// +optional
+	IstioEnabled *bool `json:"istioEnabled,omitempty"`
+
+	// This is the list of system namespaces from which AKO will not listen any Kubernetes object event.
+	// +optional
+	BlockedNamespaceList []string `json:"blockedNamespaceList,omitempty"`
+
+	// This flag can take values V4 or V6 (default V4)
+	// default value is V4
+	// +kubebuilder:validation:Enum=V4;V6
+	// +optional
+	IpFamily string `json:"ipFamily,omitempty"`
 
 	// NetworksConfig specifies the network configurations for virtual services.
 	// +optional

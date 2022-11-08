@@ -43,6 +43,9 @@ loadBalancerAndIngressService:
                 label_key: ""
                 label_value: ""
             enable_events: ""
+            istio_enabled: ""
+            blocked_namespace_list: ""
+            ip_family: ""
         network_settings:
             subnet_ip: 10.0.0.0
             subnet_prefix: "24"
