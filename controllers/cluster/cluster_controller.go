@@ -76,7 +76,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ 
 
 	log = log.WithValues("Cluster", cluster.Namespace+"/"+cluster.Name)
 
-	if ako_operator.IsHAProvider() {
+	if ako_operator.IsControlPlaneVIPProvider(cluster) {
 		log.Info("AVI is control plane HA provider")
 		r.Haprovider = haprovider.NewProvider(r.Client, r.Log)
 		if err = r.Haprovider.CreateOrUpdateHAService(ctx, cluster); err != nil {
@@ -86,6 +86,12 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ 
 		if ako_operator.IsBootStrapCluster() {
 			return res, nil
 		}
+	}
+
+	// skip reconcile if cluster is using kube-vip to provide load balancer service
+	if !ako_operator.IsLoadBalancerProvider(cluster) {
+		log.Info("cluster uses kube-vip to provide load balancer type of service, skip reconciling")
+		return res, nil
 	}
 
 	akoDeploymentConfig, err := ako_operator.GetAKODeploymentConfigForCluster(ctx, r.Client, log, cluster)

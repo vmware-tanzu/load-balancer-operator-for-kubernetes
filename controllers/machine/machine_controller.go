@@ -75,17 +75,6 @@ func (r *MachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ 
 		}
 	}()
 
-	if ako_operator.IsHAProvider() {
-		r.Haprovider = haprovider.NewProvider(r.Client, log)
-		if err = r.Haprovider.CreateOrUpdateHAEndpoints(ctx, obj); err != nil {
-			log.Error(err, "Fail to reconcile HA endpoint")
-			return res, err
-		}
-		if ako_operator.IsBootStrapCluster() {
-			return res, nil
-		}
-	}
-
 	// Get the name of the cluster to which the current machine belongs
 	clusterName, exist := obj.Labels[clusterv1.ClusterLabelName]
 	if !exist {
@@ -103,6 +92,23 @@ func (r *MachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ 
 	}
 
 	log = log.WithValues("Cluster", cluster.Namespace+"/"+cluster.Name)
+
+	if ako_operator.IsControlPlaneVIPProvider(cluster) {
+		r.Haprovider = haprovider.NewProvider(r.Client, log)
+		if err = r.Haprovider.CreateOrUpdateHAEndpoints(ctx, obj); err != nil {
+			log.Error(err, "Fail to reconcile HA endpoint")
+			return res, err
+		}
+		if ako_operator.IsBootStrapCluster() {
+			return res, nil
+		}
+	}
+
+	// skip reconcile if cluster is using kube-vip to provide load balancer service
+	if !ako_operator.IsLoadBalancerProvider(cluster) {
+		log.Info("cluster uses kube-vip to provide load balancer type of service, skip reconciling")
+		return res, nil
+	}
 
 	if _, exist := cluster.Labels[akoov1alpha1.AviClusterLabel]; !exist {
 		delete(obj.Annotations, akoov1alpha1.PreTerminateAnnotation)
