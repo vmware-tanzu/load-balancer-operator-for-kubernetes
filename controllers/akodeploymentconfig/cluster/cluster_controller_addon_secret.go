@@ -36,7 +36,7 @@ func (r *ClusterReconciler) ReconcileAddonSecret(
 
 	// when avi is ha provider and deploy ako in management cluster, need to wait for
 	// control plane load balancer type of service creating
-	if akoo.IsHAProvider() && cluster.Namespace == akoov1alpha1.TKGSystemNamespace {
+	if akoo.IsControlPlaneVIPProvider(cluster) && cluster.Namespace == akoov1alpha1.TKGSystemNamespace {
 		svc := &corev1.Service{}
 		if err = r.Get(ctx, client.ObjectKey{
 			Name:      cluster.Namespace + "-" + cluster.Name + "-" + akoov1alpha1.HAServiceName,
@@ -70,7 +70,7 @@ func (r *ClusterReconciler) ReconcileAddonSecret(
 		return res, err
 	}
 
-	if isClusterClassBasedCluster(cluster) {
+	if akoo.IsClusterClassBasedCluster(cluster) {
 		// patch cluster bootstrap here
 		if err := r.patchAkoPackageRefToClusterBootstrap(ctx, cluster); err != nil {
 			log.Error(err, "Failed to patch ako package ref to cluster bootstrap, requeue")
@@ -106,7 +106,7 @@ func (r *ClusterReconciler) ReconcileAddonSecretDelete(
 		return res, err
 	}
 
-	if isClusterClassBasedCluster(cluster) {
+	if akoo.IsClusterClassBasedCluster(cluster) {
 		// remove cluster bootstrap correspondingly
 		if err := r.removeAkoPackageRefFromClusterBootstrap(ctx, cluster); err != nil {
 			log.Error(err, "Failed to remove ako package ref from cluster bootstrap, requeue")
@@ -233,9 +233,4 @@ func (r *ClusterReconciler) removeAkoPackageRefFromClusterBootstrap(ctx context.
 	}
 
 	return r.Update(ctx, bootstrap)
-}
-
-// isClusterClassBasedCluster checks if a cluster is cluster class based cluster
-func isClusterClassBasedCluster(cluster *clusterv1.Cluster) bool {
-	return cluster.Spec.Topology != nil
 }
