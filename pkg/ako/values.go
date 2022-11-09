@@ -15,6 +15,8 @@ import (
 
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	ako_operator "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
 // Values defines the structures of an Ako addon secret string data
@@ -44,7 +46,6 @@ func NewValues(obj *akoov1alpha1.AKODeploymentConfig, clusterNameSpacedName stri
 	l7Settings := NewL7Settings(&obj.Spec.ExtraConfigs.IngressConfigs)
 	l4Settings := NewL4Settings(&obj.Spec.ExtraConfigs.L4Configs)
 	nodePortSelector := NewNodePortSelector(&obj.Spec.ExtraConfigs.NodePortSelector)
-	resources := DefaultResources()
 	rbac := NewRbac(obj.Spec.ExtraConfigs.Rbac)
 
 	return &Values{
@@ -60,7 +61,6 @@ func NewValues(obj *akoov1alpha1.AKODeploymentConfig, clusterNameSpacedName stri
 				L4Settings:            l4Settings,
 				ControllerSettings:    controllerSettings,
 				NodePortSelector:      nodePortSelector,
-				Resources:             resources,
 				Rbac:                  rbac,
 				PersistentVolumeClaim: obj.Spec.ExtraConfigs.Log.PersistentVolumeClaim,
 				MountPath:             obj.Spec.ExtraConfigs.Log.MountPath,
@@ -82,13 +82,17 @@ func NewValuesFromBytes(data []byte) (*Values, error) {
 
 // YttYaml converts the AkoAddonSecretData to a Ytt Yaml template string,
 // return any unmarshall error occurs
-func (v *Values) YttYaml() (string, error) {
-	header := akoov1alpha1.TKGDataValueFormatString
+func (v *Values) YttYaml(cluster *clusterv1.Cluster) (string, error) {
 	buf, err := yaml.Marshal(v)
 	if err != nil {
 		return "", err
 	}
-	return header + string(buf), nil
+	if ako_operator.IsClusterClassBasedCluster(cluster) {
+		return string(buf), nil
+	} else {
+		header := akoov1alpha1.TKGDataValueFormatString
+		return header + string(buf), nil
+	}
 }
 
 // LoadBalancerAndIngressService describes the load balancer and ingress service
@@ -110,7 +114,6 @@ type Config struct {
 	L4Settings            *L4Settings         `yaml:"l4_settings"`
 	ControllerSettings    *ControllerSettings `yaml:"controller_settings"`
 	NodePortSelector      *NodePortSelector   `yaml:"nodeport_selector"`
-	Resources             *Resources          `yaml:"resources"`
 	Rbac                  *Rbac               `yaml:"rbac"`
 	PersistentVolumeClaim string              `yaml:"persistent_volume_claim"`
 	MountPath             string              `yaml:"mount_path"`
@@ -442,25 +445,6 @@ func NewNodePortSelector(nodePortSelector *akoov1alpha1.NodePortSelector) *NodeP
 		selector.Key = nodePortSelector.Value
 	}
 	return selector
-}
-
-type Resources struct {
-	Requests Requests `yaml:"request"`
-}
-
-// DefaultResources returns the default configuration for Resources
-func DefaultResources() *Resources {
-	return &Resources{
-		Requests: Requests{
-			Cpu:    "50m",
-			Memory: "50Mi",
-		},
-	}
-}
-
-type Requests struct {
-	Cpu    string `yaml:"cpu"`
-	Memory string `yaml:"memory"`
 }
 
 // Rbac creates the pod security policy if PspEnabled is set to true

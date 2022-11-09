@@ -36,7 +36,12 @@ func (r *ClusterReconciler) ReconcileAddonSecret(
 
 	// when avi is ha provider and deploy ako in management cluster, need to wait for
 	// control plane load balancer type of service creating
-	if akoo.IsControlPlaneVIPProvider(cluster) && cluster.Namespace == akoov1alpha1.TKGSystemNamespace {
+	isVIPProvider, err := akoo.IsControlPlaneVIPProvider(cluster)
+	if err != nil {
+		log.Error(err, "can't unmarshal cluster variables")
+		return res, err
+	}
+	if isVIPProvider && cluster.Namespace == akoov1alpha1.TKGSystemNamespace {
 		svc := &corev1.Service{}
 		if err = r.Get(ctx, client.ObjectKey{
 			Name:      cluster.Namespace + "-" + cluster.Name + "-" + akoov1alpha1.HAServiceName,
@@ -142,7 +147,7 @@ func (r *ClusterReconciler) createAKOAddonSecret(cluster *clusterv1.Cluster, obj
 				akoov1alpha1.TKGAddOnLabelClusterctlKey:  "",
 			},
 		},
-		Type: akoov1alpha1.TKGAddOnSecretType,
+		Type: "Opaque",
 		StringData: map[string]string{
 			akoov1alpha1.TKGAddOnSecretDataKey: secretStringData,
 		},
@@ -172,7 +177,7 @@ func AkoAddonSecretDataYaml(cluster *clusterv1.Cluster, obj *akoov1alpha1.AKODep
 	secret.LoadBalancerAndIngressService.Config.Avicredentials.Username = string(aviUsersecret.Data["username"][:])
 	secret.LoadBalancerAndIngressService.Config.Avicredentials.Password = string(aviUsersecret.Data["password"][:])
 	secret.LoadBalancerAndIngressService.Config.Avicredentials.CertificateAuthorityData = string(aviUsersecret.Data[akoov1alpha1.AviCertificateKey][:])
-	return secret.YttYaml()
+	return secret.YttYaml(cluster)
 }
 
 func (r *ClusterReconciler) getClusterAviUserSecret(cluster *clusterv1.Cluster, ctx context.Context) (*corev1.Secret, error) {

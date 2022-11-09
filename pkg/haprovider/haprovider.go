@@ -85,6 +85,11 @@ func (r *HAProvider) createService(
 		return nil, err
 	}
 
+	port, err := ako_operator.GetControlPlaneEndpointPort(cluster)
+	if err != nil {
+		return nil, err
+	}
+
 	service := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Service",
@@ -99,7 +104,7 @@ func (r *HAProvider) createService(
 			Type: corev1.ServiceTypeLoadBalancer,
 			Ports: []corev1.ServicePort{{
 				Protocol:   "TCP",
-				Port:       ako_operator.GetControlPlaneEndpointPort(cluster),
+				Port:       port,
 				TargetPort: intstr.FromInt(int(6443)),
 			},
 			},
@@ -118,7 +123,11 @@ func (r *HAProvider) createService(
 			},
 		}
 	}
-	if endpoint, ok := cluster.ObjectMeta.Annotations[akoov1alpha1.ClusterControlPlaneAnnotations]; ok {
+
+	if endpoint, err := ako_operator.GetControlPlaneEndpoint(cluster); err != nil {
+		r.log.Error(err, "can't unmarshal cluster variables ", "endpoint", endpoint)
+		return nil, err
+	} else if endpoint != "" {
 		// "endpoint" can be ipv4 or hostname, add ipv4 or hostname to service.Spec.LoadBalancerIP
 		if net.ParseIP(endpoint) == nil {
 			endpoint, err = QueryFQDN(endpoint)
@@ -204,7 +213,7 @@ func (r *HAProvider) getAviInfraSettingFromAdc(ctx context.Context, adcForCluste
 }
 
 func (r *HAProvider) updateClusterControlPlaneEndpoint(cluster *clusterv1.Cluster, service *corev1.Service) error {
-	endpoint, _ := cluster.Annotations[akoov1alpha1.ClusterControlPlaneAnnotations]
+	endpoint, _ := ako_operator.GetControlPlaneEndpoint(cluster)
 	// Dakar Limitation: customers ensure the service engine is running
 	ingress := service.Status.LoadBalancer.Ingress
 	if len(ingress) > 0 && net.ParseIP(ingress[0].IP) != nil {
@@ -212,9 +221,11 @@ func (r *HAProvider) updateClusterControlPlaneEndpoint(cluster *clusterv1.Cluste
 			cluster.Spec.ControlPlaneEndpoint.Host = endpoint
 		} else {
 			cluster.Spec.ControlPlaneEndpoint.Host = service.Status.LoadBalancer.Ingress[0].IP
+			ako_operator.SetControlPlaneEndpoint(cluster, service.Status.LoadBalancer.Ingress[0].IP)
 		}
-		cluster.Spec.ControlPlaneEndpoint.Port = ako_operator.GetControlPlaneEndpointPort(cluster)
-		return nil
+		port, err := ako_operator.GetControlPlaneEndpointPort(cluster)
+		cluster.Spec.ControlPlaneEndpoint.Port = port
+		return err
 	}
 	return errors.New(service.Name + " service external ip is not ready")
 }

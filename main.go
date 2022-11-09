@@ -24,6 +24,7 @@ import (
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/controllers"
 
 	ako_operator "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
+	runv1alpha3 "github.com/vmware-tanzu/tanzu-framework/apis/run/v1alpha3"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -49,6 +50,7 @@ func init() {
 	_ = clusterv1.AddToScheme(scheme)
 	_ = akoov1alpha1.AddToScheme(scheme)
 	_ = akov1alpha1.AddToScheme(scheme)
+	_ = runv1alpha3.AddToScheme(scheme)
 }
 
 func main() {

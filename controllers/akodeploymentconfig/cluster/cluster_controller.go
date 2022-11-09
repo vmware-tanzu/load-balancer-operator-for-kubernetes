@@ -132,7 +132,7 @@ func (r *ClusterReconciler) cleanup(
 
 	if values.LoadBalancerAndIngressService.Config.AKOSettings.DeleteConfig != "true" {
 		values.LoadBalancerAndIngressService.Config.AKOSettings.DeleteConfig = "true"
-		secretData, err := values.YttYaml()
+		secretData, err := values.YttYaml(obj)
 		if err != nil {
 			return false, errors.Errorf("workload cluster %s ako add-on data values marshal error", obj.Name)
 		}

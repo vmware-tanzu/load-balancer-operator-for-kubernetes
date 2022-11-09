@@ -93,7 +93,13 @@ func (r *MachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ 
 
 	log = log.WithValues("Cluster", cluster.Namespace+"/"+cluster.Name)
 
-	if ako_operator.IsControlPlaneVIPProvider(cluster) {
+	isVIPProvider, err := ako_operator.IsControlPlaneVIPProvider(cluster)
+	if err != nil {
+		log.Error(err, "can't unmarshal cluster variables")
+		return res, err
+	}
+
+	if isVIPProvider {
 		r.Haprovider = haprovider.NewProvider(r.Client, log)
 		if err = r.Haprovider.CreateOrUpdateHAEndpoints(ctx, obj); err != nil {
 			log.Error(err, "Fail to reconcile HA endpoint")
@@ -105,7 +111,10 @@ func (r *MachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ 
 	}
 
 	// skip reconcile if cluster is using kube-vip to provide load balancer service
-	if !ako_operator.IsLoadBalancerProvider(cluster) {
+	if isLBProvider, err := ako_operator.IsLoadBalancerProvider(cluster); err != nil {
+		log.Error(err, "can't unmarshal cluster variables")
+		return res, err
+	} else if !isLBProvider {
 		log.Info("cluster uses kube-vip to provide load balancer type of service, skip reconciling")
 		return res, nil
 	}

@@ -52,7 +52,6 @@ const (
 	HAServiceBootstrapClusterFinalizer = "ako-operator.networking.tkg.tanzu.vmware.com/ha"
 	HAServiceAnnotationsKey            = "skipnodeport.ako.vmware.com/enabled"
 	HAAVIInfraSettingAnnotationsKey    = "aviinfrasetting.ako.vmware.com/name"
-	ClusterControlPlaneAnnotations     = "tkg.tanzu.vmware.com/cluster-controlplane-endpoint"
 
 	AKODeploymentConfigControllerName = "akodeploymentconfig-controller"
 )
