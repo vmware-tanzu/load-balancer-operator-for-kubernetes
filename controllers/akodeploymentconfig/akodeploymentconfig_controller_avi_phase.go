@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"sync"
 
 	"net"
 	"sort"
@@ -30,6 +31,8 @@ import (
 
 	ako_operator "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 )
+
+var lock = &sync.Mutex{}
 
 func getAviCAFromADC(c client.Client, ctx context.Context,
 	log logr.Logger, obj *akoov1alpha1.AKODeploymentConfig) (string, error) {
@@ -67,6 +70,7 @@ func (r *AKODeploymentConfigReconciler) initAVI(
 	}
 	reInit := currentCa != newCa
 
+	lock.Lock()
 	// Lazily initialize aviClient so we don't skip other reconciliations
 	if r.aviClient == nil || reInit {
 		var err error
@@ -100,6 +104,7 @@ func (r *AKODeploymentConfigReconciler) initAVI(
 
 		log.Info("AVI Client initialized successfully")
 	}
+	lock.Unlock()
 
 	if r.userReconciler == nil || reInit {
 		r.userReconciler = user.NewProvider(r.Client, r.aviClient, r.Log, r.Scheme)

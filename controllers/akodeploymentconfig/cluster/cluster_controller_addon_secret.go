@@ -16,6 +16,8 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	runv1alpha3 "github.com/vmware-tanzu/tanzu-framework/apis/run/v1alpha3"
 )
 
 func (r *ClusterReconciler) ReconcileAddonSecret(
@@ -34,7 +36,12 @@ func (r *ClusterReconciler) ReconcileAddonSecret(
 
 	// when avi is ha provider and deploy ako in management cluster, need to wait for
 	// control plane load balancer type of service creating
-	if akoo.IsHAProvider() && cluster.Namespace == akoov1alpha1.TKGSystemNamespace {
+	isVIPProvider, err := akoo.IsControlPlaneVIPProvider(cluster)
+	if err != nil {
+		log.Error(err, "can't unmarshal cluster variables")
+		return res, err
+	}
+	if isVIPProvider && cluster.Namespace == akoov1alpha1.TKGSystemNamespace {
 		svc := &corev1.Service{}
 		if err = r.Get(ctx, client.ObjectKey{
 			Name:      cluster.Namespace + "-" + cluster.Name + "-" + akoov1alpha1.HAServiceName,
@@ -63,7 +70,19 @@ func (r *ClusterReconciler) ReconcileAddonSecret(
 		return res, err
 	}
 	secret = newAddonSecret.DeepCopy()
-	return res, r.Update(ctx, secret)
+	if err := r.Update(ctx, secret); err != nil {
+		log.Error(err, "Failed to update ako add on secret, requeue")
+		return res, err
+	}
+
+	if akoo.IsClusterClassBasedCluster(cluster) {
+		// patch cluster bootstrap here
+		if err := r.patchAkoPackageRefToClusterBootstrap(ctx, cluster); err != nil {
+			log.Error(err, "Failed to patch ako package ref to cluster bootstrap, requeue")
+			return res, err
+		}
+	}
+	return res, nil
 }
 
 func (r *ClusterReconciler) ReconcileAddonSecretDelete(
@@ -87,7 +106,19 @@ func (r *ClusterReconciler) ReconcileAddonSecretDelete(
 		log.Error(err, "Failed to get AKO Deployment Secret, requeue")
 		return res, err
 	}
-	return res, r.Delete(ctx, secret)
+	if err := r.Delete(ctx, secret); err != nil {
+		log.Error(err, "Failed to delete ako add on secret, requeue")
+		return res, err
+	}
+
+	if akoo.IsClusterClassBasedCluster(cluster) {
+		// remove cluster bootstrap correspondingly
+		if err := r.removeAkoPackageRefFromClusterBootstrap(ctx, cluster); err != nil {
+			log.Error(err, "Failed to remove ako package ref from cluster bootstrap, requeue")
+			return res, err
+		}
+	}
+	return res, nil
 }
 
 func (r *ClusterReconciler) aviUserSecretName(cluster *clusterv1.Cluster) string {
@@ -116,7 +147,7 @@ func (r *ClusterReconciler) createAKOAddonSecret(cluster *clusterv1.Cluster, obj
 				akoov1alpha1.TKGAddOnLabelClusterctlKey:  "",
 			},
 		},
-		Type: akoov1alpha1.TKGAddOnSecretType,
+		Type: "Opaque",
 		StringData: map[string]string{
 			akoov1alpha1.TKGAddOnSecretDataKey: secretStringData,
 		},
@@ -146,7 +177,7 @@ func AkoAddonSecretDataYaml(cluster *clusterv1.Cluster, obj *akoov1alpha1.AKODep
 	secret.LoadBalancerAndIngressService.Config.Avicredentials.Username = string(aviUsersecret.Data["username"][:])
 	secret.LoadBalancerAndIngressService.Config.Avicredentials.Password = string(aviUsersecret.Data["password"][:])
 	secret.LoadBalancerAndIngressService.Config.Avicredentials.CertificateAuthorityData = string(aviUsersecret.Data[akoov1alpha1.AviCertificateKey][:])
-	return secret.YttYaml()
+	return secret.YttYaml(cluster)
 }
 
 func (r *ClusterReconciler) getClusterAviUserSecret(cluster *clusterv1.Cluster, ctx context.Context) (*corev1.Secret, error) {
@@ -158,4 +189,53 @@ func (r *ClusterReconciler) getClusterAviUserSecret(cluster *clusterv1.Cluster, 
 		return secret, err
 	}
 	return secret, nil
+}
+
+// @TODOs:(xudongl): add test cases to cover following functions
+// getClusterBootstrap gets cluster's clusterbootstrap object
+func (r *ClusterReconciler) getClusterBootstrap(ctx context.Context, cluster *clusterv1.Cluster) (*runv1alpha3.ClusterBootstrap, error) {
+	bootstrap := &runv1alpha3.ClusterBootstrap{}
+	if err := r.Get(ctx, client.ObjectKey{
+		Name:      cluster.Name,
+		Namespace: cluster.Namespace,
+	}, bootstrap); err != nil {
+		return nil, err
+	}
+	return bootstrap, nil
+}
+
+// patchAkoPackageRefToClusterBootstrap adds ako package ref to the cluster's clusterbootstrap object
+func (r *ClusterReconciler) patchAkoPackageRefToClusterBootstrap(ctx context.Context, cluster *clusterv1.Cluster) error {
+	bootstrap, err := r.getClusterBootstrap(ctx, cluster)
+	if err != nil {
+		return err
+	}
+
+	akoClusterBootstrapPackage := &runv1alpha3.ClusterBootstrapPackage{
+		RefName: akoov1alpha1.AkoClusterBootstrapRefName,
+		ValuesFrom: &runv1alpha3.ValuesFrom{
+			SecretRef: r.akoAddonSecretName(cluster),
+		},
+	}
+	// append ako package ref to cluster bootstrap package install
+	bootstrap.Spec.AdditionalPackages = append(bootstrap.Spec.AdditionalPackages, akoClusterBootstrapPackage)
+	return r.Update(ctx, bootstrap)
+}
+
+// removeAkoPackageRefFromClusterBootstrap removes the ako package ref from cluster's clusterbootstrap object
+func (r *ClusterReconciler) removeAkoPackageRefFromClusterBootstrap(ctx context.Context, cluster *clusterv1.Cluster) error {
+	bootstrap, err := r.getClusterBootstrap(ctx, cluster)
+	if err != nil {
+		return err
+	}
+
+	for i, clusterBootstrapPackage := range bootstrap.Spec.AdditionalPackages {
+		// remove ako package from cluster bootstrap additional packages
+		if clusterBootstrapPackage.RefName == akoov1alpha1.AkoClusterBootstrapRefName {
+			bootstrap.Spec.AdditionalPackages[i] = bootstrap.Spec.AdditionalPackages[len(bootstrap.Spec.AdditionalPackages)-1]
+			bootstrap.Spec.AdditionalPackages = bootstrap.Spec.AdditionalPackages[:len(bootstrap.Spec.AdditionalPackages)-1]
+		}
+	}
+
+	return r.Update(ctx, bootstrap)
 }

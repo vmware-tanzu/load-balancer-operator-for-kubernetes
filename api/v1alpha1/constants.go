@@ -34,6 +34,7 @@ const (
 	AkoConfigMapCloudNameKey      = "cloudName"
 	AkoConfigMapControllerIPKey   = "controllerIP"
 	AkoConfigMapVipNetworkListKey = "vipNetworkList"
+	AkoClusterBootstrapRefName    = "load-balancer-and-ingress-service.tanzu.vmware.com"
 
 	AviClusterLabel                                              = "networking.tkg.tanzu.vmware.com/avi"
 	AviClusterDeleteConfigLabel                                  = "networking.tkg.tanzu.vmware.com/avi-config-delete"
@@ -51,7 +52,6 @@ const (
 	HAServiceBootstrapClusterFinalizer = "ako-operator.networking.tkg.tanzu.vmware.com/ha"
 	HAServiceAnnotationsKey            = "skipnodeport.ako.vmware.com/enabled"
 	HAAVIInfraSettingAnnotationsKey    = "aviinfrasetting.ako.vmware.com/name"
-	ClusterControlPlaneAnnotations     = "tkg.tanzu.vmware.com/cluster-controlplane-endpoint"
 
 	AKODeploymentConfigControllerName = "akodeploymentconfig-controller"
 )

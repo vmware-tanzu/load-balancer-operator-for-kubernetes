@@ -74,6 +74,7 @@ func ReconcileClustersPhases(
 
 	if len(clusters.Items) == 0 {
 		log.Info("No cluster matches the selector, skip")
+		return res, nil
 	}
 
 	var allErrs []error
@@ -83,6 +84,15 @@ func ReconcileClustersPhases(
 		var errs []error
 
 		clog := log.WithValues("cluster", cluster.Namespace+"/"+cluster.Name)
+
+		// skip reconcile if cluster is using kube-vip to provide load balancer service
+		if isLBProvider, err := ako_operator.IsLoadBalancerProvider(&cluster); err != nil {
+			log.Error(err, "can't unmarshal cluster variables")
+			return res, err
+		} else if !isLBProvider {
+			log.Info("cluster uses kube-vip to provide load balancer type of service, skip reconciling")
+			return res, nil
+		}
 
 		// Always Patch for each cluster when exiting this function so changes to the resource are updated on the API server.
 		patchHelper, err := patch.NewHelper(&cluster, client)

@@ -78,13 +78,6 @@ loadBalancerAndIngressService:
         nodeport_selector:
             key: ""
             value: ""
-        resources:
-            limits:
-                cpu: 350m
-                memory: 400Mi
-            request:
-                cpu: 100m
-                memory: 200Mi
         rbac:
             psp_enabled: true
             psp_policy_api_version: test/1.2
@@ -197,7 +190,7 @@ func unitTestAKODeploymentYaml() {
 				values, err := ako.NewValues(akoDeploymentConfig, "namespace-name")
 				Expect(err).ShouldNot(HaveOccurred())
 				values.LoadBalancerAndIngressService.Config.AKOSettings.DeleteConfig = "true"
-				secretData, err := values.YttYaml()
+				secretData, err := values.YttYaml(&clusterv1.Cluster{})
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(secretData).Should(ContainSubstring("delete_config: \"true\""))
 			})
