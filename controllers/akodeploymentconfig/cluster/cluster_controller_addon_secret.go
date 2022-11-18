@@ -5,6 +5,9 @@ package cluster
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/go-logr/logr"
 	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
@@ -17,6 +20,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/vmware-tanzu/tanzu-framework/apis/run/v1alpha3"
 	runv1alpha3 "github.com/vmware-tanzu/tanzu-framework/apis/run/v1alpha3"
 )
 
@@ -77,7 +81,7 @@ func (r *ClusterReconciler) ReconcileAddonSecret(
 
 	if akoo.IsClusterClassBasedCluster(cluster) {
 		// patch cluster bootstrap here
-		if err := r.patchAkoPackageRefToClusterBootstrap(ctx, cluster); err != nil {
+		if err := r.patchAkoPackageRefToClusterBootstrap(ctx, log, cluster); err != nil {
 			log.Error(err, "Failed to patch ako package ref to cluster bootstrap, requeue")
 			return res, err
 		}
@@ -205,14 +209,18 @@ func (r *ClusterReconciler) getClusterBootstrap(ctx context.Context, cluster *cl
 }
 
 // patchAkoPackageRefToClusterBootstrap adds ako package ref to the cluster's clusterbootstrap object
-func (r *ClusterReconciler) patchAkoPackageRefToClusterBootstrap(ctx context.Context, cluster *clusterv1.Cluster) error {
+func (r *ClusterReconciler) patchAkoPackageRefToClusterBootstrap(ctx context.Context, log logr.Logger, cluster *clusterv1.Cluster) error {
 	bootstrap, err := r.getClusterBootstrap(ctx, cluster)
 	if err != nil {
 		return err
 	}
 
+	akoPackageRefName, err := r.GetAKOPackageRefName(ctx, log, bootstrap)
+	if err != nil {
+		return err
+	}
 	akoClusterBootstrapPackage := &runv1alpha3.ClusterBootstrapPackage{
-		RefName: akoov1alpha1.AkoClusterBootstrapRefName,
+		RefName: akoPackageRefName,
 		ValuesFrom: &runv1alpha3.ValuesFrom{
 			SecretRef: r.akoAddonSecretName(cluster),
 		},
@@ -222,6 +230,7 @@ func (r *ClusterReconciler) patchAkoPackageRefToClusterBootstrap(ctx context.Con
 	return r.Update(ctx, bootstrap)
 }
 
+// This is not supported at the moment. But good thing is we don't have this scenario at the moment
 // removeAkoPackageRefFromClusterBootstrap removes the ako package ref from cluster's clusterbootstrap object
 func (r *ClusterReconciler) removeAkoPackageRefFromClusterBootstrap(ctx context.Context, cluster *clusterv1.Cluster) error {
 	bootstrap, err := r.getClusterBootstrap(ctx, cluster)
@@ -231,11 +240,41 @@ func (r *ClusterReconciler) removeAkoPackageRefFromClusterBootstrap(ctx context.
 
 	for i, clusterBootstrapPackage := range bootstrap.Spec.AdditionalPackages {
 		// remove ako package from cluster bootstrap additional packages
-		if clusterBootstrapPackage.RefName == akoov1alpha1.AkoClusterBootstrapRefName {
+		if strings.HasPrefix(clusterBootstrapPackage.RefName, akoov1alpha1.AkoClusterBootstrapRefNamePrefix) {
 			bootstrap.Spec.AdditionalPackages[i] = bootstrap.Spec.AdditionalPackages[len(bootstrap.Spec.AdditionalPackages)-1]
 			bootstrap.Spec.AdditionalPackages = bootstrap.Spec.AdditionalPackages[:len(bootstrap.Spec.AdditionalPackages)-1]
 		}
 	}
 
 	return r.Update(ctx, bootstrap)
+}
+
+func (r *ClusterReconciler) GetAKOPackageRefName(ctx context.Context, log logr.Logger, cb *v1alpha3.ClusterBootstrap) (string, error) {
+	if cb.Status.ResolvedTKR == "" {
+		return "", errors.New("ClusterBootstrap.Status.ResolvedTKR is empty")
+	}
+	tkrName := cb.Status.ResolvedTKR
+	tkr := &runv1alpha3.TanzuKubernetesRelease{}
+	if err := r.Client.Get(ctx, client.ObjectKey{Name: tkrName}, tkr); err != nil {
+		log.Error(err, fmt.Sprintf("unable to get the TanzuKubernetesRelease %s", tkrName))
+		return "", err
+	}
+
+	akoPackageRefFullName, err := r.GetAKOPackageRefNameFromTKR(log, tkr)
+	if err != nil {
+		log.Error(err, fmt.Sprintf("failed to complete ako packageRef name from tkr %s", tkrName))
+		return "", err
+	}
+
+	return akoPackageRefFullName, nil
+}
+
+func (r *ClusterReconciler) GetAKOPackageRefNameFromTKR(log logr.Logger, tkr *v1alpha3.TanzuKubernetesRelease) (string, error) {
+	for _, tkrBootstrapPackage := range tkr.Spec.BootstrapPackages {
+		if strings.HasPrefix(tkrBootstrapPackage.Name, akoov1alpha1.AkoClusterBootstrapRefNamePrefix) {
+			log.Info(fmt.Sprintf("found ako package ref %s in tkr", tkrBootstrapPackage.Name))
+			return tkrBootstrapPackage.Name, nil
+		}
+	}
+	return "", fmt.Errorf("no bootstrapPackage name matches the prefix %s within the BootstrapPackages [%v] of TanzuKubernetesRelease %s", akoov1alpha1.AkoClusterBootstrapRefNamePrefix, tkr.Spec.BootstrapPackages, tkr.Name)
 }
