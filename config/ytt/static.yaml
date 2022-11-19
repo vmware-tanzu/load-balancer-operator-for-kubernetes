@@ -2,12 +2,14 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
+    cert-manager.io/inject-ca-from: $(CERTIFICATE_NAMESPACE)/$(CERTIFICATE_NAME)
     controller-gen.kubebuilder.io/version: v0.7.0
-  creationTimestamp: null
   labels:
     app: tanzu-ako-operator
   name: akodeploymentconfigs.networking.tkg.tanzu.vmware.com
 spec:
+  conversion:
+    strategy: None
   group: networking.tkg.tanzu.vmware.com
   names:
     kind: AKODeploymentConfig
@@ -149,7 +151,8 @@ spec:
                 type: string
               controllerVersion:
                 description: ControllerVersion is the AVI Controller version which
-                  AKO Operator and AKO talks to. If not set, default version is 20.1.3
+                  AKO Operator and AKO talks to. this value can be auto detected and
+                  corrected.
                 type: string
               dataNetwork:
                 description: DataNetworks describes the Data Networks the AKO will
@@ -194,6 +197,12 @@ spec:
                       server for the liveness probe of the AKO pod default port is
                       8080
                     type: integer
+                  blockedNamespaceList:
+                    description: This is the list of system namespaces from which
+                      AKO will not listen any Kubernetes object event.
+                    items:
+                      type: string
+                    type: array
                   cniPlugin:
                     description: 'CniPlugin describes which cni plugin cluster is
                       using. default value is antrea, set this string if cluster cni
@@ -295,6 +304,17 @@ spec:
                         - DEDICATED
                         type: string
                     type: object
+                  ipFamily:
+                    description: This flag can take values V4 or V6 (default V4) default
+                      value is V4
+                    enum:
+                    - V4
+                    - V6
+                    type: string
+                  istioEnabled:
+                    description: This flag needs to be enabled when AKO is be to brought
+                      up in an Istio environment default value is false
+                    type: boolean
                   l4Config:
                     description: IngressConfigs specifies L4 load balancer configuration
                       for ako
@@ -665,19 +685,25 @@ rules:
   - get
   - patch
   - update
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  labels:
-    app: tanzu-ako-operator
-  name: ako-operator-metrics-reader
-rules:
-- nonResourceURLs:
-  - /metrics
+- apiGroups:
+  - run.tanzu.vmware.com
+  resources:
+  - clusterbootstraps
+  - clusterbootstraps/status
   verbs:
   - get
----
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - run.tanzu.vmware.com
+  resources:
+  - tanzukubernetesrelease
+  - tanzukubernetesrelease/status
+  verbs:
+  - get
+  - list
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
@@ -708,161 +734,3 @@ subjects:
 - kind: ServiceAccount
   name: default
   namespace: tkg-system-networking
----
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    app: tanzu-ako-operator
-  name: ako-operator-webhook-service
-  namespace: tkg-system-networking
-spec:
-  ports:
-  - port: 443
-    targetPort: 9443
-  selector:
-    app: tanzu-ako-operator
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  labels:
-    app: tanzu-ako-operator
-  name: ako-operator-controller-manager
-  namespace: tkg-system-networking
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: tanzu-ako-operator
-  template:
-    metadata:
-      labels:
-        app: tanzu-ako-operator
-    spec:
-      containers:
-      - command:
-        - /manager
-        image: projects-stg.registry.vmware.com/tkg/ako-operator:v1.6.0_vmware.1
-        name: manager
-        ports:
-        - containerPort: 9443
-          name: webhook-server
-          protocol: TCP
-        env:
-          - name: bootstrap_cluster
-            value: "False"
-          - name: avi_control_plane_ha_provider
-            value: "False"
-          - name: tkg_management_cluster_name
-            value: ""
-          - name: control_plane_endpoint_port
-            value: "6443"
-          - name: avi_controller_version
-            value: ""
-        resources:
-          limits:
-            cpu: 100m
-            memory: 300Mi
-          requests:
-            cpu: 100m
-            memory: 100Mi
-        volumeMounts:
-        - mountPath: /tmp/k8s-webhook-server/serving-certs
-          name: cert
-          readOnly: true
-      terminationGracePeriodSeconds: 10
-      volumes:
-      - name: cert
-        secret:
-          defaultMode: 420
-          secretName: webhook-server-cert
----
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  labels:
-    app: tanzu-ako-operator
-  name: ako-operator-serving-cert
-  namespace: tkg-system-networking
-spec:
-  dnsNames:
-  - ako-operator-webhook-service.tkg-system-networking.svc
-  - ako-operator-webhook-service.tkg-system-networking.svc.cluster.local
-  issuerRef:
-    kind: Issuer
-    name: ako-operator-selfsigned-issuer
-  secretName: webhook-server-cert
----
-apiVersion: cert-manager.io/v1
-kind: Issuer
-metadata:
-  labels:
-    app: tanzu-ako-operator
-  name: ako-operator-selfsigned-issuer
-  namespace: tkg-system-networking
-spec:
-  selfSigned: {}
----
-apiVersion: admissionregistration.k8s.io/v1
-kind: MutatingWebhookConfiguration
-metadata:
-  annotations:
-    cert-manager.io/inject-ca-from: tkg-system-networking/ako-operator-serving-cert
-  labels:
-    app: tanzu-ako-operator
-  name: ako-operator-mutating-webhook-configuration
-webhooks:
-- admissionReviewVersions:
-  - v1
-  - v1alpha1
-  clientConfig:
-    service:
-      name: ako-operator-webhook-service
-      namespace: tkg-system-networking
-      path: /validate-networking-tkg-tanzu-vmware-com-v1alpha1-akodeploymentconfig
-  failurePolicy: Fail
-  name: vakodeploymentconfig.kb.io
-  rules:
-  - apiGroups:
-    - networking.tkg.tanzu.vmware.com
-    apiVersions:
-    - v1alpha1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - akodeploymentconfigs
-  sideEffects: None
----
-apiVersion: admissionregistration.k8s.io/v1
-kind: ValidatingWebhookConfiguration
-metadata:
-  annotations:
-    cert-manager.io/inject-ca-from: tkg-system-networking/ako-operator-serving-cert
-  labels:
-    app: tanzu-ako-operator
-  name: ako-operator-validating-webhook-configuration
-webhooks:
-- admissionReviewVersions:
-  - v1
-  - v1alpha1
-  clientConfig:
-    service:
-      name: ako-operator-webhook-service
-      namespace: tkg-system-networking
-      path: /validate-networking-tkg-tanzu-vmware-com-v1alpha1-akodeploymentconfig
-  failurePolicy: Fail
-  name: vakodeploymentconfig.kb.io
-  rules:
-  - apiGroups:
-    - networking.tkg.tanzu.vmware.com
-    apiVersions:
-    - v1alpha1
-    operations:
-    - CREATE
-    - UPDATE
-    - DELETE
-    resources:
-    - akodeploymentconfigs
-  sideEffects: None

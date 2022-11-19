@@ -87,10 +87,13 @@ type labelGetter func() map[string]string
 
 // LoadTestTest checks if the testcase is registered to run.
 // It takes one parameter:
-//    string: name of the testcase
+//
+//	string: name of the testcase
+//
 // It returns two values:
-//    bool: if it's true, then the test case is not registered and should be skipped
-//    *E2ETestCase: an encapsulation of a Test Case's env
+//
+//	bool: if it's true, then the test case is not registered and should be skipped
+//	*E2ETestCase: an encapsulation of a Test Case's env
 func LoadTestCase(name string) (bool, *E2ETestCase) {
 	namespace := "akoo-e2e-" + GenerateRandomName()
 	res := &E2ETestCase{

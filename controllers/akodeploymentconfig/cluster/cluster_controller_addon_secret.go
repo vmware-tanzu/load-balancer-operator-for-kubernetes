@@ -20,7 +20,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/vmware-tanzu/tanzu-framework/apis/run/v1alpha3"
 	runv1alpha3 "github.com/vmware-tanzu/tanzu-framework/apis/run/v1alpha3"
 )
 
@@ -249,7 +248,7 @@ func (r *ClusterReconciler) removeAkoPackageRefFromClusterBootstrap(ctx context.
 	return r.Update(ctx, bootstrap)
 }
 
-func (r *ClusterReconciler) GetAKOPackageRefName(ctx context.Context, log logr.Logger, cb *v1alpha3.ClusterBootstrap) (string, error) {
+func (r *ClusterReconciler) GetAKOPackageRefName(ctx context.Context, log logr.Logger, cb *runv1alpha3.ClusterBootstrap) (string, error) {
 	if cb.Status.ResolvedTKR == "" {
 		return "", errors.New("ClusterBootstrap.Status.ResolvedTKR is empty")
 	}
@@ -269,7 +268,7 @@ func (r *ClusterReconciler) GetAKOPackageRefName(ctx context.Context, log logr.L
 	return akoPackageRefFullName, nil
 }
 
-func (r *ClusterReconciler) GetAKOPackageRefNameFromTKR(log logr.Logger, tkr *v1alpha3.TanzuKubernetesRelease) (string, error) {
+func (r *ClusterReconciler) GetAKOPackageRefNameFromTKR(log logr.Logger, tkr *runv1alpha3.TanzuKubernetesRelease) (string, error) {
 	for _, tkrBootstrapPackage := range tkr.Spec.BootstrapPackages {
 		if strings.HasPrefix(tkrBootstrapPackage.Name, akoov1alpha1.AkoClusterBootstrapRefNamePrefix) {
 			log.Info(fmt.Sprintf("found ako package ref %s in tkr", tkrBootstrapPackage.Name))
