@@ -17,6 +17,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterapipatchutil "sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -214,25 +215,49 @@ func (r *ClusterReconciler) patchAkoPackageRefToClusterBootstrap(ctx context.Con
 		return err
 	}
 
+	// Create a patch helper for clusterbootstrap
+	patchHelper, err := clusterapipatchutil.NewHelper(bootstrap, r.Client)
+	if err != nil {
+		return err
+	}
+
 	akoPackageRefName, err := r.GetAKOPackageRefName(ctx, log, bootstrap)
 	if err != nil {
 		return err
 	}
-	akoClusterBootstrapPackage := &runv1alpha3.ClusterBootstrapPackage{
+	expectedAKOClusterBootstrapPackage := &runv1alpha3.ClusterBootstrapPackage{
 		RefName: akoPackageRefName,
 		ValuesFrom: &runv1alpha3.ValuesFrom{
 			SecretRef: r.akoAddonSecretName(cluster),
 		},
 	}
-	// append ako package ref to cluster bootstrap package install
-	bootstrap.Spec.AdditionalPackages = append(bootstrap.Spec.AdditionalPackages, akoClusterBootstrapPackage)
-	return r.Update(ctx, bootstrap)
+
+	// if there is already existing ako packageRef, check if it's up to date, if not, patch it
+	index, akoPackageInClusterBootstrap := getAKOPackageRefFromClusterBootstrap(log, bootstrap)
+	if akoPackageInClusterBootstrap == nil || index == -1 {
+		// ako package ref not presented
+		// append ako package ref to cluster bootstrap package install
+		bootstrap.Spec.AdditionalPackages = append(bootstrap.Spec.AdditionalPackages, expectedAKOClusterBootstrapPackage)
+	} else {
+		// check if it's up to date, if not, patch it
+		if akoPackageInClusterBootstrap != expectedAKOClusterBootstrapPackage {
+			bootstrap.Spec.AdditionalPackages[index] = expectedAKOClusterBootstrapPackage
+		}
+	}
+
+	return patchHelper.Patch(ctx, bootstrap.DeepCopy())
 }
 
 // This is not supported at the moment. But good thing is we don't have this scenario at the moment
 // removeAkoPackageRefFromClusterBootstrap removes the ako package ref from cluster's clusterbootstrap object
 func (r *ClusterReconciler) removeAkoPackageRefFromClusterBootstrap(ctx context.Context, cluster *clusterv1.Cluster) error {
 	bootstrap, err := r.getClusterBootstrap(ctx, cluster)
+	if err != nil {
+		return err
+	}
+
+	// Create a patch helper for clusterbootstrap
+	patchHelper, err := clusterapipatchutil.NewHelper(bootstrap, r.Client)
 	if err != nil {
 		return err
 	}
@@ -245,7 +270,7 @@ func (r *ClusterReconciler) removeAkoPackageRefFromClusterBootstrap(ctx context.
 		}
 	}
 
-	return r.Update(ctx, bootstrap)
+	return patchHelper.Patch(ctx, bootstrap.DeepCopy())
 }
 
 func (r *ClusterReconciler) GetAKOPackageRefName(ctx context.Context, log logr.Logger, cb *runv1alpha3.ClusterBootstrap) (string, error) {
@@ -276,4 +301,14 @@ func (r *ClusterReconciler) GetAKOPackageRefNameFromTKR(log logr.Logger, tkr *ru
 		}
 	}
 	return "", fmt.Errorf("no bootstrapPackage name matches the prefix %s within the BootstrapPackages [%v] of TanzuKubernetesRelease %s", akoov1alpha1.AkoClusterBootstrapRefNamePrefix, tkr.Spec.BootstrapPackages, tkr.Name)
+}
+
+func getAKOPackageRefFromClusterBootstrap(log logr.Logger, cb *runv1alpha3.ClusterBootstrap) (int, *runv1alpha3.ClusterBootstrapPackage) {
+	for index, additionalPackage := range cb.Spec.AdditionalPackages {
+		if strings.HasPrefix(additionalPackage.RefName, akoov1alpha1.AkoClusterBootstrapRefNamePrefix) {
+			log.Info(fmt.Sprintf("found ako package ref %s in clusterbootstrap", additionalPackage.RefName))
+			return index, additionalPackage
+		}
+	}
+	return -1, nil
 }

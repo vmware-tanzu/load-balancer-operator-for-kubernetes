@@ -67,6 +67,8 @@ func (r *AKODeploymentConfigReconciler) SetAviClient(client aviclient.Client) {
 // +kubebuilder:rbac:groups=networking.tkg.tanzu.vmware.com,resources=akodeploymentconfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;create;list;watch;update;delete
 // +kubebuilder:rbac:groups=ako.vmware.com,resources=aviinfrasettings,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=run.tanzu.vmware.com,resources=clusterbootstraps;clusterbootstraps/status,verbs=get;list;watch;update;patch
+// +kubebuilder:rbac:groups=run.tanzu.vmware.com,resources=tanzukubernetesreleases;tanzukubernetesreleases/status,verbs=get;list;watch
 
 func (r *AKODeploymentConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	log := r.Log.WithValues("AKODeploymentConfig", req.NamespacedName)
