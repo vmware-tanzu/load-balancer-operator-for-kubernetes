@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -237,11 +238,15 @@ func (r *ClusterReconciler) patchAkoPackageRefToClusterBootstrap(ctx context.Con
 	if akoPackageInClusterBootstrap == nil || index == -1 {
 		// ako package ref not presented
 		// append ako package ref to cluster bootstrap package install
+		log.Info("ako package ref not found in ClusterBootstrap, patching")
 		bootstrap.Spec.AdditionalPackages = append(bootstrap.Spec.AdditionalPackages, expectedAKOClusterBootstrapPackage)
 	} else {
 		// check if it's up to date, if not, patch it
-		if akoPackageInClusterBootstrap != expectedAKOClusterBootstrapPackage {
+		if !reflect.DeepEqual(akoPackageInClusterBootstrap, expectedAKOClusterBootstrapPackage) {
+			log.Info(fmt.Sprintf("ako package ref is not up to date. update from %v to %v", akoPackageInClusterBootstrap, expectedAKOClusterBootstrapPackage))
 			bootstrap.Spec.AdditionalPackages[index] = expectedAKOClusterBootstrapPackage
+		} else {
+			log.Info("ako package ref up to date. skip")
 		}
 	}
 
