@@ -187,7 +187,7 @@ func (client *CloudClient) GetByName(name string, options ...session.ApiOptionsP
 	return client.getByNameCloudFn(name)
 }
 
-//IPAMDNSProviderProfile
+// IPAMDNSProviderProfile
 type IPAMDNSProviderProfileClient struct {
 	getIPAMFn    GetIPAMFunc
 	updateIPAMFn UpdateIPAMFn
@@ -257,7 +257,7 @@ func (client *UserClient) Update(obj *models.User, options ...session.ApiOptions
 	return client.updateUserFunc(obj)
 }
 
-//Tenant Client
+// Tenant Client
 type TenantClient struct {
 	getTenantFn GetTenantFunc
 }

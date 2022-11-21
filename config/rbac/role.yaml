@@ -102,3 +102,23 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - run.tanzu.vmware.com
+  resources:
+  - clusterbootstraps
+  - clusterbootstraps/status
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - run.tanzu.vmware.com
+  resources:
+  - tanzukubernetesreleases
+  - tanzukubernetesreleases/status
+  verbs:
+  - get
+  - list
+  - watch
