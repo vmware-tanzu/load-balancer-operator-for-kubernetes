@@ -134,7 +134,7 @@ func (r *ClusterReconciler) aviUserSecretName(cluster *clusterv1.Cluster) string
 }
 
 func (r *ClusterReconciler) akoAddonSecretName(cluster *clusterv1.Cluster) string {
-	return cluster.Name + "-load-balancer-and-ingress-service-addon"
+	return cluster.Name + "-load-balancer-and-ingress-service-data-values"
 }
 
 func (r *ClusterReconciler) createAKOAddonSecret(cluster *clusterv1.Cluster, obj *akoov1alpha1.AKODeploymentConfig, aviUsersecret *corev1.Secret) (*corev1.Secret, error) {
