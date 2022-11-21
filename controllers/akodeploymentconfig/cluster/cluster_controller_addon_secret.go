@@ -76,22 +76,23 @@ func (r *ClusterReconciler) ReconcileAddonSecret(
 		return res, err
 	}
 	secret = newAddonSecret.DeepCopy()
+	secret.ObjectMeta.OwnerReferences = []metav1.OwnerReference{
+		{
+			UID:                cluster.UID,
+			Name:               cluster.Name,
+			Controller:         pointer.BoolPtr(true),
+			BlockOwnerDeletion: pointer.BoolPtr(true),
+			Kind:               cluster.Kind,
+			APIVersion:         clusterv1.GroupVersion.String(),
+		},
+	}
+
 	if err := r.Update(ctx, secret); err != nil {
 		log.Error(err, "Failed to update ako add on secret, requeue")
 		return res, err
 	}
 
 	if akoo.IsClusterClassBasedCluster(cluster) {
-		secret.ObjectMeta.OwnerReferences = []metav1.OwnerReference{
-			{
-				UID:                cluster.UID,
-				Name:               cluster.Name,
-				Controller:         pointer.BoolPtr(true),
-				BlockOwnerDeletion: pointer.BoolPtr(true),
-				Kind:               cluster.Kind,
-				APIVersion:         clusterv1.GroupVersion.String(),
-			},
-		}
 		// patch cluster bootstrap here
 		if err := r.patchAkoPackageRefToClusterBootstrap(ctx, log, cluster); err != nil {
 			log.Error(err, "Failed to patch ako package ref to cluster bootstrap, requeue")
@@ -101,6 +102,8 @@ func (r *ClusterReconciler) ReconcileAddonSecret(
 	return res, nil
 }
 
+// TODO:(xudongl) deprecate reconcile addon secret delete in future
+// add on secret will have owner reference to the cluster, no need to try to delete it anymore
 func (r *ClusterReconciler) ReconcileAddonSecretDelete(
 	ctx context.Context,
 	log logr.Logger,
@@ -111,6 +114,7 @@ func (r *ClusterReconciler) ReconcileAddonSecretDelete(
 	res := ctrl.Result{}
 
 	if akoo.IsClusterClassBasedCluster(cluster) {
+		log.Info("skip reconciling add on secret deletion")
 		return res, nil
 	}
 	secret := &corev1.Secret{}
@@ -164,6 +168,16 @@ func (r *ClusterReconciler) createAKOAddonSecret(cluster *clusterv1.Cluster, obj
 				akoov1alpha1.TKGAddOnLabelAddonNameKey:   "load-balancer-and-ingress-service",
 				akoov1alpha1.TKGAddOnLabelClusterNameKey: cluster.Name,
 				akoov1alpha1.TKGAddOnLabelClusterctlKey:  "",
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					UID:                cluster.UID,
+					Name:               cluster.Name,
+					Controller:         pointer.BoolPtr(true),
+					BlockOwnerDeletion: pointer.BoolPtr(true),
+					Kind:               cluster.Kind,
+					APIVersion:         clusterv1.GroupVersion.String(),
+				},
 			},
 		},
 		Type: "Opaque",
