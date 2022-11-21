@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	kapppkgiv1alpha1 "github.com/vmware-tanzu/carvel-kapp-controller/pkg/apis/packaging/v1alpha1"
 	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako"
 	akoo "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
@@ -22,6 +23,7 @@ import (
 	clusterapipatchutil "sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	runv1alpha3 "github.com/vmware-tanzu/tanzu-framework/apis/run/v1alpha3"
 )
@@ -93,6 +95,35 @@ func (r *ClusterReconciler) ReconcileAddonSecret(
 	}
 
 	if akoo.IsClusterClassBasedCluster(cluster) {
+		//Get remote client
+		remoteClient, err := r.GetRemoteClient(ctx, akoov1alpha1.AKODeploymentConfigControllerName, r.Client, client.ObjectKey{
+			Name:      cluster.Name,
+			Namespace: cluster.Namespace,
+		})
+		if err != nil {
+			log.Info("Failed to create remote client for cluster, requeue the request")
+			return res, err
+		}
+		//Get AKO Packageinstall
+		pkgi := &kapppkgiv1alpha1.PackageInstall{}
+		if err := remoteClient.Get(ctx, client.ObjectKey{
+			Name:      cluster.Name + "-load-balancer-and-ingress-service",
+			Namespace: akoov1alpha1.TKGSystemNamespace,
+		}, pkgi); err != nil {
+			if apierrors.IsNotFound(err) {
+				return res, nil
+			}
+			log.Error(err, "Failed to get AKO Packageinstall")
+			return res, err
+		}
+		//Add AKO pkgi Finalizer
+		ctrlutil.AddFinalizer(pkgi, akoov1alpha1.AkoDeploymentConfigFinalizer)
+		//Update Remote client
+		if err := remoteClient.Update(ctx, pkgi); err != nil {
+			log.Error(err, "Failed to update AKO Packageinstall")
+			return res, err
+		}
+
 		// patch cluster bootstrap here
 		if err := r.patchAkoPackageRefToClusterBootstrap(ctx, log, cluster); err != nil {
 			log.Error(err, "Failed to patch ako package ref to cluster bootstrap, requeue")

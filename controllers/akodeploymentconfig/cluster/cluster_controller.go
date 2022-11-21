@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	kapppkgiv1alpha1 "github.com/vmware-tanzu/carvel-kapp-controller/pkg/apis/packaging/v1alpha1"
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -153,6 +154,27 @@ func (r *ClusterReconciler) cleanup(
 	if cleanupFinished {
 		log.Info("AKO finished cleanup, updating Cluster condition")
 		conditions.MarkTrue(obj, akoov1alpha1.AviResourceCleanupSucceededCondition)
+
+		//Get AKO Packageinstall
+		pkgi := &kapppkgiv1alpha1.PackageInstall{}
+		if err := remoteClient.Get(ctx, client.ObjectKey{
+			Name:      obj.Name + "-load-balancer-and-ingress-service",
+			Namespace: akoov1alpha1.TKGSystemNamespace,
+		}, pkgi); err != nil {
+			if apierrors.IsNotFound(err) {
+				return true, nil
+			}
+			log.Error(err, "Failed to get AKO Packageinstall")
+			return false, err
+		}
+		//Remove AKO pkgi Finalizer
+		ctrlutil.RemoveFinalizer(pkgi, akoov1alpha1.AkoDeploymentConfigFinalizer)
+		//Update Remote client
+		if err := remoteClient.Update(ctx, pkgi); err != nil {
+			log.Error(err, "Failed to update AKO Packageinstall")
+			return false, err
+		}
+
 		return true, nil
 	}
 	return false, nil
