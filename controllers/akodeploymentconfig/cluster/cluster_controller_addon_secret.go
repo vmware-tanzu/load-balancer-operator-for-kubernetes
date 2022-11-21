@@ -116,13 +116,16 @@ func (r *ClusterReconciler) ReconcileAddonSecretDelete(
 		return res, err
 	}
 
-	if akoo.IsClusterClassBasedCluster(cluster) {
-		// remove cluster bootstrap correspondingly
-		if err := r.removeAkoPackageRefFromClusterBootstrap(ctx, cluster); err != nil {
-			log.Error(err, "Failed to remove ako package ref from cluster bootstrap, requeue")
-			return res, err
-		}
-	}
+	// TODO: skip this step since ClusterBootstrap webhook doesn't aloow this yet
+	// Add back once this is supported
+	// if akoo.IsClusterClassBasedCluster(cluster) {
+
+	// 	// remove cluster bootstrap correspondingly
+	// 	if err := r.removeAkoPackageRefFromClusterBootstrap(ctx, cluster); err != nil {
+	// 		log.Error(err, "Failed to remove ako package ref from cluster bootstrap, requeue")
+	// 		return res, err
+	// 	}
+	// }
 	return res, nil
 }
 

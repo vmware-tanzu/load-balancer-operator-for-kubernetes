@@ -17,6 +17,7 @@ import (
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako"
+	akoo "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -101,6 +102,7 @@ func (r *ClusterReconciler) cleanup(
 		return true, nil
 	}
 
+	akoAddonSecret := &corev1.Secret{}
 	remoteClient, err := r.GetRemoteClient(ctx, akoov1alpha1.AKODeploymentConfigControllerName, r.Client, client.ObjectKey{
 		Name:      obj.Name,
 		Namespace: obj.Namespace,
@@ -108,18 +110,32 @@ func (r *ClusterReconciler) cleanup(
 	if err != nil {
 		log.Info("Failed to create remote client for cluster, requeue the request")
 		return false, err
-	}
 
-	akoAddonSecret := &corev1.Secret{}
-	if err := remoteClient.Get(ctx, client.ObjectKey{
-		Name:      r.akoAddonDataValueName(),
-		Namespace: akoov1alpha1.TKGSystemNamespace,
-	}, akoAddonSecret); err != nil {
-		if apierrors.IsNotFound(err) {
-			return true, nil
+	}
+	// if it's clusterclass cluster, update the secret in management cluster
+	// then Clusterbootstrap controller will sync over the config
+	if akoo.IsClusterClassBasedCluster(obj) {
+		if err := r.Client.Get(ctx, client.ObjectKey{
+			Name:      r.akoAddonSecretName(obj),
+			Namespace: akoov1alpha1.TKGSystemNamespace,
+		}, akoAddonSecret); err != nil {
+			if apierrors.IsNotFound(err) {
+				return true, nil
+			}
+			log.Error(err, "Failed to get AKO Addon Data Values, AKO clean up failed")
+			return false, err
 		}
-		log.Error(err, "Failed to get AKO Addon Data Values, AKO clean up failed")
-		return false, err
+	} else {
+		if err := remoteClient.Get(ctx, client.ObjectKey{
+			Name:      r.akoAddonDataValueName(),
+			Namespace: akoov1alpha1.TKGSystemNamespace,
+		}, akoAddonSecret); err != nil {
+			if apierrors.IsNotFound(err) {
+				return true, nil
+			}
+			log.Error(err, "Failed to get AKO Addon Data Values, AKO clean up failed")
+			return false, err
+		}
 	}
 
 	akoAddonSecretData := akoAddonSecret.Data["values.yaml"]
@@ -137,10 +153,18 @@ func (r *ClusterReconciler) cleanup(
 			return false, errors.Errorf("workload cluster %s ako add-on data values marshal error", obj.Name)
 		}
 		akoAddonSecret.Data["values.yaml"] = []byte(secretData)
-		if err := remoteClient.Update(ctx, akoAddonSecret); err != nil {
-			log.Error(err, "Failed to update AKO Addon Data Values, AKO clean up failed")
-			return false, err
+		if akoo.IsClusterClassBasedCluster(obj) {
+			if err := r.Client.Update(ctx, akoAddonSecret); err != nil {
+				log.Error(err, "Failed to update AKO Addon Data Values, AKO clean up failed")
+				return false, err
+			}
+		} else {
+			if err := remoteClient.Update(ctx, akoAddonSecret); err != nil {
+				log.Error(err, "Failed to update AKO Addon Data Values, AKO clean up failed")
+				return false, err
+			}
 		}
+
 		log.Info("Updated `deleteConfig` field to true in AKO Addon Data Values, starting ako clean up")
 	}
 
