@@ -95,38 +95,32 @@ func (r *ClusterReconciler) ReconcileAddonSecret(
 	}
 
 	if akoo.IsClusterClassBasedCluster(cluster) {
-		//Get remote client
+		// patch cluster bootstrap here
+		if err := r.patchAkoPackageRefToClusterBootstrap(ctx, log, cluster); err != nil {
+			log.Error(err, "Failed to patch ako package ref to cluster bootstrap, requeue")
+			return res, err
+		}
+
+		// add avi finalizer on workload cluster ako pkgi
 		remoteClient, err := r.GetRemoteClient(ctx, akoov1alpha1.AKODeploymentConfigControllerName, r.Client, client.ObjectKey{
 			Name:      cluster.Name,
 			Namespace: cluster.Namespace,
 		})
 		if err != nil {
-			log.Info("Failed to create remote client for cluster, requeue the request")
+			log.Error(err, "Failed to create remote client for cluster, requeue")
 			return res, err
 		}
-		//Get AKO Packageinstall
 		pkgi := &kapppkgiv1alpha1.PackageInstall{}
 		if err := remoteClient.Get(ctx, client.ObjectKey{
 			Name:      cluster.Name + "-load-balancer-and-ingress-service",
 			Namespace: akoov1alpha1.TKGSystemNamespace,
 		}, pkgi); err != nil {
-			if apierrors.IsNotFound(err) {
-				return res, nil
-			}
-			log.Error(err, "Failed to get AKO Packageinstall")
+			log.Error(err, "Failed to get AKO Packageinstall, requeue")
 			return res, err
 		}
-		//Add AKO pkgi Finalizer
 		ctrlutil.AddFinalizer(pkgi, akoov1alpha1.AkoDeploymentConfigFinalizer)
-		//Update Remote client
 		if err := remoteClient.Update(ctx, pkgi); err != nil {
-			log.Error(err, "Failed to update AKO Packageinstall")
-			return res, err
-		}
-
-		// patch cluster bootstrap here
-		if err := r.patchAkoPackageRefToClusterBootstrap(ctx, log, cluster); err != nil {
-			log.Error(err, "Failed to patch ako package ref to cluster bootstrap, requeue")
+			log.Error(err, "Failed to update AKO Packageinstall, requeue")
 			return res, err
 		}
 	}

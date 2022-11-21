@@ -23,6 +23,7 @@ import (
 
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/controllers"
 
+	kapppkgiv1alpha1 "github.com/vmware-tanzu/carvel-kapp-controller/pkg/apis/packaging/v1alpha1"
 	ako_operator "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 	runv1alpha3 "github.com/vmware-tanzu/tanzu-framework/apis/run/v1alpha3"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -51,6 +52,7 @@ func init() {
 	_ = akoov1alpha1.AddToScheme(scheme)
 	_ = akov1alpha1.AddToScheme(scheme)
 	_ = runv1alpha3.AddToScheme(scheme)
+	_ = kapppkgiv1alpha1.AddToScheme(scheme)
 }
 
 func main() {

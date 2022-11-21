@@ -154,8 +154,7 @@ func (r *ClusterReconciler) cleanup(
 	if cleanupFinished {
 		log.Info("AKO finished cleanup, updating Cluster condition")
 		conditions.MarkTrue(obj, akoov1alpha1.AviResourceCleanupSucceededCondition)
-
-		//Get AKO Packageinstall
+		// remove avi finalizer on ako pkgi
 		pkgi := &kapppkgiv1alpha1.PackageInstall{}
 		if err := remoteClient.Get(ctx, client.ObjectKey{
 			Name:      obj.Name + "-load-balancer-and-ingress-service",
@@ -167,14 +166,11 @@ func (r *ClusterReconciler) cleanup(
 			log.Error(err, "Failed to get AKO Packageinstall")
 			return false, err
 		}
-		//Remove AKO pkgi Finalizer
 		ctrlutil.RemoveFinalizer(pkgi, akoov1alpha1.AkoDeploymentConfigFinalizer)
-		//Update Remote client
 		if err := remoteClient.Update(ctx, pkgi); err != nil {
 			log.Error(err, "Failed to update AKO Packageinstall")
 			return false, err
 		}
-
 		return true, nil
 	}
 	return false, nil
