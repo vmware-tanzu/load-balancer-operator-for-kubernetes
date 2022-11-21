@@ -17,6 +17,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	clusterapipatchutil "sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -81,6 +82,16 @@ func (r *ClusterReconciler) ReconcileAddonSecret(
 	}
 
 	if akoo.IsClusterClassBasedCluster(cluster) {
+		secret.ObjectMeta.OwnerReferences = []metav1.OwnerReference{
+			{
+				UID:                cluster.UID,
+				Name:               cluster.Name,
+				Controller:         pointer.BoolPtr(true),
+				BlockOwnerDeletion: pointer.BoolPtr(true),
+				Kind:               cluster.Kind,
+				APIVersion:         clusterv1.GroupVersion.String(),
+			},
+		}
 		// patch cluster bootstrap here
 		if err := r.patchAkoPackageRefToClusterBootstrap(ctx, log, cluster); err != nil {
 			log.Error(err, "Failed to patch ako package ref to cluster bootstrap, requeue")
@@ -99,6 +110,9 @@ func (r *ClusterReconciler) ReconcileAddonSecretDelete(
 	log.Info("Starts reconciling add on secret deletion")
 	res := ctrl.Result{}
 
+	if akoo.IsClusterClassBasedCluster(cluster) {
+		return res, nil
+	}
 	secret := &corev1.Secret{}
 	if err := r.Get(ctx, client.ObjectKey{
 		Name:      r.akoAddonSecretName(cluster),
