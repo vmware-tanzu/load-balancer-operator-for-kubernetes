@@ -116,13 +116,16 @@ func (r *ClusterReconciler) ReconcileAddonSecretDelete(
 		return res, err
 	}
 
-	if akoo.IsClusterClassBasedCluster(cluster) {
-		// remove cluster bootstrap correspondingly
-		if err := r.removeAkoPackageRefFromClusterBootstrap(ctx, cluster); err != nil {
-			log.Error(err, "Failed to remove ako package ref from cluster bootstrap, requeue")
-			return res, err
-		}
-	}
+	// TODO: skip this step since ClusterBootstrap webhook doesn't aloow this yet
+	// Add back once this is supported
+	// if akoo.IsClusterClassBasedCluster(cluster) {
+
+	// 	// remove cluster bootstrap correspondingly
+	// 	if err := r.removeAkoPackageRefFromClusterBootstrap(ctx, cluster); err != nil {
+	// 		log.Error(err, "Failed to remove ako package ref from cluster bootstrap, requeue")
+	// 		return res, err
+	// 	}
+	// }
 	return res, nil
 }
 
@@ -131,7 +134,7 @@ func (r *ClusterReconciler) aviUserSecretName(cluster *clusterv1.Cluster) string
 }
 
 func (r *ClusterReconciler) akoAddonSecretName(cluster *clusterv1.Cluster) string {
-	return cluster.Name + "-load-balancer-and-ingress-service-addon"
+	return cluster.Name + "-load-balancer-and-ingress-service-data-values"
 }
 
 func (r *ClusterReconciler) createAKOAddonSecret(cluster *clusterv1.Cluster, obj *akoov1alpha1.AKODeploymentConfig, aviUsersecret *corev1.Secret) (*corev1.Secret, error) {

@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"k8s.io/client-go/kubernetes/scheme"
@@ -17,6 +18,7 @@ import (
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako"
+	akoo "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -101,6 +103,7 @@ func (r *ClusterReconciler) cleanup(
 		return true, nil
 	}
 
+	akoAddonSecret := &corev1.Secret{}
 	remoteClient, err := r.GetRemoteClient(ctx, akoov1alpha1.AKODeploymentConfigControllerName, r.Client, client.ObjectKey{
 		Name:      obj.Name,
 		Namespace: obj.Namespace,
@@ -108,14 +111,19 @@ func (r *ClusterReconciler) cleanup(
 	if err != nil {
 		log.Info("Failed to create remote client for cluster, requeue the request")
 		return false, err
+
 	}
 
-	akoAddonSecret := &corev1.Secret{}
+	secretName := r.akoAddonDataValueName()
+	if akoo.IsClusterClassBasedCluster(obj) {
+		secretName = r.akoAddonSecretName(obj)
+	}
 	if err := remoteClient.Get(ctx, client.ObjectKey{
-		Name:      r.akoAddonDataValueName(),
+		Name:      secretName,
 		Namespace: akoov1alpha1.TKGSystemNamespace,
 	}, akoAddonSecret); err != nil {
 		if apierrors.IsNotFound(err) {
+			log.Info(fmt.Sprintf("since secret %s/%s is not found, assume the ako resource deletion succeed", akoov1alpha1.TKGSystemNamespace, secretName))
 			return true, nil
 		}
 		log.Error(err, "Failed to get AKO Addon Data Values, AKO clean up failed")
@@ -141,6 +149,7 @@ func (r *ClusterReconciler) cleanup(
 			log.Error(err, "Failed to update AKO Addon Data Values, AKO clean up failed")
 			return false, err
 		}
+
 		log.Info("Updated `deleteConfig` field to true in AKO Addon Data Values, starting ako clean up")
 	}
 
