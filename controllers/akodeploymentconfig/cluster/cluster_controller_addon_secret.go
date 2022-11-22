@@ -253,6 +253,18 @@ func (r *ClusterReconciler) patchAkoPackageRefToClusterBootstrap(ctx context.Con
 		}
 	}
 
+	// Add skip deleting ako packageinstall annotation to clusterboostrap if it doesn't exist
+	if _, exist := bootstrap.Annotations[akoov1alpha1.TKGSkipDeletePkgiAnnotationKey]; !exist {
+		if bootstrap.Annotations == nil {
+			bootstrap.Annotations = make(map[string]string)
+		}
+		bootstrap.Annotations[akoov1alpha1.TKGSkipDeletePkgiAnnotationKey] += "," + akoov1alpha1.AkoPackageInstallName
+	} else {
+		if !strings.Contains(bootstrap.Annotations[akoov1alpha1.TKGSkipDeletePkgiAnnotationKey], akoov1alpha1.AkoPackageInstallName) {
+			bootstrap.Annotations[akoov1alpha1.TKGSkipDeletePkgiAnnotationKey] += "," + akoov1alpha1.AkoPackageInstallName
+		}
+	}
+
 	return patchHelper.Patch(ctx, bootstrap.DeepCopy())
 }
 
