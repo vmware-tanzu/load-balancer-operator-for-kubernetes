@@ -114,6 +114,10 @@ func (r *ClusterReconciler) cleanup(
 
 	}
 
+	// in legacy cluster
+	//   - secret is load-balancer-and-ingress-service-data-values
+	// in clusterclass cluster
+	//   - secret is <cluster-name>-load-balancer-and-ingress-service-data-values
 	secretName := r.akoAddonDataValueName()
 	if akoo.IsClusterClassBasedCluster(obj) {
 		secretName = r.akoAddonSecretNameForClusterClass(obj)
