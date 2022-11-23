@@ -116,7 +116,7 @@ func (r *ClusterReconciler) cleanup(
 
 	secretName := r.akoAddonDataValueName()
 	if akoo.IsClusterClassBasedCluster(obj) {
-		secretName = r.akoAddonSecretName(obj)
+		secretName = r.akoAddonSecretNameForClusterClass(obj)
 	}
 	if err := remoteClient.Get(ctx, client.ObjectKey{
 		Name:      secretName,
