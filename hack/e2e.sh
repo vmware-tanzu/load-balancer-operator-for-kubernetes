@@ -94,7 +94,7 @@ WORKLOAD_CLUSTERS=${WORKLOAD_CLUSTERS:-"workload-cls"}
 function check_dependencies() {
   # Ensure Kind 0.7.0+ is available.
   command -v kind >/dev/null 2>&1 || fatal "kind 0.7.0+ is required"
-  if [[ 10#"$(kind --version 2>&1 | awk '{print $3}' | tr -d '.')" -lt 10#070 ]]; then
+  if [[ 10#"$(kind --version 2>&1 | awk '{print $3}' | tr -d '.')" < 10#070 ]]; then
     echo "kind 0.7.0+ is required" && exit 1
   fi
 
