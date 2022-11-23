@@ -18,6 +18,7 @@ const (
 	TKGAddOnLabelClusterNameKey    = "tkg.tanzu.vmware.com/cluster-name"
 	TKGAddOnLabelClusterctlKey     = "clusterctl.cluster.x-k8s.io/move"
 	TKGAddOnSecretType             = "tkg.tanzu.vmware.com/addon"
+	TKGClusterClassAddOnSecretType = "clusterbootstrap-secret"
 	TKGAddOnSecretDataKey          = "values.yaml"
 	TKGDataValueFormatString       = "#@data/values\n#@overlay/match-child-defaults missing_ok=True\n---\n"
 	TKGSkipDeletePkgiAnnotationKey = "run.tanzu.vmware.com/skip-packageinstall-deletion"

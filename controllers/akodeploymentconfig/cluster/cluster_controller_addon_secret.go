@@ -159,10 +159,14 @@ func (r *ClusterReconciler) createAKOAddonSecret(cluster *clusterv1.Cluster, obj
 				akoov1alpha1.TKGAddOnLabelClusterctlKey:  "",
 			},
 		},
-		Type: "Opaque",
+		Type: akoov1alpha1.TKGAddOnSecretType,
 		StringData: map[string]string{
 			akoov1alpha1.TKGAddOnSecretDataKey: secretStringData,
 		},
+	}
+
+	if akoo.IsClusterClassBasedCluster(cluster) {
+		secret.Type = akoov1alpha1.TKGClusterClassAddOnSecretType
 	}
 	return secret, nil
 }
