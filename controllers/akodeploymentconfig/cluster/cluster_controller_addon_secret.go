@@ -134,7 +134,7 @@ func (r *ClusterReconciler) aviUserSecretName(cluster *clusterv1.Cluster) string
 }
 
 func (r *ClusterReconciler) akoAddonSecretName(cluster *clusterv1.Cluster) string {
-	return cluster.Name + "-load-balancer-and-ingress-service-addons"
+	return cluster.Name + "-load-balancer-and-ingress-service-addon"
 }
 
 func (r *ClusterReconciler) akoAddonSecretNameForClusterClass(cluster *clusterv1.Cluster) string {
