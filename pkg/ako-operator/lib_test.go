@@ -94,6 +94,37 @@ var _ = Describe("AKO Operator lib unit test", func() {
 		})
 	})
 
+	Context("If ako operator is deployed in bootstrap cluster", func() {
+		When("set cluster_class_enabled to true ", func() {
+			BeforeEach(func() {
+				os.Setenv(ClusterClassEnabled, "True")
+			})
+			AfterEach(func() {
+				os.Unsetenv(ClusterClassEnabled)
+			})
+			It("should return True", func() {
+				Expect(IsClusterClassEnabled()).Should(Equal(true))
+			})
+		})
+		When("set cluster_class_enabled to false ", func() {
+			BeforeEach(func() {
+				os.Setenv(ClusterClassEnabled, "False")
+			})
+			AfterEach(func() {
+				os.Unsetenv(ClusterClassEnabled)
+			})
+			It("should return false", func() {
+				Expect(IsClusterClassEnabled()).Should(Equal(false))
+			})
+		})
+		When("didn't set cluster_class_enabled", func() {
+			It("should return false", func() {
+				Expect(IsClusterClassEnabled()).Should(Equal(false))
+			})
+		})
+
+	})
+
 	Context("ako operator control plane HA provider", func() {
 		Context("Legacy Cluster Cases", func() {
 			When("ako operator provides control plane HA", func() {

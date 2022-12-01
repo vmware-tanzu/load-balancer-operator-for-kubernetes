@@ -80,8 +80,8 @@ func (r *ClusterReconciler) ReconcileAddonSecret(
 		return res, err
 	}
 
-	if akoo.IsClusterClassBasedCluster(cluster) {
-		// patch cluster bootstrap here
+	// patch cluster bootstrap when it is classy cluster and not in bootstrap cluster
+	if akoo.IsClusterClassBasedCluster(cluster) && !akoo.IsBootStrapCluster() {
 		if err := r.patchAkoPackageRefToClusterBootstrap(ctx, log, cluster); err != nil {
 			log.Error(err, "Failed to patch ako package ref to cluster bootstrap, requeue")
 			return res, err

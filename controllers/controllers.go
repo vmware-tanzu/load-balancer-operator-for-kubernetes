@@ -20,7 +20,7 @@ func SetupReconcilers(mgr ctrl.Manager) error {
 	}).SetupWithManager(mgr); err != nil {
 		return err
 	}
-	if !akoo.IsBootStrapCluster() {
+	if !akoo.IsLegacyBootStrapCluster() {
 		// if the ako-operator manager is deployed on management cluster
 		// it will reconcile against any AKODeploymentConfig
 		if err := (&akodeploymentconfig.AKODeploymentConfigReconciler{

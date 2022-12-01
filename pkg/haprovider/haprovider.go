@@ -150,7 +150,7 @@ func (r *HAProvider) annotateService(ctx context.Context, cluster *clusterv1.Clu
 		akoov1alpha1.TKGClusterNameSpaceLabel: cluster.Namespace,
 	}
 
-	if ako_operator.IsBootStrapCluster() {
+	if ako_operator.IsLegacyBootStrapCluster() {
 		return serviceAnnotation, nil
 	}
 
