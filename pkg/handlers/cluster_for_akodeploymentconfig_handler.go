@@ -52,6 +52,7 @@ func AkoDeploymentConfigForCluster(c client.Client, log logr.Logger) handler.Map
 			ako_operator.ApplyClusterLabel(log, cluster, adcForCluster)
 			requests = append(requests, ctrl.Request{NamespacedName: types.NamespacedName{Name: adcForCluster.Name}})
 		}
+		// TODO: change to patch instead of retry
 		// update cluster with avi label
 		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			return c.Update(ctx, cluster)
