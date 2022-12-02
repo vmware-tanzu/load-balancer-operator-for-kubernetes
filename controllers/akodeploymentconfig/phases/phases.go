@@ -5,6 +5,7 @@ package phases
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 
@@ -90,7 +91,7 @@ func ReconcileClustersPhases(
 			log.Error(err, "can't unmarshal cluster variables")
 			return res, err
 		} else if !isLBProvider {
-			log.Info("cluster uses kube-vip to provide load balancer type of service, skip reconciling")
+			log.Info(fmt.Sprintf("cluster uses kube-vip to provide load balancer type of service, skip reconciling for cluster %s/%s", cluster.Namespace, cluster.Name))
 			return res, nil
 		}
 

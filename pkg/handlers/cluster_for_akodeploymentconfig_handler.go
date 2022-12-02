@@ -10,6 +10,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -52,7 +53,10 @@ func AkoDeploymentConfigForCluster(c client.Client, log logr.Logger) handler.Map
 			requests = append(requests, ctrl.Request{NamespacedName: types.NamespacedName{Name: adcForCluster.Name}})
 		}
 		// update cluster with avi label
-		if err := c.Update(ctx, cluster); err != nil {
+		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			return c.Update(ctx, cluster)
+		})
+		if err != nil {
 			logger.Error(err, "update cluster's adc label error")
 			return []reconcile.Request{}
 		}
