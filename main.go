@@ -90,7 +90,7 @@ func main() {
 	}
 
 	//setup webhook here
-	if !ako_operator.IsBootStrapCluster() {
+	if !ako_operator.IsLegacyBootStrapCluster() {
 		err = (&akoov1alpha1.AKODeploymentConfig{}).SetupWebhookWithManager(mgr)
 		if err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "AKODeploymentConfig")

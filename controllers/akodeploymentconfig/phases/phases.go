@@ -5,6 +5,7 @@ package phases
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 
@@ -88,10 +89,11 @@ func ReconcileClustersPhases(
 		// skip reconcile if cluster is using kube-vip to provide load balancer service
 		if isLBProvider, err := ako_operator.IsLoadBalancerProvider(&cluster); err != nil {
 			log.Error(err, "can't unmarshal cluster variables")
-			return res, err
+			allErrs = append(allErrs, err)
+			continue
 		} else if !isLBProvider {
-			log.Info("cluster uses kube-vip to provide load balancer type of service, skip reconciling")
-			return res, nil
+			log.Info(fmt.Sprintf("cluster uses kube-vip to provide load balancer type of service, skip reconciling for cluster %s/%s", cluster.Namespace, cluster.Name))
+			continue
 		}
 
 		// Always Patch for each cluster when exiting this function so changes to the resource are updated on the API server.

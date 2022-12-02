@@ -31,6 +31,9 @@ const (
 
 // ClusterClass Env variables
 const (
+	// ClusterClassEnabled - helps check if cluster is classy based cluster when no cluster object create yet.
+	ClusterClassEnabled = "cluster_class_enabled"
+
 	// KubeVipLoadBalancerProvider - defines if cluster using kube-vip to implement load balancer
 	// type of service
 	KubeVipLoadBalancerProvider = "kubeVipLoadBalancerProvider"
@@ -45,8 +48,16 @@ const (
 	ApiServerPort = "apiServerPort"
 )
 
+func IsLegacyBootStrapCluster() bool {
+	return IsBootStrapCluster() && !IsClusterClassEnabled()
+}
+
 func IsBootStrapCluster() bool {
 	return os.Getenv(DeployInBootstrapCluster) == "True"
+}
+
+func IsClusterClassEnabled() bool {
+	return os.Getenv(ClusterClassEnabled) == "True"
 }
 
 // IsClusterClassBasedCluster checks if a cluster is cluster class based cluster

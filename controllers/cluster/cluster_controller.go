@@ -89,7 +89,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ 
 			log.Error(err, "Fail to reconcile HA service")
 			return res, err
 		}
-		if ako_operator.IsBootStrapCluster() {
+		if ako_operator.IsLegacyBootStrapCluster() {
 			return res, nil
 		}
 	}
