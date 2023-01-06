@@ -4,6 +4,8 @@
 package netprovider
 
 import (
+	"strings"
+
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/aviclient"
@@ -42,8 +44,10 @@ func (c *UsableNetworkProvider) AddUsableNetwork(client aviclient.Client, cloudN
 	}
 	// Ensure network is added to the cloud's IPAM Profile as one of its
 	// usable Networks
+	// sample network url: https://1.1.1.1/api/network/network-38-cloud-c654fba6-6486-4595-911d-52a8f1fbbf77#testnetwork
+	// sample usable network ref: https://1.1.1.1/api/network/network-38-cloud-c654fba6-6486-4595-911d-52a8f1fbbf77
 	for _, usableNetwork := range ipam.InternalProfile.UsableNetworks {
-		if *usableNetwork.NwRef == *(network.URL) {
+		if strings.Contains(*(network.URL), *(usableNetwork.NwRef)) {
 			log.Info("Network is already one of the cloud's usable network", "network", networkName)
 			return nil
 		}
