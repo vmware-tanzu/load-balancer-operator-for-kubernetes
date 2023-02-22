@@ -3,7 +3,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     cert-manager.io/inject-ca-from: $(CERTIFICATE_NAMESPACE)/$(CERTIFICATE_NAME)
-    controller-gen.kubebuilder.io/version: v0.7.0
+    controller-gen.kubebuilder.io/version: v0.9.2
   labels:
     app: tanzu-ako-operator
   name: akodeploymentconfigs.networking.tkg.tanzu.vmware.com
@@ -47,9 +47,8 @@ spec:
                 description: "AdminCredentialRef points to a Secret resource which
                   includes the username and password to access and configure the Avi
                   Controller. \n * username                   Username used with basic
-                  authentication for                              the Avi REST API
-                  * password                   Password used with basic authentication
-                  for                              the Avi REST API \n This credential
+                  authentication for the Avi REST API * password                   Password
+                  used with basic authentication for the Avi REST API \n This credential
                   needs to be bound with admin tenant and will be used by AKO Operator
                   to automate configurations and operations."
                 properties:
@@ -66,7 +65,7 @@ spec:
               certificateAuthorityRef:
                 description: "CertificateAuthorityRef points to a Secret resource
                   that includes the AVI Controller's CA \n * certificateAuthorityData
-                  \  PEM-encoded certificate authority                              certificates"
+                  \  PEM-encoded certificate authority certificates"
                 properties:
                   name:
                     description: Name is the name of resource being referenced.
@@ -128,6 +127,7 @@ spec:
                       are ANDed.
                     type: object
                 type: object
+                x-kubernetes-map-type: atomic
               controlPlaneNetwork:
                 description: ControlPlaneNetwork describes the control plane network
                   of the clusters selected by an akoDeploymentConfig
@@ -144,10 +144,9 @@ spec:
                 description: Controller is the AVI Controller endpoint to which AKO
                   talks to provision Load Balancer resources The format is [scheme://]address[:port]
                   * scheme                     http or https, defaults to https if
-                  not                              specified * address                    IP
-                  address of the AVI Controller                              specified
-                  * port                       if not specified, use default port
-                  for                              the corresponding scheme
+                  not specified * address                    IP address of the AVI
+                  Controller specified * port                       if not specified,
+                  use default port for the corresponding scheme
                 type: string
               controllerVersion:
                 description: ControllerVersion is the AVI Controller version which
@@ -455,9 +454,8 @@ spec:
                 description: "WorkloadCredentialRef points to a Secret resource which
                   includes the username and password to access and configure the Avi
                   Controller. \n * username                   Username used with basic
-                  authentication for                              the Avi REST API
-                  * password                   Password used with basic authentication
-                  for                              the Avi REST API \n This field
+                  authentication for the Avi REST API * password                   Password
+                  used with basic authentication for the Avi REST API \n This field
                   is optional. When it's not specified, username/password will be
                   automatically generated for each Cluster and Tenant needs to be
                   non-nil in this case."
@@ -539,12 +537,6 @@ spec:
     storage: true
     subresources:
       status: {}
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
