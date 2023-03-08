@@ -230,13 +230,37 @@ func (r *HAProvider) updateClusterControlPlaneEndpoint(cluster *clusterv1.Cluste
 	return errors.New(service.Name + " service external ip is not ready")
 }
 
-func (r *HAProvider) findEndpointInMachine(ip string, machine *clusterv1.Machine) bool {
+func (r *HAProvider) syncEndpointMachineIP(address *corev1.EndpointAddress, machine *clusterv1.Machine) {
+	// check if ip is still in the machine's address
+	found := false
 	for _, machineAddress := range machine.Status.Addresses {
-		if net.ParseIP(machineAddress.Address) != nil && ip == machineAddress.Address {
-			return true
+		if machineAddress.Type != clusterv1.MachineExternalIP {
+			continue
+		}
+		if net.ParseIP(machineAddress.Address) != nil && address.IP == machineAddress.Address {
+			found = true
 		}
 	}
-	return false
+
+	if found {
+		// no need to sync mahcine ip
+		return
+	}
+
+	// machine address is not sync with the ip address in endpoints object
+	// update endpoints object
+	for _, machineAddress := range machine.Status.Addresses {
+		if machineAddress.Type != clusterv1.MachineExternalIP {
+			continue
+		}
+		if net.ParseIP(machineAddress.Address) != nil {
+			address.IP = machineAddress.Address
+			r.log.Info("sync endpoints object, update machine: " + machine.Name + " ip to:" + address.IP)
+			return
+		} else {
+			r.log.Info(machineAddress.Address + " is not a valid IP address")
+		}
+	}
 }
 
 func (r *HAProvider) removeMachineIpFromEndpoints(endpoints *corev1.Endpoints, machine *clusterv1.Machine) {
@@ -246,7 +270,7 @@ func (r *HAProvider) removeMachineIpFromEndpoints(endpoints *corev1.Endpoints, m
 	}
 	newAddresses := make([]corev1.EndpointAddress, 0)
 	for _, address := range endpoints.Subsets[0].Addresses {
-		if !r.findEndpointInMachine(address.IP, machine) {
+		if address.NodeName != &machine.Name {
 			newAddresses = append(newAddresses, address)
 		}
 	}
@@ -270,15 +294,19 @@ func (r *HAProvider) addMachineIpToEndpoints(endpoints *corev1.Endpoints, machin
 	} else {
 		// check if machine has already been added to Endpoints
 		for _, address := range endpoints.Subsets[0].Addresses {
-			if r.findEndpointInMachine(address.IP, machine) {
-				r.log.Info("machine is in Endpoints Object, skip")
+			if address.NodeName == &machine.Name {
+				r.log.Info("machine is in Endpoints Object")
+				r.syncEndpointMachineIP(&address, machine)
 				return
 			}
 		}
 	}
 	// add a new machine to Endpoints
 	for _, machineAddress := range machine.Status.Addresses {
-		// check machineAddress.Address is ipv4
+		if machineAddress.Type != clusterv1.MachineExternalIP {
+			continue
+		}
+		// check machineAddress.Address is valid
 		if net.ParseIP(machineAddress.Address) != nil {
 			newAddress := corev1.EndpointAddress{
 				IP:       machineAddress.Address,
