@@ -46,6 +46,7 @@ loadBalancerAndIngressService:
             istio_enabled: ""
             blocked_namespace_list: ""
             ip_family: ""
+            use_default_secrets_only: ""
         network_settings:
             subnet_ip: 10.0.0.0
             subnet_prefix: "24"

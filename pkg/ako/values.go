@@ -149,6 +149,7 @@ type AKOSettings struct {
 	BlockedNamespaceList     []string          `yaml:"-"`
 	BlockedNamespaceListJson string            `yaml:"blocked_namespace_list"`
 	IpFamily                 string            `yaml:"ip_family"`
+	UseDefaultSecretsOnly    string            `yaml:"use_default_secrets_only"`
 }
 
 type CNI string
@@ -222,6 +223,9 @@ func NewAKOSettings(clusterName string, obj *akoov1alpha1.AKODeploymentConfig) (
 	}
 	if obj.Spec.ExtraConfigs.IstioEnabled != nil {
 		settings.IstioEnabled = strconv.FormatBool(*obj.Spec.ExtraConfigs.IstioEnabled)
+	}
+	if obj.Spec.ExtraConfigs.UseDefaultSecretsOnly != nil {
+		settings.UseDefaultSecretsOnly = strconv.FormatBool(*obj.Spec.ExtraConfigs.UseDefaultSecretsOnly)
 	}
 	if obj.Spec.ExtraConfigs.IpFamily != "" {
 		settings.IpFamily = obj.Spec.ExtraConfigs.IpFamily

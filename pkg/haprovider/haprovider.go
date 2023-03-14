@@ -128,7 +128,7 @@ func (r *HAProvider) createService(
 		r.log.Error(err, "can't unmarshal cluster variables ", "endpoint", endpoint)
 		return nil, err
 	} else if endpoint != "" {
-		// "endpoint" can be ipv4 or hostname, add ipv4 or hostname to service.Spec.LoadBalancerIP
+		// "endpoint" can be ipv4 or hostname, add ipv4 or hostname as annotation: ako.vmware.com/load-balancer-ip:<ip>
 		if net.ParseIP(endpoint) == nil {
 			endpoint, err = QueryFQDN(endpoint)
 			if err != nil {
@@ -136,7 +136,10 @@ func (r *HAProvider) createService(
 				return nil, err
 			}
 		}
+		// update the load balancer ip spec & annotation as intermediate plan to
+		// tolerant older and newer version TKr
 		service.Spec.LoadBalancerIP = endpoint
+		service.Annotations[akoov1alpha1.AkoPreferredIPAnnotation] = endpoint
 	}
 	r.log.Info("Creating " + serviceName + " Service")
 	err = r.Create(ctx, service)

@@ -38,6 +38,7 @@ const (
 	AkoConfigMapVipNetworkListKey    = "vipNetworkList"
 	AkoClusterBootstrapRefNamePrefix = "load-balancer-and-ingress-service.tanzu.vmware.com"
 	AkoPackageInstallName            = "load-balancer-and-ingress-service"
+	AkoPreferredIPAnnotation         = "ako.vmware.com/load-balancer-ip"
 
 	AviClusterLabel                                              = "networking.tkg.tanzu.vmware.com/avi"
 	AviClusterDeleteConfigLabel                                  = "networking.tkg.tanzu.vmware.com/avi-config-delete"
