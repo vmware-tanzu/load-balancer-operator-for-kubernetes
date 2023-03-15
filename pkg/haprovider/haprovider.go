@@ -230,13 +230,34 @@ func (r *HAProvider) updateClusterControlPlaneEndpoint(cluster *clusterv1.Cluste
 	return errors.New(service.Name + " service external ip is not ready")
 }
 
-func (r *HAProvider) findEndpointInMachine(ip string, machine *clusterv1.Machine) bool {
+func (r *HAProvider) syncEndpointMachineIP(address corev1.EndpointAddress, machine *clusterv1.Machine) corev1.EndpointAddress {
+	// check if ip is still in the machine's address
+	found := false
 	for _, machineAddress := range machine.Status.Addresses {
-		if net.ParseIP(machineAddress.Address) != nil && ip == machineAddress.Address {
-			return true
+		if machineAddress.Type != clusterv1.MachineExternalIP {
+			continue
+		}
+		if net.ParseIP(machineAddress.Address) != nil && address.IP == machineAddress.Address {
+			found = true
 		}
 	}
-	return false
+
+	if !found {
+		// machine address is not sync with the ip address in endpoints object
+		// update endpoints object
+		for _, machineAddress := range machine.Status.Addresses {
+			if machineAddress.Type != clusterv1.MachineExternalIP {
+				continue
+			}
+			if net.ParseIP(machineAddress.Address) != nil && net.ParseIP(machineAddress.Address).To4() != nil {
+				address.IP = machineAddress.Address
+				r.log.Info("sync endpoints object, update machine: " + machine.Name + "'s ip to:" + address.IP)
+			} else {
+				r.log.Info(machineAddress.Address + " is not a valid IPv4 address")
+			}
+		}
+	}
+	return address
 }
 
 func (r *HAProvider) removeMachineIpFromEndpoints(endpoints *corev1.Endpoints, machine *clusterv1.Machine) {
@@ -246,9 +267,11 @@ func (r *HAProvider) removeMachineIpFromEndpoints(endpoints *corev1.Endpoints, m
 	}
 	newAddresses := make([]corev1.EndpointAddress, 0)
 	for _, address := range endpoints.Subsets[0].Addresses {
-		if !r.findEndpointInMachine(address.IP, machine) {
-			newAddresses = append(newAddresses, address)
+		// skip the machine should be deleted
+		if address.NodeName != nil && *address.NodeName == machine.Name {
+			continue
 		}
+		newAddresses = append(newAddresses, address)
 	}
 	endpoints.Subsets[0].Addresses = newAddresses
 	// remove the Subset if "Addresses" is emtpy
@@ -269,17 +292,22 @@ func (r *HAProvider) addMachineIpToEndpoints(endpoints *corev1.Endpoints, machin
 		}}
 	} else {
 		// check if machine has already been added to Endpoints
-		for _, address := range endpoints.Subsets[0].Addresses {
-			if r.findEndpointInMachine(address.IP, machine) {
-				r.log.Info("machine is in Endpoints Object, skip")
+		for i, address := range endpoints.Subsets[0].Addresses {
+			if address.NodeName != nil && *address.NodeName == machine.Name {
+				r.log.Info("machine is in Endpoints Object")
+				endpoints.Subsets[0].Addresses[i] = r.syncEndpointMachineIP(address, machine)
 				return
 			}
 		}
 	}
 	// add a new machine to Endpoints
 	for _, machineAddress := range machine.Status.Addresses {
-		// check machineAddress.Address is ipv4
-		if net.ParseIP(machineAddress.Address) != nil {
+		if machineAddress.Type != clusterv1.MachineExternalIP {
+			continue
+		}
+		// check machineAddress.Address is valid
+		// only support IPv4 for now
+		if net.ParseIP(machineAddress.Address) != nil && net.ParseIP(machineAddress.Address).To4() != nil {
 			newAddress := corev1.EndpointAddress{
 				IP:       machineAddress.Address,
 				NodeName: &machine.Name,
@@ -287,7 +315,7 @@ func (r *HAProvider) addMachineIpToEndpoints(endpoints *corev1.Endpoints, machin
 			endpoints.Subsets[0].Addresses = append(endpoints.Subsets[0].Addresses, newAddress)
 			break
 		} else {
-			r.log.Info(machineAddress.Address + " is not a valid IP address")
+			r.log.Info(machineAddress.Address + " is not a valid IPv4 address")
 		}
 	}
 }
@@ -316,7 +344,7 @@ func (r *HAProvider) CreateOrUpdateHAEndpoints(ctx context.Context, machine *clu
 	}
 
 	if !machine.DeletionTimestamp.IsZero() {
-		r.log.Info("machine is being deleted, remove the endpoint of the machine from " + r.getHAServiceName(cluster) + " Endpoints")
+		r.log.Info("machine" + machine.Name + " is being deleted, remove the endpoint of the machine from " + r.getHAServiceName(cluster) + " Endpoints")
 		r.removeMachineIpFromEndpoints(endpoints, machine)
 	} else {
 		// Add machine ip to the Endpoints object no matter it's ready or not
