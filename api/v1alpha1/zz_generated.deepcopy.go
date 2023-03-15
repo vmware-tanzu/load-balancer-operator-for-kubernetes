@@ -326,6 +326,11 @@ func (in *ExtraConfigs) DeepCopyInto(out *ExtraConfigs) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.UseDefaultSecretsOnly != nil {
+		in, out := &in.UseDefaultSecretsOnly, &out.UseDefaultSecretsOnly
+		*out = new(bool)
+		**out = **in
+	}
 	in.NetworksConfig.DeepCopyInto(&out.NetworksConfig)
 	in.IngressConfigs.DeepCopyInto(&out.IngressConfigs)
 	out.L4Configs = in.L4Configs

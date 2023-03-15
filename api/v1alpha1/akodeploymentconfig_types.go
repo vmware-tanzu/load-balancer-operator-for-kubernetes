@@ -178,6 +178,12 @@ type ExtraConfigs struct {
 	// +optional
 	IpFamily string `json:"ipFamily,omitempty"`
 
+	// If this flag is set to true, AKO will only handle default secrets from the namespace where AKO is installed
+	// This flag is applicable only to Openshift clusters
+	// default value is false
+	// +optional
+	UseDefaultSecretsOnly *bool `json:"useDefaultSecretsOnly,omitempty"`
+
 	// NetworksConfig specifies the network configurations for virtual services.
 	// +optional
 	NetworksConfig NetworksConfig `json:"networksConfig,omitempty"`

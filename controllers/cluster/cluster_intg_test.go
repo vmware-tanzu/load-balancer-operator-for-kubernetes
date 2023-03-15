@@ -142,7 +142,7 @@ func intgTestEnsureClusterHAProvider() {
 
 					err := ctx.Client.Get(ctx, client.ObjectKey{Name: serviceName, Namespace: ctx.Namespace}, service)
 					Expect(err).ShouldNot(HaveOccurred())
-					Expect(service.Spec.LoadBalancerIP).Should(Equal("10.1.2.1"))
+					Expect(service.Annotations[akoov1alpha1.AkoPreferredIPAnnotation]).Should(Equal("10.1.2.1"))
 				})
 			})
 		})
