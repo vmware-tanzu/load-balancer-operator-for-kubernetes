@@ -163,6 +163,10 @@ func (r *HAProvider) annotateService(ctx context.Context, cluster *clusterv1.Clu
 	}
 	//no adc is selected for cluster, no annotation is needed.
 	if adcForCluster == nil {
+		// for the management cluster, it needs to requeue until the install-ako-for-management-cluster AKODeploymentConfig created
+		if _, ok := cluster.Labels[akoov1alpha1.TKGManagememtClusterRoleLabel]; ok {
+			return serviceAnnotation, errors.New("management cluster's AKODeploymentConfig didn't find, requeue to wait for AKODeploymentConfig created")
+		}
 		return serviceAnnotation, nil
 	}
 
