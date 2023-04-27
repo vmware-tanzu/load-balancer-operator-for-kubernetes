@@ -6,6 +6,7 @@ package haprovider
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"sync"
 
@@ -353,9 +354,12 @@ func (r *HAProvider) CreateOrUpdateHAEndpoints(ctx context.Context, machine *clu
 	if !machine.DeletionTimestamp.IsZero() {
 		r.log.Info("machine" + machine.Name + " is being deleted, remove the endpoint of the machine from " + r.getHAServiceName(cluster) + " Endpoints")
 		r.removeMachineIpFromEndpoints(endpoints, machine)
+	} else if machine.Status.GetTypedPhase() != clusterv1.MachinePhaseRunning &&
+		machine.Status.GetTypedPhase() != clusterv1.MachinePhaseProvisioned {
+		err = fmt.Errorf("control plane machine %s is in %s phase, not ready yet", machine.Name, machine.Status.Phase)
+		r.log.Error(err, "Failed to add machine to endpoint:")
+		return err
 	} else {
-		// Add machine ip to the Endpoints object no matter it's ready or not
-		// Because avi controller checks the status of machine. If it's not ready, avi won't use it as an endpoint
 		r.addMachineIpToEndpoints(endpoints, machine)
 	}
 	return r.Update(ctx, endpoints)

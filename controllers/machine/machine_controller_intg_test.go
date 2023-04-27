@@ -53,6 +53,9 @@ func intgTestMachineController() {
 		Spec: clusterv1.MachineSpec{
 			ClusterName: "test",
 		},
+		Status: clusterv1.MachineStatus{
+			Phase: string(clusterv1.MachinePhaseRunning),
+		},
 	}
 
 	BeforeEach(func() {

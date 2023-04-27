@@ -53,6 +53,9 @@ var _ = Describe("Control Plane HA provider", func() {
 					Namespace: "default",
 				},
 				Spec: clusterv1.MachineSpec{},
+				Status: clusterv1.MachineStatus{
+					Phase: "Running",
+				},
 			}
 			cluster = &clusterv1.Cluster{
 				ObjectMeta: v1.ObjectMeta{
@@ -111,6 +114,23 @@ var _ = Describe("Control Plane HA provider", func() {
 					mc2 := mc.DeepCopy()
 
 					Expect(haProvider.CreateOrUpdateHAEndpoints(ctx, mc2)).ShouldNot(HaveOccurred())
+					Expect(haProvider.Client.Get(ctx, key, ep)).ShouldNot(HaveOccurred())
+					Expect(len(ep.Subsets[0].Addresses)).Should(Equal(1))
+					Expect(ep.Subsets[0].Addresses[0].IP).Should(Equal("1.1.1.1"))
+					Expect(ep.Subsets[0].Addresses[0].NodeName).Should(Equal(pointer.StringPtr("test-mc")))
+				})
+
+				It("should not add a not ready machine", func() {
+					mc2 := mc.DeepCopy()
+					mc2.Name = "test-mc-2"
+					mc2.Status.Phase = string(clusterv1.MachinePhaseProvisioning)
+					mc2.Status.Addresses = clusterv1.MachineAddresses{
+						clusterv1.MachineAddress{
+							Type:    clusterv1.MachineExternalIP,
+							Address: "1.1.1.2",
+						},
+					}
+					Expect(haProvider.CreateOrUpdateHAEndpoints(ctx, mc2)).Should(HaveOccurred())
 					Expect(haProvider.Client.Get(ctx, key, ep)).ShouldNot(HaveOccurred())
 					Expect(len(ep.Subsets[0].Addresses)).Should(Equal(1))
 					Expect(ep.Subsets[0].Addresses[0].IP).Should(Equal("1.1.1.1"))
