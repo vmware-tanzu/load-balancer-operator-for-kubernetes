@@ -189,8 +189,8 @@ func intgTestAkoDeploymentConfigController() {
 		Eventually(func() bool {
 			found := false
 			for _, subnet := range networkUpdate.ConfiguredSubnets {
-				for _, sr := range subnet.StaticRanges {
-					if *(sr.End.Addr) == newIPAddrEnd {
+				for _, sr := range subnet.StaticIPRanges {
+					if *(sr.Range.End.Addr) == newIPAddrEnd {
 						found = true
 						break
 					}
@@ -423,14 +423,18 @@ func intgTestAkoDeploymentConfigController() {
 											},
 											Mask: pointer.Int32Ptr(24),
 										},
-										StaticRanges: []*models.IPAddrRange{{
-											Begin: &models.IPAddr{
-												Addr: pointer.StringPtr("10.0.0.1"),
+										StaticIPRanges: []*models.StaticIPRange{
+											{
+												Range: &models.IPAddrRange{
+													Begin: &models.IPAddr{
+														Addr: pointer.StringPtr("10.0.0.1"),
+													},
+													End: &models.IPAddr{
+														Addr: pointer.StringPtr("10.0.0.10"),
+													},
+												},
 											},
-											End: &models.IPAddr{
-												Addr: pointer.StringPtr("10.0.0.10"),
-											},
-										}},
+										},
 									}},
 								}, nil
 							})
@@ -452,14 +456,18 @@ func intgTestAkoDeploymentConfigController() {
 											},
 											Mask: pointer.Int32Ptr(24),
 										},
-										StaticRanges: []*models.IPAddrRange{{
-											Begin: &models.IPAddr{
-												Addr: pointer.StringPtr("10.0.0.1"),
+										StaticIPRanges: []*models.StaticIPRange{
+											{
+												Range: &models.IPAddrRange{
+													Begin: &models.IPAddr{
+														Addr: pointer.StringPtr("10.0.0.1"),
+													},
+													End: &models.IPAddr{
+														Addr: pointer.StringPtr("10.0.0.5"),
+													},
+												},
 											},
-											End: &models.IPAddr{
-												Addr: pointer.StringPtr("10.0.0.5"),
-											},
-										}},
+										},
 									}},
 								}, nil
 							})
@@ -481,14 +489,18 @@ func intgTestAkoDeploymentConfigController() {
 											},
 											Mask: pointer.Int32Ptr(24),
 										},
-										StaticRanges: []*models.IPAddrRange{{
-											Begin: &models.IPAddr{
-												Addr: pointer.StringPtr("10.0.0.10"),
+										StaticIPRanges: []*models.StaticIPRange{
+											{
+												Range: &models.IPAddrRange{
+													Begin: &models.IPAddr{
+														Addr: pointer.StringPtr("10.0.0.10"),
+													},
+													End: &models.IPAddr{
+														Addr: pointer.StringPtr("10.0.0.20"),
+													},
+												},
 											},
-											End: &models.IPAddr{
-												Addr: pointer.StringPtr("10.0.0.20"),
-											},
-										}},
+										},
 									}},
 								}, nil
 							})

@@ -11,7 +11,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/satori/go.uuid v1.2.0
 	github.com/vmware-tanzu/tanzu-framework/apis/run v0.0.0-20221104044415-a462bbe793b9
-	github.com/vmware/alb-sdk v0.0.0-20210721142023-8e96475b833b
+	github.com/vmware/alb-sdk v0.0.0-20221125101019-1edb021a121b
 	github.com/vmware/load-balancer-and-ingress-services-for-kubernetes v0.0.0-20211102041403-f2ed902e4706
 	go.uber.org/zap v1.19.1
 	gopkg.in/yaml.v3 v3.0.1
