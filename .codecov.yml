@@ -20,3 +20,4 @@ ignore:
   - "config"
   - "docs"
   - "e2e"
+  - "pkg/test/*"

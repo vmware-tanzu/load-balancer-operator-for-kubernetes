@@ -109,16 +109,15 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ 
 		return res, err
 	}
 
+	// Removing finalizer and avi label if current cluster can't be selected by any akoDeploymentConfig
 	if akoDeploymentConfig == nil {
-		// Removing finalizer if current cluster can't be selected by any akoDeploymentConfig
-		log.Info("Not find cluster matched akodeploymentconfig, removing finalizer", "finalizer", akoov1alpha1.ClusterFinalizer)
+		log.Info("Not find cluster matched akodeploymentconfig, skip Cluster reconciling, removing finalizer and avi labels", "finalizer", akoov1alpha1.ClusterFinalizer)
+		ako_operator.RemoveClusterLabel(log, cluster)
 		ctrlutil.RemoveFinalizer(cluster, akoov1alpha1.ClusterFinalizer)
-		// Removing avi label after deleting all the resources
-		delete(cluster.Labels, akoov1alpha1.AviClusterLabel)
-		log.Info("Cluster doesn't have AVI enabled, skip Cluster reconciling")
-		return res, nil
+	} else {
+		log.Info("cluster has AVI enabled", "akodeploymentconfig", akoDeploymentConfig)
+		ako_operator.ApplyClusterLabel(log, cluster, akoDeploymentConfig)
 	}
 
-	log.Info("Cluster has AVI enabled")
 	return res, nil
 }

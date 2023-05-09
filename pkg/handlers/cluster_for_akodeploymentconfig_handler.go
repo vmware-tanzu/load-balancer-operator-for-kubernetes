@@ -10,7 +10,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/util/retry"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -43,23 +42,13 @@ func AkoDeploymentConfigForCluster(c client.Client, log logr.Logger) handler.Map
 			logger.Error(err, "failed to get cluster matched akodeploymentconfig object")
 			return []reconcile.Request{}
 		}
+
 		requests := []reconcile.Request{}
 		if adcForCluster == nil {
-			logger.V(1).Info("cluster is not selected by any ako deploymentconfig")
-			ako_operator.RemoveClusterLabel(log, cluster)
+			logger.Info("cluster is not selected by any akodeploymentconfig, skip")
 		} else {
-			logger.V(1).Info("cluster is selected by adc", "akodeploymentconfig", adcForCluster)
-			ako_operator.ApplyClusterLabel(log, cluster, adcForCluster)
+			logger.Info("cluster is selected by akodeploymentconfig", "akodeploymentconfig", adcForCluster)
 			requests = append(requests, ctrl.Request{NamespacedName: types.NamespacedName{Name: adcForCluster.Name}})
-		}
-		// TODO: change to patch instead of retry
-		// update cluster with avi label
-		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			return c.Update(ctx, cluster)
-		})
-		if err != nil {
-			logger.Error(err, "update cluster's adc label error")
-			return []reconcile.Request{}
 		}
 		return requests
 	}
