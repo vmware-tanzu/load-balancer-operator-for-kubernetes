@@ -89,6 +89,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	printRunningEnv()
+
 	//setup webhook here
 	if !ako_operator.IsLegacyBootStrapCluster() {
 		err = (&akoov1alpha1.AKODeploymentConfig{}).SetupWebhookWithManager(mgr)
@@ -115,5 +117,19 @@ func runProfiler(addr string) {
 	err := http.ListenAndServe(addr, mux)
 	if err != nil {
 		setupLog.Error(err, "unable to start listening")
+	}
+}
+
+func printRunningEnv() {
+	if ako_operator.IsBootStrapCluster() {
+		setupLog.Info("AKO Operator Running in Bootstrap Kind Cluster")
+	} else {
+		setupLog.Info("AKO Operator Running in Management Cluster")
+	}
+
+	if ako_operator.IsClusterClassEnabled() {
+		setupLog.Info("AKO Operator Running in Cluster Class Based Cluster")
+	} else {
+		setupLog.Info("AKO Operator Running in Legacy Cluster")
 	}
 }
