@@ -5,9 +5,10 @@ package haprovider
 
 import (
 	"context"
-	"errors"
 	"net"
 	"sync"
+
+	"github.com/pkg/errors"
 
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -68,6 +69,11 @@ func (r *HAProvider) CreateOrUpdateHAService(ctx context.Context, cluster *clust
 	if err := r.updateClusterControlPlaneEndpoint(cluster, service); err != nil {
 		return err
 	}
+
+	if err := r.updateControlPlaneEndpointToService(ctx, cluster, service); err != nil {
+		return err
+	}
+
 	if _, err := r.ensureEndpoints(ctx, serviceName, service.Namespace); err != nil {
 		return err
 	}
@@ -237,6 +243,18 @@ func (r *HAProvider) updateClusterControlPlaneEndpoint(cluster *clusterv1.Cluste
 	return errors.New(service.Name + " service external ip is not ready")
 }
 
+func (r *HAProvider) updateControlPlaneEndpointToService(ctx context.Context, cluster *clusterv1.Cluster, service *corev1.Service) error {
+	service.Spec.LoadBalancerIP = cluster.Spec.ControlPlaneEndpoint.Host
+	if service.Annotations == nil {
+		service.Annotations = make(map[string]string)
+	}
+	service.Annotations[akoov1alpha1.AkoPreferredIPAnnotation] = cluster.Spec.ControlPlaneEndpoint.Host
+	if err := r.Update(ctx, service); err != nil {
+		return errors.Wrapf(err, "Failed to update cluster endpoint to cluster control plane load balancer type of service <%s>\n", service.Name)
+	}
+	return nil
+}
+
 func (r *HAProvider) syncEndpointMachineIP(address corev1.EndpointAddress, machine *clusterv1.Machine) corev1.EndpointAddress {
 	// check if ip is still in the machine's address
 	found := false
@@ -358,7 +376,10 @@ func (r *HAProvider) CreateOrUpdateHAEndpoints(ctx context.Context, machine *clu
 		// Because avi controller checks the status of machine. If it's not ready, avi won't use it as an endpoint
 		r.addMachineIpToEndpoints(endpoints, machine)
 	}
-	return r.Update(ctx, endpoints)
+	if err := r.Update(ctx, endpoints); err != nil {
+		return errors.Wrapf(err, "Failed to update endpoints <%s>, control plane machine IP doesn't get allocated yet\n", endpoints.Name)
+	}
+	return nil
 }
 
 func (r *HAProvider) ensureEndpoints(ctx context.Context, serviceName, serviceNamespace string) (*corev1.Endpoints, error) {
