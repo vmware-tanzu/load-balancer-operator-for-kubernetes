@@ -392,7 +392,7 @@ func EnsureAviNetwork(network *models.Network, addrType string, cidr *net.IPNet,
 				Mask:   &mask,
 			},
 			// Add IP pools as static ranges in the subnet
-			StaticRanges: CreateStaticRangeFromIPPools(ipPools),
+			StaticIPRanges: CreateStaticRangeFromIPPools(ipPools),
 		}
 		// Add subnet into the network
 		network.ConfiguredSubnets = append(network.ConfiguredSubnets, subnet)
@@ -411,31 +411,31 @@ func EnsureStaticRanges(subnet *models.Subnet, ipPools []akoov1alpha1.IPPool, ad
 	if ipPools == nil {
 		return false
 	}
-	newStaticRanges := CreateStaticRangeFromIPPools(ipPools)
-	res := !IsStaticRangeEqual(newStaticRanges, subnet.StaticRanges)
+	newStaticIPRanges := CreateStaticRangeFromIPPools(ipPools)
+	res := !IsStaticIPRangeEqual(newStaticIPRanges, subnet.StaticIPRanges)
 	if res {
-		subnet.StaticRanges = newStaticRanges
+		subnet.StaticIPRanges = newStaticIPRanges
 	}
 	return res
 }
 
-func IsStaticRangeEqual(r1, r2 []*models.IPAddrRange) bool {
+func IsStaticIPRangeEqual(r1, r2 []*models.StaticIPRange) bool {
 	SortStaticRanges(r1)
 	SortStaticRanges(r2)
 	if len(r1) != len(r2) {
 		return false
 	}
 	for i := 0; i < len(r1); i++ {
-		if (*(r1[i].Begin.Addr) != *(r2[i].Begin.Addr)) || (*(r1[i].End.Addr) != *(r2[i].End.Addr)) {
+		if (*(r1[i].Range.Begin.Addr) != *(r2[i].Range.Begin.Addr)) || (*(r1[i].Range.End.Addr) != *(r2[i].Range.End.Addr)) {
 			return false
 		}
 	}
 	return true
 }
 
-func SortStaticRanges(staticRanges []*models.IPAddrRange) {
+func SortStaticRanges(staticRanges []*models.StaticIPRange) {
 	sort.Slice(staticRanges, func(i, j int) bool {
-		return isIPLessThan(*staticRanges[i].Begin.Addr, *staticRanges[j].Begin.Addr)
+		return isIPLessThan(*staticRanges[i].Range.Begin.Addr, *staticRanges[j].Range.Begin.Addr)
 	})
 }
 
@@ -454,12 +454,14 @@ func AviNetworkContainsSubnet(network *models.Network, startAddr string, mask in
 	return -1, false
 }
 
-func CreateStaticRangeFromIPPools(ipPools []akoov1alpha1.IPPool) []*models.IPAddrRange {
-	newStaticRanges := []*models.IPAddrRange{}
+func CreateStaticRangeFromIPPools(ipPools []akoov1alpha1.IPPool) []*models.StaticIPRange {
+	newStaticRanges := []*models.StaticIPRange{}
 	for _, ipPool := range ipPools {
-		newStaticRanges = append(newStaticRanges, &models.IPAddrRange{
-			Begin: GetAddr(ipPool.Start, ipPool.Type),
-			End:   GetAddr(ipPool.End, ipPool.Type),
+		newStaticRanges = append(newStaticRanges, &models.StaticIPRange{
+			Range: &models.IPAddrRange{
+				Begin: GetAddr(ipPool.Start, ipPool.Type),
+				End:   GetAddr(ipPool.End, ipPool.Type),
+			},
 		})
 	}
 	return newStaticRanges

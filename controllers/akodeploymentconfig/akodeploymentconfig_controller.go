@@ -5,6 +5,7 @@ package akodeploymentconfig
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/cluster"
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/controllers/akodeploymentconfig/phases"
@@ -18,6 +19,7 @@ import (
 
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -41,7 +43,7 @@ func (r *AKODeploymentConfigReconciler) SetupWithManager(mgr ctrl.Manager) error
 		).
 		Watches(
 			&source.Kind{Type: &corev1.Secret{}},
-			handler.EnqueueRequestsFromMapFunc(handlers.AkoDeploymentConfigForSecret(r.Client, r.Log)),
+			handler.EnqueueRequestsFromMapFunc(r.secretToAKODeploymentConfig(r.Client, r.Log)),
 		).
 		Complete(r)
 }
@@ -156,4 +158,45 @@ func (r *AKODeploymentConfigReconciler) reconcileDelete(
 	}()
 	return phases.ReconcilePhases(ctx, log, obj,
 		[]phases.ReconcilePhase{r.reconcileClustersDelete, r.reconcileAVIDelete})
+}
+
+func (r *AKODeploymentConfigReconciler) secretToAKODeploymentConfig(c client.Client, log logr.Logger) handler.MapFunc {
+	return func(o client.Object) []reconcile.Request {
+		ctx := context.Background()
+		secret, ok := o.(*corev1.Secret)
+		if !ok {
+			log.Error(errors.New("invalid type"),
+				"Expected to receive Cluster resource",
+				"actualType", fmt.Sprintf("%T", o))
+			return nil
+		}
+		logger := log.WithValues("Secret", secret.Namespace+"/"+secret.Name)
+
+		if secret.Name != akoov1alpha1.AviCredentialName && secret.Name != akoov1alpha1.AviCAName {
+			return []reconcile.Request{}
+		}
+
+		var akoDeploymentConfigs akoov1alpha1.AKODeploymentConfigList
+		if err := c.List(ctx, &akoDeploymentConfigs, []client.ListOption{}...); err != nil {
+			logger.Error(err, "Couldn't read ADCs")
+			return []reconcile.Request{}
+		}
+
+		var requests []ctrl.Request
+		for _, akoDeploymentConfig := range akoDeploymentConfigs.Items {
+			if akoDeploymentConfig.Spec.CertificateAuthorityRef.Name == secret.Name &&
+				akoDeploymentConfig.Spec.CertificateAuthorityRef.Namespace == secret.Namespace {
+				requests = append(requests, ctrl.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: akoDeploymentConfig.Namespace,
+						Name:      akoDeploymentConfig.Name,
+					},
+				})
+			}
+		}
+
+		logger.Info("Generating requests", "requests", requests)
+		// Return reconcile requests for the AKODeploymentConfig resources.
+		return requests
+	}
 }

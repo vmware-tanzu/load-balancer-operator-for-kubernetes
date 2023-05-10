@@ -5,20 +5,25 @@ package cluster
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 	ako_operator "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
-	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/handlers"
+	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/go-logr/logr"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/haprovider"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -33,7 +38,7 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&clusterv1.Cluster{}).
 		Watches(
 			&source.Kind{Type: &corev1.Service{}},
-			handler.EnqueueRequestsFromMapFunc(handlers.ClusterForService(r.Client, r.Log)),
+			handler.EnqueueRequestsFromMapFunc(r.serviceToCluster(r.Client, r.Log)),
 		).
 		Complete(r)
 }
@@ -109,16 +114,77 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ 
 		return res, err
 	}
 
+	// Removing finalizer and avi label if current cluster can't be selected by any akoDeploymentConfig
 	if akoDeploymentConfig == nil {
-		// Removing finalizer if current cluster can't be selected by any akoDeploymentConfig
-		log.Info("Not find cluster matched akodeploymentconfig, removing finalizer", "finalizer", akoov1alpha1.ClusterFinalizer)
+		log.Info("Not find cluster matched akodeploymentconfig, skip Cluster reconciling, removing finalizer and avi labels", "finalizer", akoov1alpha1.ClusterFinalizer)
+		ako_operator.RemoveClusterLabel(log, cluster)
 		ctrlutil.RemoveFinalizer(cluster, akoov1alpha1.ClusterFinalizer)
-		// Removing avi label after deleting all the resources
-		delete(cluster.Labels, akoov1alpha1.AviClusterLabel)
-		log.Info("Cluster doesn't have AVI enabled, skip Cluster reconciling")
-		return res, nil
+	} else {
+		log.Info("cluster has AVI enabled", "akodeploymentconfig", akoDeploymentConfig)
+		ako_operator.ApplyClusterLabel(log, cluster, akoDeploymentConfig)
 	}
 
-	log.Info("Cluster has AVI enabled")
 	return res, nil
+}
+
+// serviceToCluster returns a handler map function for mapping Service
+// resources to the cluster
+func (r *ClusterReconciler) serviceToCluster(c client.Client, log logr.Logger) handler.MapFunc {
+	return func(o client.Object) []reconcile.Request {
+		ctx := context.Background()
+		service, ok := o.(*corev1.Service)
+		if !ok {
+			log.Error(errors.New("invalid type"),
+				"Expected to receive service resource",
+				"actualType", fmt.Sprintf("%T", o))
+			return nil
+		}
+		logger := log.WithValues("service", service.Namespace+"/"+service.Name)
+		if r.skipService(service) {
+			return []reconcile.Request{}
+		}
+		// in bootstrap kind cluster, ensure ako deletion before delete service
+		if ako_operator.IsBootStrapCluster() && !service.DeletionTimestamp.IsZero() {
+			if err := r.deleteAKOStatefulSet(ctx, c, v1alpha1.AkoStatefulSetName, v1alpha1.TKGSystemNamespace); err != nil {
+				log.Error(err, "Fail to delete AKO statefulset before service in bootstrap cluster")
+			}
+			return []reconcile.Request{}
+		}
+		var cluster clusterv1.Cluster
+		if err := c.Get(ctx, client.ObjectKey{
+			Name:      service.Annotations[v1alpha1.TKGClusterNameLabel],
+			Namespace: service.Annotations[v1alpha1.TKGClusterNameSpaceLabel],
+		}, &cluster); err != nil {
+			return []reconcile.Request{}
+		}
+		// Create a reconcile request for cluster resource.
+		requests := []ctrl.Request{{
+			NamespacedName: types.NamespacedName{
+				Namespace: cluster.Namespace,
+				Name:      cluster.Name,
+			}}}
+		logger.V(3).Info("Generating requests", "requests", requests)
+		// Return reconcile requests for the cluster resources.
+		return requests
+	}
+}
+
+func (r *ClusterReconciler) skipService(service *corev1.Service) bool {
+	return service.Spec.Type != corev1.ServiceTypeLoadBalancer || !strings.Contains(service.Name, v1alpha1.HAServiceName)
+}
+
+// deleteAKOStatefulSet deletes the stateful set with specified name and namespace
+func (r *ClusterReconciler) deleteAKOStatefulSet(ctx context.Context, c client.Client, name string, namespace string) error {
+	akoStatefulSet := &v1.StatefulSet{}
+	if err := c.Get(ctx, client.ObjectKey{
+		Name:      name,
+		Namespace: namespace},
+		akoStatefulSet); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		} else {
+			return err
+		}
+	}
+	return c.Delete(ctx, akoStatefulSet)
 }
