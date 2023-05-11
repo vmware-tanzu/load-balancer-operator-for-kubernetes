@@ -20,6 +20,8 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
 )
 
 var _ = Describe("Control Plane HA provider", func() {
@@ -33,10 +35,73 @@ var _ = Describe("Control Plane HA provider", func() {
 		scheme := runtime.NewScheme()
 		Expect(corev1.AddToScheme(scheme)).NotTo(HaveOccurred())
 		Expect(clusterv1.AddToScheme(scheme)).NotTo(HaveOccurred())
+		Expect(akoov1alpha1.AddToScheme(scheme)).NotTo(HaveOccurred())
 		log.SetLogger(zap.New())
 		fc := fakeClient.NewClientBuilder().WithScheme(scheme).Build()
 		logger := log.Log
 		haProvider = *NewProvider(fc, logger)
+	})
+
+	Context("Test_CreateOrUpdateHAService", func() {
+		var (
+			cluster *clusterv1.Cluster
+			svc     *corev1.Service
+			key     client.ObjectKey
+		)
+		BeforeEach(func() {
+			cluster = &clusterv1.Cluster{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      "test-cluster",
+					Namespace: "default",
+				},
+				Spec: clusterv1.ClusterSpec{},
+			}
+			svc = &corev1.Service{}
+			key = client.ObjectKey{Name: haProvider.getHAServiceName(cluster), Namespace: cluster.Namespace}
+		})
+		JustBeforeEach(func() {
+			err = haProvider.CreateOrUpdateHAService(ctx, cluster)
+		})
+
+		AfterEach(func() {
+			Expect(haProvider.Client.Delete(ctx, svc)).ShouldNot(HaveOccurred())
+		})
+
+		It("load balancer type of service should be created and no ip provisioned", func() {
+			Expect(haProvider.Client.Get(ctx, key, svc)).ShouldNot(HaveOccurred())
+			Expect(err.Error()).Should(Equal("default-test-cluster-control-plane service external ip is not ready"))
+		})
+
+		When("service has external IP", func() {
+			BeforeEach(func() {
+				cluster.Spec.ControlPlaneEndpoint.Host = "1.1.1.1"
+				svc = &corev1.Service{
+					ObjectMeta: v1.ObjectMeta{
+						Name:      "default-test-cluster-control-plane",
+						Namespace: "default",
+					},
+					Spec: corev1.ServiceSpec{},
+					Status: corev1.ServiceStatus{
+						LoadBalancer: corev1.LoadBalancerStatus{
+							Ingress: []corev1.LoadBalancerIngress{
+								{
+									IP: "1.1.1.1",
+								},
+							},
+						},
+					},
+				}
+				key = client.ObjectKey{Name: haProvider.getHAServiceName(cluster), Namespace: cluster.Namespace}
+				Expect(haProvider.Client.Create(ctx, svc)).ShouldNot(HaveOccurred())
+			})
+
+			It("test should pass without error", func() {
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(haProvider.Client.Get(ctx, key, svc)).ShouldNot(HaveOccurred())
+				Expect(svc.Spec.LoadBalancerIP).Should(Equal("1.1.1.1"))
+				Expect(svc.Annotations[akoov1alpha1.AkoPreferredIPAnnotation]).Should(Equal("1.1.1.1"))
+			})
+		})
 	})
 
 	Context("Test_CreateOrUpdateHAEndpoints", func() {
