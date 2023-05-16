@@ -60,7 +60,9 @@ jobs:
       - name: Upload coverage reports to Codecov with GitHub Action
         uses: codecov/codecov-action@v3
         with:
-          files: ./coverage.txt,./cover.out
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: cover.out
+          verbose: true
 
 
   intg_test:
