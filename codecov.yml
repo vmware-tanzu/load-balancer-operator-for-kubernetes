@@ -6,7 +6,7 @@ coverage:
     project:
       default:
         target: auto # automatically calculate coverage target - should increase
-        threshold: 1% # allow for 1% reduction without failing
+        threshold: 0.5% # allow for 0.5% reduction without failing
         if_ci_failed: error
         only_pulls: false
     patch:
@@ -26,3 +26,4 @@ ignore:
   - "docs"
   - "e2e"
   - "hack"
+  - "api/v1alpha1/zz_generated.deepcopy.go"
