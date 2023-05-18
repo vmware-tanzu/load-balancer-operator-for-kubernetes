@@ -48,10 +48,6 @@ const (
 	ApiServerPort = "apiServerPort"
 )
 
-func IsLegacyBootStrapCluster() bool {
-	return IsBootStrapCluster() && !IsClusterClassEnabled()
-}
-
 func IsBootStrapCluster() bool {
 	return os.Getenv(DeployInBootstrapCluster) == "True"
 }

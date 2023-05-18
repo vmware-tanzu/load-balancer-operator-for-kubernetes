@@ -92,12 +92,9 @@ func main() {
 	printRunningEnv()
 
 	//setup webhook here
-	if !ako_operator.IsLegacyBootStrapCluster() {
-		err = (&akoov1alpha1.AKODeploymentConfig{}).SetupWebhookWithManager(mgr)
-		if err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "AKODeploymentConfig")
-			os.Exit(1)
-		}
+	if err = (&akoov1alpha1.AKODeploymentConfig{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "AKODeploymentConfig")
+		os.Exit(1)
 	}
 
 	setupLog.Info("starting manager")
