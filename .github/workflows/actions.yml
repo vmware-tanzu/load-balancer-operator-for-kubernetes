@@ -9,6 +9,7 @@ on:
       - "hack/*.sh"
       - Makefile
       - ".github/workflows/*.yml"
+      - "codecov.yml"
 
 jobs:
   lint:
@@ -58,7 +59,7 @@ jobs:
         run: make cover
 
       - name: Upload coverage reports to Codecov with GitHub Action
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: cover.out
