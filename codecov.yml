@@ -2,7 +2,6 @@
 coverage:
   precision: 2
   round: down
-
   status:
     project:
       default:
@@ -16,8 +15,14 @@ coverage:
         if_ci_failed: error
         only_pulls: false
     changes: false
+
+comment:
+  layout: "reach, diff, files"
+  behavior: default
+  require_changes: true  # if true: only post the comment if coverage changes
+
 ignore:
   - "config"
   - "docs"
   - "e2e"
-  - "pkg/test/*"
+  - "hack"
