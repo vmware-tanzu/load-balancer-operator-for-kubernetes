@@ -9,6 +9,7 @@ on:
       - "hack/*.sh"
       - Makefile
       - ".github/workflows/*.yml"
+      - "codecov.yml"
 
 jobs:
   lint:
