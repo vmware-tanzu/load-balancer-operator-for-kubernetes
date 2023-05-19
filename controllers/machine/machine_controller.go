@@ -105,9 +105,6 @@ func (r *MachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ 
 			log.Error(err, "Fail to reconcile HA endpoint")
 			return res, err
 		}
-		if ako_operator.IsLegacyBootStrapCluster() {
-			return res, nil
-		}
 	}
 
 	// skip reconcile if cluster is using kube-vip to provide load balancer service
