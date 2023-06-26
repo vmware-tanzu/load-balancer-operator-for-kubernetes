@@ -134,7 +134,7 @@ func (r *HAProvider) createService(
 		r.log.Error(err, "can't unmarshal cluster variables ", "endpoint", endpoint)
 		return nil, err
 	} else if endpoint != "" {
-		// "endpoint" can be ipv4 or hostname, add ipv4 or hostname as annotation: ako.vmware.com/load-balancer-ip:<ip>
+		// "endpoint" can be ipv4/ipv6 or hostname, add ipv4/ipv6 or hostname as annotation: ako.vmware.com/load-balancer-ip:<ip>
 		if net.ParseIP(endpoint) == nil {
 			endpoint, err = QueryFQDN(endpoint)
 			if err != nil {
@@ -270,11 +270,13 @@ func (r *HAProvider) syncEndpointMachineIP(address corev1.EndpointAddress, machi
 			if machineAddress.Type != clusterv1.MachineExternalIP {
 				continue
 			}
-			if net.ParseIP(machineAddress.Address) != nil && net.ParseIP(machineAddress.Address).To4() != nil {
-				address.IP = machineAddress.Address
-				r.log.Info("sync endpoints object, update machine: " + machine.Name + "'s ip to:" + address.IP)
-			} else {
-				r.log.Info(machineAddress.Address + " is not a valid IPv4 address")
+			if net.ParseIP(machineAddress.Address) != nil {
+				if net.ParseIP(machineAddress.Address).To4() != nil || net.ParseIP(machineAddress.Address).To16() != nil {
+					address.IP = machineAddress.Address
+					r.log.Info("sync endpoints object, update machine: " + machine.Name + "'s ip to:" + address.IP)
+				} else {
+					r.log.Info(machineAddress.Address + " is not a valid IPv4/IPv6 address")
+				}
 			}
 		}
 	}
@@ -327,16 +329,18 @@ func (r *HAProvider) addMachineIpToEndpoints(endpoints *corev1.Endpoints, machin
 			continue
 		}
 		// check machineAddress.Address is valid
-		// only support IPv4 for now
-		if net.ParseIP(machineAddress.Address) != nil && net.ParseIP(machineAddress.Address).To4() != nil {
-			newAddress := corev1.EndpointAddress{
-				IP:       machineAddress.Address,
-				NodeName: &machine.Name,
+		// Support IPv4 and IPv6
+		if net.ParseIP(machineAddress.Address) != nil {
+			if net.ParseIP(machineAddress.Address).To4() != nil || net.ParseIP(machineAddress.Address).To16() != nil {
+				newAddress := corev1.EndpointAddress{
+					IP:       machineAddress.Address,
+					NodeName: &machine.Name,
+				}
+				endpoints.Subsets[0].Addresses = append(endpoints.Subsets[0].Addresses, newAddress)
+				break
+			} else {
+				r.log.Info(machineAddress.Address + " is not a valid IPv4/IPv6 address")
 			}
-			endpoints.Subsets[0].Addresses = append(endpoints.Subsets[0].Addresses, newAddress)
-			break
-		} else {
-			r.log.Info(machineAddress.Address + " is not a valid IPv4 address")
 		}
 	}
 }

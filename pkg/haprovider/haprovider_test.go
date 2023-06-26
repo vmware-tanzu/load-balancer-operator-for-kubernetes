@@ -102,6 +102,36 @@ var _ = Describe("Control Plane HA provider", func() {
 				Expect(svc.Annotations[akoov1alpha1.AkoPreferredIPAnnotation]).Should(Equal("1.1.1.1"))
 			})
 		})
+		When("service has IPv6 ip address", func() {
+			BeforeEach(func() {
+				cluster.Spec.ControlPlaneEndpoint.Host = "fd01:3:4:2877:250:56ff:feb4:adaf"
+				svc := &corev1.Service{
+					ObjectMeta: v1.ObjectMeta{
+						Name:      "default-test-cluster-control-plane",
+						Namespace: "default",
+					},
+					Spec: corev1.ServiceSpec{},
+					Status: corev1.ServiceStatus{
+						LoadBalancer: corev1.LoadBalancerStatus{
+							Ingress: []corev1.LoadBalancerIngress{
+								{
+									IP: "fd01:3:4:2877:250:56ff:feb4:adaf",
+								},
+							},
+						},
+					},
+				}
+				key = client.ObjectKey{Name: haProvider.getHAServiceName(cluster), Namespace: cluster.Namespace}
+				Expect(haProvider.Client.Create(ctx, svc)).ShouldNot(HaveOccurred())
+			})
+
+			It("test should pass without error", func() {
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(haProvider.Client.Get(ctx, key, svc)).ShouldNot(HaveOccurred())
+				Expect(svc.Spec.LoadBalancerIP).Should(Equal("fd01:3:4:2877:250:56ff:feb4:adaf"))
+				Expect(svc.Annotations[akoov1alpha1.AkoPreferredIPAnnotation]).Should(Equal("fd01:3:4:2877:250:56ff:feb4:adaf"))
+			})
+		})
 	})
 
 	Context("Test_CreateOrUpdateHAEndpoints", func() {
@@ -270,7 +300,7 @@ var _ = Describe("Control Plane HA provider", func() {
 				})
 
 				// Once dual-stack is supported, change this test case
-				It("Should Only support IPV4 for now", func() {
+				It("Support IPv4 and IPv6 for now", func() {
 					mc2 := mc.DeepCopy()
 					mc2.Name = "test-mc-2"
 					mc2.Status.Addresses = clusterv1.MachineAddresses{
@@ -282,7 +312,7 @@ var _ = Describe("Control Plane HA provider", func() {
 
 					Expect(haProvider.CreateOrUpdateHAEndpoints(ctx, mc2)).ShouldNot(HaveOccurred())
 					Expect(haProvider.Client.Get(ctx, key, ep)).ShouldNot(HaveOccurred())
-					Expect(len(ep.Subsets[0].Addresses)).Should(Equal(1))
+					Expect(len(ep.Subsets[0].Addresses)).Should(Equal(2))
 				})
 			})
 
