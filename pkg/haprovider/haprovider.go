@@ -271,12 +271,8 @@ func (r *HAProvider) syncEndpointMachineIP(address corev1.EndpointAddress, machi
 				continue
 			}
 			if net.ParseIP(machineAddress.Address) != nil {
-				if net.ParseIP(machineAddress.Address).To4() != nil || net.ParseIP(machineAddress.Address).To16() != nil {
-					address.IP = machineAddress.Address
-					r.log.Info("sync endpoints object, update machine: " + machine.Name + "'s ip to:" + address.IP)
-				} else {
-					r.log.Info(machineAddress.Address + " is not a valid IPv4/IPv6 address")
-				}
+				address.IP = machineAddress.Address
+				r.log.Info("sync endpoints object, update machine: " + machine.Name + "'s ip to:" + address.IP)
 			}
 		}
 	}
@@ -331,16 +327,12 @@ func (r *HAProvider) addMachineIpToEndpoints(endpoints *corev1.Endpoints, machin
 		// check machineAddress.Address is valid
 		// Support IPv4 and IPv6
 		if net.ParseIP(machineAddress.Address) != nil {
-			if net.ParseIP(machineAddress.Address).To4() != nil || net.ParseIP(machineAddress.Address).To16() != nil {
-				newAddress := corev1.EndpointAddress{
-					IP:       machineAddress.Address,
-					NodeName: &machine.Name,
-				}
-				endpoints.Subsets[0].Addresses = append(endpoints.Subsets[0].Addresses, newAddress)
-				break
-			} else {
-				r.log.Info(machineAddress.Address + " is not a valid IPv4/IPv6 address")
+			newAddress := corev1.EndpointAddress{
+				IP:       machineAddress.Address,
+				NodeName: &machine.Name,
 			}
+			endpoints.Subsets[0].Addresses = append(endpoints.Subsets[0].Addresses, newAddress)
+			break
 		}
 	}
 }
