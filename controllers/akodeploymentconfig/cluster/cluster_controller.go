@@ -81,6 +81,7 @@ func (r *ClusterReconciler) ReconcileDelete(
 			ctrlutil.RemoveFinalizer(cluster, akoov1alpha1.ClusterFinalizer)
 		} else {
 			log.Info("AKO deletion is in progress, requeue", "after", requeueAfterForAKODeletion.String())
+			log.Info("Cluster can not be deleted until finalizer is removed", "finalizer", akoov1alpha1.ClusterFinalizer)
 			return ctrl.Result{Requeue: true, RequeueAfter: requeueAfterForAKODeletion}, nil
 		}
 	}
@@ -94,7 +95,8 @@ func (r *ClusterReconciler) cleanup(
 	obj *clusterv1.Cluster,
 ) (bool, error) {
 	// Firstly we check if there is a cleanup condition in the Cluster
-	// status , if not, we update it
+	// status , if not, we update it. If cleanup condition is succeeded=true nothing left to do
+	//   -------  return true since deletion has been marked as succesfull
 	if !conditions.Has(obj, akoov1alpha1.AviResourceCleanupSucceededCondition) {
 		conditions.MarkFalse(obj, akoov1alpha1.AviResourceCleanupSucceededCondition, akoov1alpha1.AviResourceCleanupReason, clusterv1.ConditionSeverityInfo, "Cleaning up the AVI load balancing resources before deletion")
 		log.Info("Trigger the AKO cleanup in the target Cluster and set Cluster condition", "condition", akoov1alpha1.AviResourceCleanupSucceededCondition)
@@ -128,6 +130,7 @@ func (r *ClusterReconciler) cleanup(
 	}, akoAddonSecret); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info(fmt.Sprintf("since secret %s/%s is not found, assume the ako resource deletion succeed", akoov1alpha1.TKGSystemNamespace, secretName))
+			conditions.MarkTrue(obj, akoov1alpha1.AviResourceCleanupSucceededCondition)
 			return true, nil
 		}
 		log.Error(err, "Failed to get AKO Addon Data Values, AKO clean up failed")
