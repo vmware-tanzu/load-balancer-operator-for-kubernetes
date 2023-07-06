@@ -54,6 +54,13 @@ type ClusterReconciler struct {
 	GetRemoteClient remote.ClusterClientGetter
 }
 
+// TODO: (adduarte remvoe) AKOO add a finalizer to cluster object ako-operator.networking.tkg.tanzu.vmware.com  which blocks cluster deletion, in case AKO needs to clean up resources in AVI Controller before cluster is deleted.  But some cases, AKO might just crashed or isn't even there, for example, cluster is not created successfully, AKOO will not remove the finalizer since AKO can't report the status correctly.
+// TODO: (adduarte remove) I think first improvement we could do is to check when cluster is deleted, whether the AKO package is installed on the cluster, if not , we could just remove the finalizer regardless.
+func akoInstalled() (bool, error) {
+	//This function should return true if the pkgi for the ako is present
+	return true, nil
+}
+
 // ReconcileDelete removes the finalizer on Cluster once AKO finishes its
 // cleanup work
 func (r *ClusterReconciler) ReconcileDelete(
@@ -62,15 +69,24 @@ func (r *ClusterReconciler) ReconcileDelete(
 	cluster *clusterv1.Cluster,
 	_ *akoov1alpha1.AKODeploymentConfig,
 ) (ctrl.Result, error) {
-	res := ctrl.Result{}
 
 	if ctrlutil.ContainsFinalizer(cluster, akoov1alpha1.ClusterFinalizer) {
 		log.Info("Handling deleted Cluster")
+		akoPresent, err := akoInstalled() //TODO (adduarte) rename akoPresent to something more generic which represents weather or not the ako package is installed, or having problems, or crashed.
+		if err != nil {
+			log.Error(err, "could not verify if ako pkgi is present in cluster")
+			return ctrl.Result{}, err
+		}
+		if !akoPresent {
+			log.Info("The AKO package is not present in the cluster. Removing finalizer")
+			ctrlutil.RemoveFinalizer(cluster, akoov1alpha1.ClusterFinalizer)
+			return ctrl.Result{}, nil
+		}
 
 		finished, err := r.cleanup(ctx, log, cluster)
 		if err != nil {
 			log.Error(err, "Error cleaning up")
-			return res, err
+			return ctrl.Result{}, err
 		}
 		// remove finalizer only after avi resources deleted && avi user deleted
 		finished = finished && conditions.IsTrue(cluster, akoov1alpha1.AviUserCleanupSucceededCondition)
@@ -85,7 +101,7 @@ func (r *ClusterReconciler) ReconcileDelete(
 		}
 	}
 
-	return res, nil
+	return ctrl.Result{}, nil
 }
 
 func (r *ClusterReconciler) cleanup(
