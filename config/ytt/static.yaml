@@ -206,7 +206,10 @@ spec:
                   cniPlugin:
                     description: 'CniPlugin describes which cni plugin cluster is
                       using. default value is antrea, set this string if cluster cni
-                      is other type. AKO supported CNI: antrea|calico|canal|flannel|openshift|ncp'
+                      is other type. For Cilium CNI, set the string as cilium only
+                      when using Cluster Scope mode for IPAM and leave it empty if
+                      using Kubernetes Host Scope mode for IPAM. AKO supported CNI:
+                      antrea|calico|canal|flannel|openshift|ncp|ovn-kubernetes|cilium'
                     enum:
                     - antrea
                     - calico
@@ -214,6 +217,8 @@ spec:
                     - flannel
                     - openshift
                     - ncp
+                    - ovn-kubernetes
+                    - cilium
                     type: string
                   disableStaticRouteSync:
                     description: DisableStaticRouteSync describes ako should sync
