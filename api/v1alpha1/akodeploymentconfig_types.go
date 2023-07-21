@@ -131,8 +131,10 @@ type ExtraConfigs struct {
 
 	// CniPlugin describes which cni plugin cluster is using.
 	// default value is antrea, set this string if cluster cni is other type.
-	// AKO supported CNI: antrea|calico|canal|flannel|openshift|ncp
-	// +kubebuilder:validation:Enum=antrea;calico;canal;flannel;openshift;ncp
+	// For Cilium CNI, set the string as cilium only when using Cluster Scope mode for IPAM
+	// and leave it empty if using Kubernetes Host Scope mode for IPAM.
+	// AKO supported CNI: antrea|calico|canal|flannel|openshift|ncp|ovn-kubernetes|cilium
+	// +kubebuilder:validation:Enum=antrea;calico;canal;flannel;openshift;ncp;ovn-kubernetes;cilium
 	// +optional
 	CniPlugin string `json:"cniPlugin,omitempty"`
 
