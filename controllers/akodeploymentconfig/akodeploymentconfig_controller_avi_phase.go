@@ -313,7 +313,16 @@ func (r *AKODeploymentConfigReconciler) createAviInfraSetting(adc *akoov1alpha1.
 	if adc.Spec.ExtraConfigs.IngressConfigs.ShardVSSize != "" {
 		shardSize = adc.Spec.ExtraConfigs.IngressConfigs.ShardVSSize
 	}
-
+	vipNetwork := []akov1alpha1.AviInfraSettingVipNetwork{{
+		NetworkName: adc.Spec.ControlPlaneNetwork.Name,
+		Cidr:        adc.Spec.ControlPlaneNetwork.CIDR,
+	}}
+	if adc.Spec.ExtraConfigs.IpFamily == "V6" {
+		vipNetwork = []akov1alpha1.AviInfraSettingVipNetwork{{
+			NetworkName: adc.Spec.ControlPlaneNetwork.Name,
+			V6Cidr:      adc.Spec.ControlPlaneNetwork.CIDR,
+		}}
+	}
 	return &akov1alpha1.AviInfraSetting{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: haprovider.GetAviInfraSettingName(adc),
@@ -323,10 +332,7 @@ func (r *AKODeploymentConfigReconciler) createAviInfraSetting(adc *akoov1alpha1.
 				Name: adc.Spec.ServiceEngineGroup,
 			},
 			Network: akov1alpha1.AviInfraSettingNetwork{
-				VipNetworks: []akov1alpha1.AviInfraSettingVipNetwork{{
-					NetworkName: adc.Spec.ControlPlaneNetwork.Name,
-					Cidr:        adc.Spec.ControlPlaneNetwork.CIDR,
-				}},
+				VipNetworks: vipNetwork,
 			},
 			L7Settings: akov1alpha1.AviInfraL7Settings{
 				ShardSize: shardSize,

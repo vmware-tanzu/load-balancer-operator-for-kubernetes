@@ -282,7 +282,12 @@ func NewNetworkSettings(obj *akoov1alpha1.AKODeploymentConfig) (*NetworkSettings
 	settings.SubnetPrefix = strconv.Itoa(ones)
 
 	settings.NodeNetworkList = obj.Spec.ExtraConfigs.IngressConfigs.NodeNetworkList
-	settings.VIPNetworkList = []v1alpha1.VIPNetwork{{NetworkName: obj.Spec.DataNetwork.Name, CIDR: obj.Spec.DataNetwork.CIDR}}
+	//V6CIDR will enable the VS networks to use ipv6
+	if obj.Spec.ExtraConfigs.IpFamily == "V6" {
+		settings.VIPNetworkList = []v1alpha1.VIPNetwork{{NetworkName: obj.Spec.DataNetwork.Name, V6CIDR: obj.Spec.DataNetwork.CIDR}}
+	} else {
+		settings.VIPNetworkList = []v1alpha1.VIPNetwork{{NetworkName: obj.Spec.DataNetwork.Name, CIDR: obj.Spec.DataNetwork.CIDR}}
+	}
 
 	if len(settings.NodeNetworkList) != 0 {
 		jsonBytes, err := json.Marshal(settings.NodeNetworkList)

@@ -317,6 +317,27 @@ func TestCreateNewAKODeploymentConfig(t *testing.T) {
 			},
 			expectErr: true,
 		},
+		{
+			name:              "should throw error if addr type doesn't match ippool type",
+			adminSecret:       staticAdminSecret.DeepCopy(),
+			certificateSecret: staticCASecret.DeepCopy(),
+			adc:               staticADC.DeepCopy(),
+			customizeInput: func(adminSecret, certificateSecret *corev1.Secret, adc *AKODeploymentConfig) (*corev1.Secret, *corev1.Secret, *AKODeploymentConfig) {
+				adc.Spec.DataNetwork = DataNetwork{
+					Name: "VM Network 1",
+					CIDR: "10.0.0.1/24",
+					IPPools: []IPPool{
+						{
+							Start: "10.0.0.5",
+							End:   "10.0.0.6",
+							Type:  "V6",
+						},
+					},
+				}
+				return adminSecret, certificateSecret, adc
+			},
+			expectErr: true,
+		},
 	}
 
 	for _, tc := range testcases {

@@ -273,6 +273,8 @@ func (r *HAProvider) syncEndpointMachineIP(address corev1.EndpointAddress, machi
 			if net.ParseIP(machineAddress.Address) != nil {
 				address.IP = machineAddress.Address
 				r.log.Info("sync endpoints object, update machine: " + machine.Name + "'s ip to:" + address.IP)
+			} else {
+				r.log.Info(machineAddress.Address + " is not a valid IP address")
 			}
 		}
 	}
@@ -333,6 +335,8 @@ func (r *HAProvider) addMachineIpToEndpoints(endpoints *corev1.Endpoints, machin
 			}
 			endpoints.Subsets[0].Addresses = append(endpoints.Subsets[0].Addresses, newAddress)
 			break
+		} else {
+			r.log.Info(machineAddress.Address + " is not a valid IP address")
 		}
 	}
 }

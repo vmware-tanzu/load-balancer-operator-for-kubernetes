@@ -144,8 +144,8 @@ var _ = Describe("Control Plane HA provider", func() {
 		BeforeEach(func() {
 			cluster = &clusterv1.Cluster{
 				ObjectMeta: v1.ObjectMeta{
-					Name:        "test-cluster",
-					Namespace:   "default",
+					Name:      "test-cluster",
+					Namespace: "default",
 				},
 				Spec: clusterv1.ClusterSpec{},
 			}

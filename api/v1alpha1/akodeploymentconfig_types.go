@@ -365,7 +365,8 @@ type ControlPlaneNetwork struct {
 // VIPNetwork describes a VIPNetwork in the adc file
 type VIPNetwork struct {
 	NetworkName string `json:"networkName"`
-	CIDR        string `json:"cidr"`
+	CIDR        string `json:"cidr,omitempty"`
+	V6CIDR      string `json:"v6cidr,omitempty"`
 }
 
 // IPPool defines a contiguous range of IP Addresses

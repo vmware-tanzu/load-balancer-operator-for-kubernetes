@@ -326,7 +326,13 @@ func (r *AKODeploymentConfig) validateAviDataNetworks() field.ErrorList {
 			"failed to get data plane network "+r.Spec.DataNetwork.Name+" from avi controller:"+err.Error()))
 	}
 	// check network cidr
-	_, cidr, err := net.ParseCIDR(r.Spec.DataNetwork.CIDR)
+	addr, cidr, err := net.ParseCIDR(r.Spec.DataNetwork.CIDR)
+	addrType := "INVALID"
+	if addr.To4() != nil {
+		addrType = "V4"
+	} else if addr.To16() != nil {
+		addrType = "V6"
+	}
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "dataNetwork", "cidr"),
 			r.Spec.DataNetwork.CIDR,
@@ -356,12 +362,11 @@ func (r *AKODeploymentConfig) validateAviDataNetworks() field.ErrorList {
 				r.Spec.DataNetwork.IPPools,
 				ipPool.Start+" is greater than "+ipPool.End))
 		}
-		// TODO:(xudongl) will wait for AKO support v6 address to uncomment this
-		// if ippool.Type != addrType {
-		// 	return field.Invalid(field.NewPath("spec", "dataNetwork", "ipPools"),
-		// 		r.Spec.DataNetwork.IPPools,
-		// 		"data plane network ip pools type is not aligned with cidr")
-		// }
+		if ipPool.Type != addrType {
+			return append(allErrs, field.Invalid(field.NewPath("spec", "dataNetwork", "ipPools"),
+				r.Spec.DataNetwork.IPPools,
+				"data plane network ip pools type is not aligned with cidr"))
+		}
 	}
 	return allErrs
 }
