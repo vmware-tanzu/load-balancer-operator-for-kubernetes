@@ -301,7 +301,7 @@ func (r *HAProvider) removeMachineIpFromEndpoints(endpoints *corev1.Endpoints, m
 	}
 }
 
-func (r *HAProvider) addMachineIpToEndpoints(endpoints *corev1.Endpoints, machine *clusterv1.Machine) {
+func (r *HAProvider) addMachineIpToEndpoints(endpoints *corev1.Endpoints, machine *clusterv1.Machine, adcForCluster *akoov1alpha1.AKODeploymentConfig) {
 	if endpoints.Subsets == nil {
 		// create a Subset if Endpoint doesn't have one
 		endpoints.Subsets = []corev1.EndpointSubset{{
@@ -333,8 +333,16 @@ func (r *HAProvider) addMachineIpToEndpoints(endpoints *corev1.Endpoints, machin
 				IP:       machineAddress.Address,
 				NodeName: &machine.Name,
 			}
-			endpoints.Subsets[0].Addresses = append(endpoints.Subsets[0].Addresses, newAddress)
-			break
+			//Validate MachineIP before adding to Endpoint
+			if adcForCluster != nil && adcForCluster.Spec.ExtraConfigs.IpFamily == "V6" {
+				if net.ParseIP(machineAddress.Address).To16() != nil {
+					endpoints.Subsets[0].Addresses = append(endpoints.Subsets[0].Addresses, newAddress)
+					break
+				}
+			} else {
+				endpoints.Subsets[0].Addresses = append(endpoints.Subsets[0].Addresses, newAddress)
+				break
+			}
 		} else {
 			r.log.Info(machineAddress.Address + " is not a valid IP address")
 		}
@@ -364,13 +372,18 @@ func (r *HAProvider) CreateOrUpdateHAEndpoints(ctx context.Context, machine *clu
 		return err
 	}
 
+	adcForCluster, err := r.getADCForCluster(ctx, cluster)
+	if err != nil {
+		return err
+	}
+
 	if !machine.DeletionTimestamp.IsZero() {
 		r.log.Info("machine" + machine.Name + " is being deleted, remove the endpoint of the machine from " + r.getHAServiceName(cluster) + " Endpoints")
 		r.removeMachineIpFromEndpoints(endpoints, machine)
 	} else {
 		// Add machine ip to the Endpoints object no matter it's ready or not
 		// Because avi controller checks the status of machine. If it's not ready, avi won't use it as an endpoint
-		r.addMachineIpToEndpoints(endpoints, machine)
+		r.addMachineIpToEndpoints(endpoints, machine, adcForCluster)
 	}
 	if err := r.Update(ctx, endpoints); err != nil {
 		return errors.Wrapf(err, "Failed to update endpoints <%s>, control plane machine IP doesn't get allocated yet\n", endpoints.Name)
