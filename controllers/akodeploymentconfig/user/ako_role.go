@@ -194,11 +194,11 @@ var AkoRolePermission = []*models.Permission{
 		Resource: pointer.StringPtr("PERMISSION_USER_CREDENTIAL"),
 	},
 	{
-		Type:     pointer.StringPtr("NO_ACCESS"),
+		Type:     pointer.StringPtr("READ_ACCESS"),
 		Resource: pointer.StringPtr("PERMISSION_SYSTEMCONFIGURATION"),
 	},
 	{
-		Type:     pointer.StringPtr("NO_ACCESS"),
+		Type:     pointer.StringPtr("READ_ACCESS"),
 		Resource: pointer.StringPtr("PERMISSION_CONTROLLER"),
 	},
 	{
