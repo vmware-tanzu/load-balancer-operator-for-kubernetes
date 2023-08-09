@@ -5,6 +5,7 @@ package haprovider
 
 import (
 	"context"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/utils"
 	"net"
 	"sync"
 
@@ -301,7 +302,7 @@ func (r *HAProvider) removeMachineIpFromEndpoints(endpoints *corev1.Endpoints, m
 	}
 }
 
-func (r *HAProvider) addMachineIpToEndpoints(endpoints *corev1.Endpoints, machine *clusterv1.Machine, adcForCluster *akoov1alpha1.AKODeploymentConfig) {
+func (r *HAProvider) addMachineIpToEndpoints(endpoints *corev1.Endpoints, machine *clusterv1.Machine, ipFamily string) {
 	if endpoints.Subsets == nil {
 		// create a Subset if Endpoint doesn't have one
 		endpoints.Subsets = []corev1.EndpointSubset{{
@@ -334,14 +335,16 @@ func (r *HAProvider) addMachineIpToEndpoints(endpoints *corev1.Endpoints, machin
 				NodeName: &machine.Name,
 			}
 			//Validate MachineIP before adding to Endpoint
-			if adcForCluster != nil && adcForCluster.Spec.ExtraConfigs.IpFamily == "V6" {
-				if net.ParseIP(machineAddress.Address).To16() != nil {
+			if ipFamily == "V6" {
+				if net.ParseIP(machineAddress.Address).To4() == nil {
 					endpoints.Subsets[0].Addresses = append(endpoints.Subsets[0].Addresses, newAddress)
 					break
 				}
-			} else {
-				endpoints.Subsets[0].Addresses = append(endpoints.Subsets[0].Addresses, newAddress)
-				break
+			} else if ipFamily == "V4" {
+				if net.ParseIP(machineAddress.Address).To4() != nil {
+					endpoints.Subsets[0].Addresses = append(endpoints.Subsets[0].Addresses, newAddress)
+					break
+				}
 			}
 		} else {
 			r.log.Info(machineAddress.Address + " is not a valid IP address")
@@ -372,7 +375,7 @@ func (r *HAProvider) CreateOrUpdateHAEndpoints(ctx context.Context, machine *clu
 		return err
 	}
 
-	adcForCluster, err := r.getADCForCluster(ctx, cluster)
+	ipFamily, err := utils.GetPrimaryIPFamily(cluster)
 	if err != nil {
 		return err
 	}
@@ -383,7 +386,7 @@ func (r *HAProvider) CreateOrUpdateHAEndpoints(ctx context.Context, machine *clu
 	} else {
 		// Add machine ip to the Endpoints object no matter it's ready or not
 		// Because avi controller checks the status of machine. If it's not ready, avi won't use it as an endpoint
-		r.addMachineIpToEndpoints(endpoints, machine, adcForCluster)
+		r.addMachineIpToEndpoints(endpoints, machine, ipFamily)
 	}
 	if err := r.Update(ctx, endpoints); err != nil {
 		return errors.Wrapf(err, "Failed to update endpoints <%s>, control plane machine IP doesn't get allocated yet\n", endpoints.Name)
