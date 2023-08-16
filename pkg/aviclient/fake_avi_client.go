@@ -116,6 +116,10 @@ func (r *FakeAviClient) RoleCreate(obj *models.Role, options ...session.ApiOptio
 	return r.Role.Create(obj)
 }
 
+func (r *FakeAviClient) RoleUpdate(obj *models.Role, options ...session.ApiOptionsParams) (*models.Role, error) {
+	return r.Role.Update(obj)
+}
+
 func (r *FakeAviClient) VirtualServiceGetByName(name string, options ...session.ApiOptionsParams) (*models.VirtualService, error) {
 	return r.VirtualService.GetByName(name)
 }
@@ -276,10 +280,12 @@ func (client *TenantClient) Get(uuid string, options ...session.ApiOptionsParams
 type RoleClient struct {
 	getByNameRoleFn GetByNameRoleFunc
 	createRoleFunc  CreateRoleFunc
+	updateRoleFunc  UpdateRoleFunc
 }
 
 type GetByNameRoleFunc func(name string, options ...session.ApiOptionsParams) (*models.Role, error)
 type CreateRoleFunc func(obj *models.Role, options ...session.ApiOptionsParams) (*models.Role, error)
+type UpdateRoleFunc func(obj *models.Role, options ...session.ApiOptionsParams) (*models.Role, error)
 
 func (client *RoleClient) SetGetByNameRoleFunc(fn GetByNameRoleFunc) {
 	client.getByNameRoleFn = fn
@@ -289,12 +295,20 @@ func (client *RoleClient) SetCreateRoleFunc(fn CreateRoleFunc) {
 	client.createRoleFunc = fn
 }
 
+func (client *RoleClient) SetUpdateRoleFunc(fn UpdateRoleFunc) {
+	client.updateRoleFunc = fn
+}
+
 func (client *RoleClient) GetByName(name string, options ...session.ApiOptionsParams) (*models.Role, error) {
 	return client.getByNameRoleFn(name)
 }
 
 func (client *RoleClient) Create(obj *models.Role, options ...session.ApiOptionsParams) (*models.Role, error) {
 	return client.createRoleFunc(obj)
+}
+
+func (client *RoleClient) Update(obj *models.Role, options ...session.ApiOptionsParams) (*models.Role, error) {
+	return client.updateRoleFunc(obj)
 }
 
 // Pool Client

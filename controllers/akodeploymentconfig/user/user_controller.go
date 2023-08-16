@@ -288,10 +288,15 @@ func (r *AkoUserReconciler) createOrUpdateAviUser(aviUsername, aviPassword, tena
 		}
 		return r.aviClient.UserCreate(aviUser)
 	}
-	// Update the password when user found, this is needed when the AVI user was
-	// created before the mc Secret. And this operation will sync
-	// the User's password to be the same as mc Secret's
+
 	if err == nil {
+		// ensure user's role align with latest essential permission when user found
+		if _, err := r.ensureAkoUserRole(); err != nil {
+			return nil, err
+		}
+		// Update the password when user found, this is needed when the AVI user was
+		// created before the mc Secret. And this operation will sync
+		// the User's password to be the same as mc Secret's
 		aviUser.Password = &aviPassword
 		return r.aviClient.UserUpdate(aviUser)
 	}
@@ -310,8 +315,32 @@ func (r *AkoUserReconciler) getOrCreateAkoUserRole(roleTenantRef *string) (*mode
 		}
 		return r.aviClient.RoleCreate(role)
 	}
-	// else return role or error
+	if err == nil {
+		return r.ensureAkoUserRole()
+	}
 	return role, err
+}
+
+// ensureAkoUserRole ensure ako-essential-role has the latest permission
+func (r *AkoUserReconciler) ensureAkoUserRole() (*models.Role, error) {
+	role, err := r.aviClient.RoleGetByName(akoov1alpha1.AkoUserRoleName)
+	if err != nil {
+		return role, err
+	}
+	// check if role needs to be sync
+	needSync := false
+	for i, permission := range role.Privileges {
+		if *permission.Resource == "PERMISSION_CONTROLLER" || *permission.Resource == "PERMISSION_SYSTEMCONFIGURATION" {
+			if *permission.Type != "READ_ACCESS" {
+				needSync = true
+				role.Privileges[i].Type = pointer.StringPtr("READ_ACCESS")
+			}
+		}
+	}
+	if needSync {
+		return r.aviClient.RoleUpdate(role)
+	}
+	return role, nil
 }
 
 // mcAVISecretNameNameSpace get avi user secret name/namespace in management cluster. There is no need to
