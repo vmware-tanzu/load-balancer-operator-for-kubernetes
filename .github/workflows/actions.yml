@@ -94,4 +94,4 @@ jobs:
 #      - name: Setup tmate session
 #        uses: mxschmitt/action-tmate@v3
       - name: Build Docker Image
-        run: docker build . -t ako-operator:latest -f Dockerfile-for-github-ci
+        run: docker build . -t ako-operator:latest -f Dockerfile

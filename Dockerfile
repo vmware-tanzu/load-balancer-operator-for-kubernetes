@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Build the manager binary
-FROM harbor-repo.vmware.com/dockerhub-proxy-cache/library/golang:1.17.0 AS builder
+FROM golang:1.17.0 AS builder
 # FROM golang:1.15.0 AS builder
 
 WORKDIR /workspace
@@ -25,7 +25,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager 
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM harbor-repo.vmware.com/load-balancer-operator-for-kubernetes/distroless/static:nonroot
+FROM gcr.io/distroless/static:nonroot
 WORKDIR /
 COPY --from=builder /workspace/manager .
 USER nonroot:nonroot
