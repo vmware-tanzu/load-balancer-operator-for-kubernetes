@@ -260,7 +260,32 @@ func intgTestAkoDeploymentConfigController() {
 		})
 		ctx.AviClient.Role.SetCreateRoleFunc(func(obj *models.Role, options ...session.ApiOptionsParams) (*models.Role, error) {
 			userRoleCreateCalled = true
-			return &models.Role{}, nil
+			return &models.Role{
+				Privileges: []*models.Permission{
+					{
+						Type:     pointer.StringPtr("READ_ACCESS"),
+						Resource: pointer.StringPtr("PERMISSION_SYSTEMCONFIGURATION"),
+					},
+					{
+						Type:     pointer.StringPtr("READ_ACCESS"),
+						Resource: pointer.StringPtr("PERMISSION_CONTROLLER"),
+					},
+				},
+			}, nil
+		})
+		ctx.AviClient.Role.SetUpdateRoleFunc(func(obj *models.Role, options ...session.ApiOptionsParams) (*models.Role, error) {
+			return &models.Role{
+				Privileges: []*models.Permission{
+					{
+						Type:     pointer.StringPtr("READ_ACCESS"),
+						Resource: pointer.StringPtr("PERMISSION_SYSTEMCONFIGURATION"),
+					},
+					{
+						Type:     pointer.StringPtr("READ_ACCESS"),
+						Resource: pointer.StringPtr("PERMISSION_CONTROLLER"),
+					},
+				},
+			}, nil
 		})
 		ctx.AviClient.Tenant.SetGetTenantFunc(func(uuid string, options ...session.ApiOptionsParams) (*models.Tenant, error) {
 			return &models.Tenant{}, nil
@@ -525,6 +550,23 @@ func intgTestAkoDeploymentConfigController() {
 							})
 
 							When("AVI user exists", func() {
+								BeforeEach(func() {
+									ctx.AviClient.Role.SetGetByNameRoleFunc(func(name string, options ...session.ApiOptionsParams) (*models.Role, error) {
+										return &models.Role{
+											Privileges: []*models.Permission{
+												{
+													Type:     pointer.StringPtr("READ_ACCESS"),
+													Resource: pointer.StringPtr("PERMISSION_SYSTEMCONFIGURATION"),
+												},
+												{
+													Type:     pointer.StringPtr("READ_ACCESS"),
+													Resource: pointer.StringPtr("PERMISSION_CONTROLLER"),
+												},
+											},
+										}, nil
+									})
+								})
+
 								It("should update AVI user", func() {
 									Eventually(func() bool {
 										return userUpdateCalled
