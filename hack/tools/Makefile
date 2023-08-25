@@ -63,7 +63,7 @@ $(CONTROLLER_GEN):
 golangci-lint: $(GOLANGCI_LINT) $(SRCS)
 golangci-lint: ## Build golangci-lint
 $(GOLANGCI_LINT):
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.43.0
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.54.2
 
 kustomize: $(KUSTOMIZE) $(SRCS)
 kustomize: ## Build kustomize
