@@ -27,6 +27,7 @@ type Client interface {
 
 	RoleGetByName(name string, options ...session.ApiOptionsParams) (*models.Role, error)
 	RoleCreate(obj *models.Role, options ...session.ApiOptionsParams) (*models.Role, error)
+	RoleUpdate(obj *models.Role, options ...session.ApiOptionsParams) (*models.Role, error)
 
 	IPAMDNSProviderProfileGet(uuid string, options ...session.ApiOptionsParams) (*models.IPAMDNSProviderProfile, error)
 	IPAMDNSProviderProfileUpdate(obj *models.IPAMDNSProviderProfile, options ...session.ApiOptionsParams) (*models.IPAMDNSProviderProfile, error)

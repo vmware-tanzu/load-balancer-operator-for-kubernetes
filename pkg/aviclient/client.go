@@ -276,6 +276,10 @@ func (r *realAviClient) RoleCreate(obj *models.Role, options ...session.ApiOptio
 	return r.Role.Create(obj)
 }
 
+func (r *realAviClient) RoleUpdate(obj *models.Role, options ...session.ApiOptionsParams) (*models.Role, error) {
+	return r.Role.Update(obj)
+}
+
 func (r *realAviClient) VirtualServiceGetByName(name string, options ...session.ApiOptionsParams) (*models.VirtualService, error) {
 	return r.VirtualService.GetByName(name)
 }
