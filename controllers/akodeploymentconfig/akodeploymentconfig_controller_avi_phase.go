@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/utils"
 	"sync"
 
 	"net"
@@ -314,6 +315,18 @@ func (r *AKODeploymentConfigReconciler) createAviInfraSetting(adc *akoov1alpha1.
 		shardSize = adc.Spec.ExtraConfigs.IngressConfigs.ShardVSSize
 	}
 
+	vipNetwork := []akov1alpha1.AviInfraSettingVipNetwork{{
+		NetworkName: adc.Spec.ControlPlaneNetwork.Name,
+		Cidr:        adc.Spec.ControlPlaneNetwork.CIDR,
+	}}
+	//Use V6Cidr field if cidr of control plane network is IPv6
+	if utils.GetIPFamilyFromCidr(adc.Spec.ControlPlaneNetwork.CIDR) == "V6" {
+		vipNetwork = []akov1alpha1.AviInfraSettingVipNetwork{{
+			NetworkName: adc.Spec.ControlPlaneNetwork.Name,
+			V6Cidr:      adc.Spec.ControlPlaneNetwork.CIDR,
+		}}
+	}
+
 	return &akov1alpha1.AviInfraSetting{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: haprovider.GetAviInfraSettingName(adc),
@@ -323,10 +336,7 @@ func (r *AKODeploymentConfigReconciler) createAviInfraSetting(adc *akoov1alpha1.
 				Name: adc.Spec.ServiceEngineGroup,
 			},
 			Network: akov1alpha1.AviInfraSettingNetwork{
-				VipNetworks: []akov1alpha1.AviInfraSettingVipNetwork{{
-					NetworkName: adc.Spec.ControlPlaneNetwork.Name,
-					Cidr:        adc.Spec.ControlPlaneNetwork.CIDR,
-				}},
+				VipNetworks: vipNetwork,
 			},
 			L7Settings: akov1alpha1.AviInfraL7Settings{
 				ShardSize: shardSize,
