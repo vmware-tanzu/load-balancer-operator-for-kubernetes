@@ -138,5 +138,64 @@ var _ = Describe("AKO", func() {
 				ensureValueIsExpected(rendered, akoDeploymentConfig)
 			})
 		})
+
+		When("a valid ipv6 AKODeploymentYaml is provided", func() {
+			BeforeEach(func() {
+				akoDeploymentConfig = &akoov1alpha1.AKODeploymentConfig{
+					Spec: akoov1alpha1.AKODeploymentConfigSpec{
+						CloudName:          "test-cloud-2",
+						Controller:         "10.23.122.1",
+						ServiceEngineGroup: "Default-SEG",
+						DataNetwork: akoov1alpha1.DataNetwork{
+							Name: "test-akdc",
+							CIDR: "2002::1234:abcd:ffff:c0a8:101/64",
+						},
+						ControlPlaneNetwork: akoov1alpha1.ControlPlaneNetwork{
+							Name: "test-akdc-2",
+							CIDR: "2002::1234:abcd:ffff:c0a8:101/64",
+						},
+						ExtraConfigs: akoov1alpha1.ExtraConfigs{
+							FullSyncFrequency: "1900",
+							IpFamily:          "V6",
+							Rbac: akoov1alpha1.AKORbacConfig{
+								PspEnabled:          pointer.Bool(true),
+								PspPolicyAPIVersion: "test/1.2",
+							},
+							Log: akoov1alpha1.AKOLogConfig{
+								LogLevel:              "DEBUG",
+								PersistentVolumeClaim: "true",
+								MountPath:             "/var/log",
+								LogFile:               "test-avi.log",
+							},
+							IngressConfigs: akoov1alpha1.AKOIngressConfig{
+								DisableIngressClass:      pointer.Bool(true),
+								DefaultIngressController: pointer.Bool(true),
+								ShardVSSize:              "MEDIUM",
+								ServiceType:              "NodePort",
+								NodeNetworkList: []akoov1alpha1.NodeNetwork{
+									{
+										NetworkName: "test-node-network-1",
+										Cidrs:       []string{"2002::1234:abcd:ffff:c0a8:101/64"},
+									},
+								},
+							},
+							DisableStaticRouteSync: pointer.BoolPtr(true),
+							CniPlugin:              "antrea",
+						},
+					},
+				}
+			})
+			It("should get correct values in the yaml", func() {
+				vipNetworkList, jsonerr := json.Marshal(
+					[]akoov1alpha1.VIPNetwork{{
+						NetworkName: akoDeploymentConfig.Spec.DataNetwork.Name,
+						V6CIDR:      "2002::1234:abcd:ffff:c0a8:101/64",
+					}},
+				)
+				networkSettings := rendered.LoadBalancerAndIngressService.Config.NetworkSettings
+				Expect(jsonerr).ShouldNot(HaveOccurred())
+				Expect(networkSettings.VIPNetworkListJson).To(Equal(string(vipNetworkList)))
+			})
+		})
 	})
 })
