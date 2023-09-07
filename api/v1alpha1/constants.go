@@ -53,5 +53,6 @@ const (
 	HAServiceAnnotationsKey            = "skipnodeport.ako.vmware.com/enabled"
 	HAAVIInfraSettingAnnotationsKey    = "aviinfrasetting.ako.vmware.com/name"
 
-	AKODeploymentConfigControllerName = "akodeploymentconfig-controller"
+	AKODeploymentConfigControllerName                                = "akodeploymentconfig-controller"
+	ClusterIpFamilyValidationFailedCondition clusterv1.ConditionType = "ClusterIpFamilyValidationFailed"
 )

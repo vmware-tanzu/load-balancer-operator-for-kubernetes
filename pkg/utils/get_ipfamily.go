@@ -12,10 +12,10 @@ import (
 )
 
 const (
-	InvalidIPFamily = "INVALID"
-	IPv4IpFamily    = "V4"
-	IPv6IpFamily    = "V6"
-	DualStackIPFamily = "Dual-Stack"
+	InvalidIPFamily      = "INVALID"
+	IPv4IpFamily         = "V4"
+	IPv6IpFamily         = "V6"
+	DualStackIPFamily    = "Dual-Stack"
 	DualStackIPv6Primary = "V6,V4"
 	DualStackIPv4Primary = "V4,V6"
 )
@@ -92,21 +92,21 @@ func GetClusterIPFamily(c *capi.Cluster) (string, error) {
 		}
 	}
 
-	if podsIPFamily != servicesIPFamily && len(podCIDRs) != 0 && len(serviceCIDRs) != 0{
+	if podsIPFamily != servicesIPFamily && len(podCIDRs) != 0 && len(serviceCIDRs) != 0 {
 		return InvalidIPFamily, errors.New("pods and services IP family mismatch")
 	}
 
 	if podsIPFamily == DualStackIPFamily || servicesIPFamily == DualStackIPFamily {
-		if podsIPFamily == DualStackIPFamily{
+		if podsIPFamily == DualStackIPFamily {
 			podCIDRType := GetIPFamilyFromCidr(podCIDRs[0])
-			if podCIDRType == IPv4IpFamily{
+			if podCIDRType == IPv4IpFamily {
 				return DualStackIPv4Primary, nil
 			} else {
 				return DualStackIPv6Primary, nil
 			}
 		}
 		serviceCIDRType := GetIPFamilyFromCidr(serviceCIDRs[0])
-		if serviceCIDRType == IPv4IpFamily{
+		if serviceCIDRType == IPv4IpFamily {
 			return DualStackIPv4Primary, nil
 		} else {
 			return DualStackIPv6Primary, nil

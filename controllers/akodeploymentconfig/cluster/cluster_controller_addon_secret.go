@@ -14,10 +14,12 @@ import (
 	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako"
 	akoo "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	clusterapipatchutil "sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -55,6 +57,13 @@ func (r *ClusterReconciler) ReconcileAddonSecret(
 			log.Info("Failed to get cluster control plane load balancer type of service, requeue")
 			return res, err
 		}
+	}
+
+	//Stop reconciling if AKO ip family doesn't match cluster node ip family
+	if err = validateADCAndClusterIpFamily(cluster, obj, isVIPProvider, log); err != nil {
+		log.Error(err, "Error: ip family in AKODeploymentConfig doesn't match cluster node ip family")
+		conditions.MarkTrue(cluster, akoov1alpha1.ClusterIpFamilyValidationFailedCondition)
+		return res, err
 	}
 
 	newAddonSecret, err := r.createAKOAddonSecret(cluster, obj, aviSecret)
@@ -340,4 +349,29 @@ func getAKOPackageRefFromClusterBootstrap(log logr.Logger, cb *runv1alpha3.Clust
 		}
 	}
 	return -1, nil
+}
+
+func validateADCAndClusterIpFamily(cluster *clusterv1.Cluster, adc *akoov1alpha1.AKODeploymentConfig, isVIPProvider bool, log logr.Logger) error {
+	adcIpFamily := "V4"
+	if adc.Spec.ExtraConfigs.IpFamily != "" {
+		adcIpFamily = adc.Spec.ExtraConfigs.IpFamily
+	}
+	nodeIpFamily, err := utils.GetClusterIPFamily(cluster)
+	if err != nil {
+		log.Error(err, "can't get cluster ip family")
+		return err
+	}
+	if (adcIpFamily == "V4" && nodeIpFamily == "V6") || (adcIpFamily == "V6" && nodeIpFamily == "V4") {
+		errInfo := "We are not allowed to create single stack " + nodeIpFamily + " cluster when configure AKO as " + adcIpFamily + " ip family"
+		return errors.New(errInfo)
+	}
+	if isVIPProvider {
+		if adcIpFamily == "V4" && nodeIpFamily == "V6,V4" {
+			return errors.New("When enabling avi as control plane HA, we are not allowed to create ipv6 primary dual-stack cluster if AKO is configured V4 ip family")
+		} else if adcIpFamily == "V6" && nodeIpFamily == "V4,V6" {
+			return errors.New("When enabling avi as control plane HA, we are not allowed to create ipv4 primary dual-stack cluster if AKO is configured V6 ip family")
+		}
+
+	}
+	return nil
 }

@@ -7,11 +7,9 @@ import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	capi "sigs.k8s.io/cluster-api/api/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	capi "sigs.k8s.io/cluster-api/api/v1beta1"
 )
-
-
 
 var _ = ginkgo.Describe("Test get primary ipFamily", func() {
 	ginkgo.It("should return V4 from CIDR", func() {
@@ -182,7 +180,7 @@ var _ = ginkgo.Describe("Test get primary ipFamily", func() {
 			Spec: capi.ClusterSpec{
 				ClusterNetwork: &capi.ClusterNetwork{
 					Pods: &capi.NetworkRanges{
-						CIDRBlocks: []string{"192.168.0.0/16","2002::1234:abcd:ffff:c0a8:101/64","10.10.0.0/16"},
+						CIDRBlocks: []string{"192.168.0.0/16", "2002::1234:abcd:ffff:c0a8:101/64", "10.10.0.0/16"},
 					},
 					Services: &capi.NetworkRanges{
 						CIDRBlocks: []string{"192.168.0.0/16"},

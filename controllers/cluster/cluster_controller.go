@@ -6,7 +6,6 @@ package cluster
 import (
 	"context"
 	"fmt"
-	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/utils"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -112,12 +111,6 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ 
 		return res, err
 	}
 
-	//Stop reconciling if AKO ip family doesn't match cluster node ip family
-	if err = validateADCAndClusterIpFamily(cluster, akoDeploymentConfig, isVIPProvider, log); err != nil {
-		log.Error(err, "Error: ip family in AKODeploymentConfig doesn't match cluster node ip family")
-		return res, err
-	}
-
 	// Removing finalizer and avi label if current cluster can't be selected by any akoDeploymentConfig
 	if akoDeploymentConfig == nil {
 		log.Info("Not find cluster matched akodeploymentconfig, skip Cluster reconciling, removing finalizer and avi labels", "finalizer", akoov1alpha1.ClusterFinalizer)
@@ -191,26 +184,4 @@ func (r *ClusterReconciler) deleteAKOStatefulSet(ctx context.Context, c client.C
 		}
 	}
 	return c.Delete(ctx, akoStatefulSet)
-}
-
-func validateADCAndClusterIpFamily(cluster *clusterv1.Cluster, adc *akoov1alpha1.AKODeploymentConfig, isVIPProvider bool, log logr.Logger) error {
-	adcIpFamily := adc.Spec.ExtraConfigs.IpFamily
-	nodeIpFamily, err := utils.GetClusterIPFamily(cluster)
-	if err != nil {
-		log.Error(err, "can't get cluster ip family")
-		return err
-	}
-	if (adcIpFamily == "V4" && nodeIpFamily == "V6") || (adcIpFamily == "V6" && nodeIpFamily == "V4") {
-		errInfo := "We are not allowed to create single stack " + nodeIpFamily + " cluster when configure AKO as " + adcIpFamily + " ip family"
-		return errors.New(errInfo)
-	}
-	if isVIPProvider {
-		if adcIpFamily == "V4" && nodeIpFamily == "V6,V4" {
-			return errors.New("When enabling avi as control plane HA, we are not allowed to create ipv6 primary dual-stack cluster if AKO is configured V4 ip family")
-		} else if adcIpFamily == "V6" && nodeIpFamily == "V4,V6" {
-			return errors.New("When enabling avi as control plane HA, we are not allowed to create ipv4 primary dual-stack cluster if AKO is configured V6 ip family")
-		}
-
-	}
-	return nil
 }
