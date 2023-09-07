@@ -58,6 +58,13 @@ var _ = ginkgo.Describe("Test get primary ipFamily", func() {
 		Expect(err).To(BeNil())
 	})
 
+	ginkgo.It("should return Invalid from CIDR strings", func() {
+		cidrs := []string{"2002::1234:ffffaa:c0a8:101/64", "192.0.0/16"}
+		ipFamily, err := ipFamilyFromCIDRStrings(cidrs)
+		Expect(ipFamily).To(Equal("INVALID"))
+		Expect(err).NotTo(BeNil())
+	})
+
 	ginkgo.It("should return ipv4", func() {
 		clusterClassCluster := &capi.Cluster{
 			ObjectMeta: metav1.ObjectMeta{
@@ -193,6 +200,28 @@ var _ = ginkgo.Describe("Test get primary ipFamily", func() {
 		Expect(err).NotTo(BeNil())
 	})
 
+	ginkgo.It("should return INVALID, if length of servicecidr is larger than 2", func() {
+		clusterClassCluster := &capi.Cluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "cluster-class-cluster",
+				Namespace: "default",
+			},
+			Spec: capi.ClusterSpec{
+				ClusterNetwork: &capi.ClusterNetwork{
+					Pods: &capi.NetworkRanges{
+						CIDRBlocks: []string{"192.168.0.0/16"},
+					},
+					Services: &capi.NetworkRanges{
+						CIDRBlocks: []string{"192.168.0.0/16", "2002::1234:abcd:ffff:c0a8:101/64", "10.10.0.0/16"},
+					},
+				},
+			},
+		}
+		ipFamily, err := GetClusterIPFamily(clusterClassCluster)
+		Expect(ipFamily).To(Equal("INVALID"))
+		Expect(err).NotTo(BeNil())
+	})
+
 	ginkgo.It("should return INVALID, if pod family is different from service family", func() {
 		clusterClassCluster := &capi.Cluster{
 			ObjectMeta: metav1.ObjectMeta{
@@ -237,6 +266,25 @@ var _ = ginkgo.Describe("Test get primary ipFamily", func() {
 		Expect(err).To(BeNil())
 	})
 
+	ginkgo.It("should return dual-stack V6,V4 ipfamily (service cidr)", func() {
+		clusterClassCluster := &capi.Cluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "cluster-class-cluster",
+				Namespace: "default",
+			},
+			Spec: capi.ClusterSpec{
+				ClusterNetwork: &capi.ClusterNetwork{
+					Services: &capi.NetworkRanges{
+						CIDRBlocks: []string{"2002::1234:abcd:ffff:c0a8:101/64", "192.168.0.0/16"},
+					},
+				},
+			},
+		}
+		ipFamily, err := GetClusterIPFamily(clusterClassCluster)
+		Expect(ipFamily).To(Equal("V6,V4"))
+		Expect(err).To(BeNil())
+	})
+
 	ginkgo.It("should return dual-stack V4,V6 ipfamily", func() {
 		clusterClassCluster := &capi.Cluster{
 			ObjectMeta: metav1.ObjectMeta{
@@ -248,6 +296,25 @@ var _ = ginkgo.Describe("Test get primary ipFamily", func() {
 					Pods: &capi.NetworkRanges{
 						CIDRBlocks: []string{"192.168.0.0/16", "2002::1234:abcd:ffff:c0a8:101/64"},
 					},
+					Services: &capi.NetworkRanges{
+						CIDRBlocks: []string{"192.168.0.0/16", "2002::1234:abcd:ffff:c0a8:101/64"},
+					},
+				},
+			},
+		}
+		ipFamily, err := GetClusterIPFamily(clusterClassCluster)
+		Expect(ipFamily).To(Equal("V4,V6"))
+		Expect(err).To(BeNil())
+	})
+
+	ginkgo.It("should return dual-stack V4,V6 ipfamily (service cidr)", func() {
+		clusterClassCluster := &capi.Cluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "cluster-class-cluster",
+				Namespace: "default",
+			},
+			Spec: capi.ClusterSpec{
+				ClusterNetwork: &capi.ClusterNetwork{
 					Services: &capi.NetworkRanges{
 						CIDRBlocks: []string{"192.168.0.0/16", "2002::1234:abcd:ffff:c0a8:101/64"},
 					},

@@ -44,7 +44,7 @@ func ipFamilyFromCIDRStrings(cidrs []string) (string, error) {
 		cidrType := GetIPFamilyFromCidr(cidr)
 		if cidrType == IPv4IpFamily {
 			foundIPv4 = true
-		} else {
+		} else if cidrType == IPv6IpFamily {
 			foundIPv6 = true
 		}
 	}
@@ -56,7 +56,7 @@ func ipFamilyFromCIDRStrings(cidrs []string) (string, error) {
 	case foundIPv6:
 		return IPv6IpFamily, nil
 	default:
-		return InvalidIPFamily, nil
+		return InvalidIPFamily, errors.New("Invalid IP Family")
 	}
 }
 
