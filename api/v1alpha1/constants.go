@@ -46,6 +46,7 @@ const (
 	AviResourceCleanupReason                                     = "AviResourceCleanup"
 	AviResourceCleanupSucceededCondition clusterv1.ConditionType = "AviResourceCleanupSucceeded"
 	AviUserCleanupSucceededCondition     clusterv1.ConditionType = "AviUserCleanupSucceeded"
+	AKOIpFamilyValidationFailedCondition clusterv1.ConditionType = "AKOIpFamilyValidationFailed"
 	PreTerminateAnnotation                                       = clusterv1.PreTerminateDeleteHookAnnotationPrefix + "/avi-cleanup"
 
 	HAServiceName                      = "control-plane"
@@ -53,6 +54,5 @@ const (
 	HAServiceAnnotationsKey            = "skipnodeport.ako.vmware.com/enabled"
 	HAAVIInfraSettingAnnotationsKey    = "aviinfrasetting.ako.vmware.com/name"
 
-	AKODeploymentConfigControllerName                                = "akodeploymentconfig-controller"
-	ClusterIpFamilyValidationFailedCondition clusterv1.ConditionType = "ClusterIpFamilyValidationFailed"
+	AKODeploymentConfigControllerName = "akodeploymentconfig-controller"
 )

@@ -59,11 +59,13 @@ func (r *ClusterReconciler) ReconcileAddonSecret(
 		}
 	}
 
-	//Stop reconciling if AKO ip family doesn't match cluster node ip family
+	//Stop reconciling if AKO ip family doesn't match cluster ip family
 	if err = validateADCAndClusterIpFamily(cluster, obj, isVIPProvider, log); err != nil {
-		log.Error(err, "Error: ip family in AKODeploymentConfig doesn't match cluster node ip family")
-		conditions.MarkTrue(cluster, akoov1alpha1.ClusterIpFamilyValidationFailedCondition)
-		return res, err
+		errInfo := "Selected AKODeploymentConfig " + obj.Name + "'s IP family doesn't match cluster " + cluster.Namespace +
+			"-" + cluster.Name + "'s ip family, stop deploying AKO into cluster " + cluster.Namespace + "-" + cluster.Name
+		log.Error(err, errInfo)
+		conditions.MarkTrue(cluster, akoov1alpha1.AKOIpFamilyValidationFailedCondition)
+		return res, nil
 	}
 
 	newAddonSecret, err := r.createAKOAddonSecret(cluster, obj, aviSecret)
@@ -356,22 +358,21 @@ func validateADCAndClusterIpFamily(cluster *clusterv1.Cluster, adc *akoov1alpha1
 	if adc.Spec.ExtraConfigs.IpFamily != "" {
 		adcIpFamily = adc.Spec.ExtraConfigs.IpFamily
 	}
-	nodeIpFamily, err := utils.GetClusterIPFamily(cluster)
+	clusterIpFamily, err := utils.GetClusterIPFamily(cluster)
 	if err != nil {
 		log.Error(err, "can't get cluster ip family")
 		return err
 	}
-	if (adcIpFamily == "V4" && nodeIpFamily == "V6") || (adcIpFamily == "V6" && nodeIpFamily == "V4") {
-		errInfo := "We are not allowed to create single stack " + nodeIpFamily + " cluster when configure AKO as " + adcIpFamily + " ip family"
+	if (adcIpFamily == "V4" && clusterIpFamily == "V6") || (adcIpFamily == "V6" && clusterIpFamily == "V4") {
+		errInfo := "AKO with IP family " + adcIpFamily + " can not work together with cluster with IP family " + clusterIpFamily
 		return errors.New(errInfo)
 	}
 	if isVIPProvider {
-		if adcIpFamily == "V4" && nodeIpFamily == "V6,V4" {
-			return errors.New("When enabling avi as control plane HA, we are not allowed to create ipv6 primary dual-stack cluster if AKO is configured V4 ip family")
-		} else if adcIpFamily == "V6" && nodeIpFamily == "V4,V6" {
-			return errors.New("When enabling avi as control plane HA, we are not allowed to create ipv4 primary dual-stack cluster if AKO is configured V6 ip family")
+		if adcIpFamily == "V4" && clusterIpFamily == "V6,V4" {
+			return errors.New("When enabling avi as control plane HA, AKO with IP family V4 can not work together with ipv6 primary dual-stack cluster")
+		} else if adcIpFamily == "V6" && clusterIpFamily == "V4,V6" {
+			return errors.New("When enabling avi as control plane HA, AKO with IP family V6 can not work together with ipv4 primary dual-stack cluster")
 		}
-
 	}
 	return nil
 }
