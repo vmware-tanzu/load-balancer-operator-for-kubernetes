@@ -14,10 +14,12 @@ import (
 	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako"
 	akoo "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	clusterapipatchutil "sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -55,6 +57,20 @@ func (r *ClusterReconciler) ReconcileAddonSecret(
 			log.Info("Failed to get cluster control plane load balancer type of service, requeue")
 			return res, err
 		}
+	}
+
+	//Stop reconciling if AKO ip family doesn't match cluster ip family
+	if err = validateADCAndClusterIpFamily(cluster, obj, isVIPProvider, log); err != nil {
+		errInfo := "Selected AKODeploymentConfig " + obj.Name + "'s IP family doesn't match cluster " + cluster.Namespace +
+			"-" + cluster.Name + "'s ip family, stop deploying AKO into cluster " + cluster.Namespace + "-" + cluster.Name
+		log.Error(err, errInfo)
+		clusterCondition := &clusterv1.Condition{
+			Type:    akoov1alpha1.AKOIpFamilyValidationSucceededCondition,
+			Status:  corev1.ConditionFalse,
+			Message: errInfo,
+		}
+		conditions.Set(cluster, clusterCondition)
+		return res, nil
 	}
 
 	newAddonSecret, err := r.createAKOAddonSecret(cluster, obj, aviSecret)
@@ -340,4 +356,32 @@ func getAKOPackageRefFromClusterBootstrap(log logr.Logger, cb *runv1alpha3.Clust
 		}
 	}
 	return -1, nil
+}
+
+func validateADCAndClusterIpFamily(cluster *clusterv1.Cluster, adc *akoov1alpha1.AKODeploymentConfig, isVIPProvider bool, log logr.Logger) error {
+	adcIpFamily := "V4"
+	if adc.Spec.ExtraConfigs.IpFamily != "" {
+		adcIpFamily = adc.Spec.ExtraConfigs.IpFamily
+	}
+	clusterIpFamily, err := utils.GetClusterIPFamily(cluster)
+	if err != nil {
+		log.Error(err, "can't get cluster ip family")
+		return err
+	}
+	// AKO limitations: AKO can't configure backend pool ip family
+	// TODO:(chenlin) Remove validation after AKO supports configurable ip pool
+	if (adcIpFamily == "V4" && clusterIpFamily == "V6") || (adcIpFamily == "V6" && clusterIpFamily == "V4") {
+		errInfo := "AKO with IP family " + adcIpFamily + " can not work together with cluster with IP family " + clusterIpFamily
+		return errors.New(errInfo)
+	}
+	// When enable avi as control plane ha, backend server shouldn't use secondary ip type
+	// TODO:(chenlin) Remove validation after AKO supports configurable ip pool
+	if isVIPProvider {
+		if adcIpFamily == "V4" && clusterIpFamily == "V6,V4" {
+			return errors.New("When enabling avi as control plane HA, AKO with IP family V4 can not work together with ipv6 primary dual-stack cluster")
+		} else if adcIpFamily == "V6" && clusterIpFamily == "V4,V6" {
+			return errors.New("When enabling avi as control plane HA, AKO with IP family V6 can not work together with ipv4 primary dual-stack cluster")
+		}
+	}
+	return nil
 }
