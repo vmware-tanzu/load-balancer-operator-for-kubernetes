@@ -20,6 +20,10 @@ const (
 	DualStackIPv4Primary = "V4,V6"
 )
 
+// GetIPFamilyFromCidr returns a cidr IPFamily from the configuration provided.
+// 1. V4: ipv4 cidr
+// 2. V6: ipv6 cidr
+// 3. INVALID: invalid cidr
 func GetIPFamilyFromCidr(cidr string) string {
 	addr, _, err := net.ParseCIDR(cidr)
 	if err != nil {
@@ -34,6 +38,11 @@ func GetIPFamilyFromCidr(cidr string) string {
 	return addrType
 }
 
+// ipFamilyFromCIDRStrings returns cidr strings IPFamily from the configuration provided.
+// 1. V4: ipv4 cidr strings
+// 2. V6: ipv6 cidr strings
+// 3. Dual-Stack: dual-stack cidr strings
+// 4. INVALID: invalid cidr strings
 func ipFamilyFromCIDRStrings(cidrs []string) (string, error) {
 	if len(cidrs) > 2 {
 		return InvalidIPFamily, errors.New("too many CIDRs specified")
@@ -61,6 +70,11 @@ func ipFamilyFromCIDRStrings(cidrs []string) (string, error) {
 }
 
 // GetClusterIPFamily returns a cluster IPFamily from the configuration provided.
+// 1. V4: single-stack ipv4 cluster
+// 2. V6: single-stack ipv6 cluster
+// 3. V4,V6: dual-stack ipv4 primary cluster
+// 4. V6,V4: dual-stack ipv6 primary cluster
+// 5. INVALID: invalid cluster
 func GetClusterIPFamily(c *capi.Cluster) (string, error) {
 	var podCIDRs, serviceCIDRs []string
 	var podsIPFamily, servicesIPFamily string
@@ -74,6 +88,7 @@ func GetClusterIPFamily(c *capi.Cluster) (string, error) {
 			serviceCIDRs = c.Spec.ClusterNetwork.Services.CIDRBlocks
 		}
 	}
+	// Return default ipv4 ipfamily when podcidrs and servicecidrs are both empty
 	if len(podCIDRs) == 0 && len(serviceCIDRs) == 0 {
 		return IPv4IpFamily, nil
 	}
@@ -92,6 +107,7 @@ func GetClusterIPFamily(c *capi.Cluster) (string, error) {
 		}
 	}
 
+	// Return invalid when podcidrs ipfamily doesn't match servicecidrs ipfamily
 	if podsIPFamily != servicesIPFamily && len(podCIDRs) != 0 && len(serviceCIDRs) != 0 {
 		return InvalidIPFamily, errors.New("pods and services IP family mismatch")
 	}
