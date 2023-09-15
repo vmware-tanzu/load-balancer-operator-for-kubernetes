@@ -146,8 +146,6 @@ func GetPrimaryIPFamily(c *capi.Cluster) (string, error) {
 	}
 	if ipFamily == IPv4IpFamily || ipFamily == DualStackIPv4Primary{
 		return IPv4IpFamily, nil
-	} else if ipFamily == IPv6IpFamily || ipFamily == DualStackIPv6Primary{
-		return IPv6IpFamily, nil
 	}
-	return InvalidIPFamily, fmt.Errorf("Invalid IP Family")
+	return IPv6IpFamily, nil
 }

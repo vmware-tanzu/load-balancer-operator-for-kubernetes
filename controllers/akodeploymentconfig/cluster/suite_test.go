@@ -36,4 +36,5 @@ func intgTests() {
 
 func unitTests() {
 	Describe("AKO Deployment Spec generation", unitTestAKODeploymentYaml)
+	Describe("AKODeploymentConfig and cluster ip family Validation", unitTestValidateADCAndClusterIpFamily)
 }
