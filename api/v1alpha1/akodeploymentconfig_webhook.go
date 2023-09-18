@@ -327,17 +327,18 @@ func (r *AKODeploymentConfig) validateAviDataNetworks() field.ErrorList {
 	}
 	// check network cidr
 	addr, cidr, err := net.ParseCIDR(r.Spec.DataNetwork.CIDR)
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "dataNetwork", "cidr"),
+			r.Spec.DataNetwork.CIDR,
+			"data plane network cidr "+r.Spec.DataNetwork.CIDR+" is not valid:"+err.Error()))
+	}
 	addrType := "INVALID"
 	if addr.To4() != nil {
 		addrType = "V4"
 	} else if addr.To16() != nil {
 		addrType = "V6"
 	}
-	if err != nil {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "dataNetwork", "cidr"),
-			r.Spec.DataNetwork.CIDR,
-			"data plane network cidr "+r.Spec.DataNetwork.CIDR+" is not valid:"+err.Error()))
-	}
+
 	// check data network ip pools
 	for _, ipPool := range r.Spec.DataNetwork.IPPools {
 		ipStart := net.ParseIP(ipPool.Start)

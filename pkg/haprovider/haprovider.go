@@ -5,7 +5,6 @@ package haprovider
 
 import (
 	"context"
-	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/utils"
 	"net"
 	"sync"
 
@@ -136,7 +135,7 @@ func (r *HAProvider) createService(
 		return nil, err
 	} else if endpoint != "" {
 		// "endpoint" can be ipv4/ipv6 or hostname, add ipv4/ipv6 or hostname as annotation: ako.vmware.com/load-balancer-ip:<ip>
-		// Limitation: Incheon doesn't support ipv6 endpoint because of AKO limitation
+		// doesn't support ipv6 endpoint because of AKO limitation: https://avinetworks.com/docs/ako/1.10/support-for-ipv6-in-ako/
 		if net.ParseIP(endpoint) == nil {
 			endpoint, err = QueryFQDN(endpoint)
 			if err != nil {
@@ -383,8 +382,8 @@ func (r *HAProvider) CreateOrUpdateHAEndpoints(ctx context.Context, machine *clu
 		return err
 	}
 	ipFamily := "V4"
-	if adcForCluster != nil {
-		ipFamily = utils.GetIPFamilyFromCidr(adcForCluster.Spec.DataNetwork.CIDR)
+	if adcForCluster != nil && adcForCluster.Spec.ExtraConfigs.IpFamily != "" {
+		ipFamily = adcForCluster.Spec.ExtraConfigs.IpFamily
 
 	}
 	if !machine.DeletionTimestamp.IsZero() {
