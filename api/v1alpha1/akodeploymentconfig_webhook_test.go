@@ -317,6 +317,48 @@ func TestCreateNewAKODeploymentConfig(t *testing.T) {
 			},
 			expectErr: true,
 		},
+		{
+			name:              "should throw error if addr type doesn't match ippool type",
+			adminSecret:       staticAdminSecret.DeepCopy(),
+			certificateSecret: staticCASecret.DeepCopy(),
+			adc:               staticADC.DeepCopy(),
+			customizeInput: func(adminSecret, certificateSecret *corev1.Secret, adc *AKODeploymentConfig) (*corev1.Secret, *corev1.Secret, *AKODeploymentConfig) {
+				adc.Spec.DataNetwork = DataNetwork{
+					Name: "VM Network 1",
+					CIDR: "10.0.0.1/24",
+					IPPools: []IPPool{
+						{
+							Start: "2002::1234:abcd:ffff:c0a8:101/64",
+							End:   "2002::1234:abcd:ffff:c0a8:102/64",
+							Type:  "V6",
+						},
+					},
+				}
+				return adminSecret, certificateSecret, adc
+			},
+			expectErr: true,
+		},
+		{
+			name:              "valid ipv6 cidr",
+			adminSecret:       staticAdminSecret.DeepCopy(),
+			certificateSecret: staticCASecret.DeepCopy(),
+			adc:               staticADC.DeepCopy(),
+			customizeInput: func(adminSecret, certificateSecret *corev1.Secret, adc *AKODeploymentConfig) (*corev1.Secret, *corev1.Secret, *AKODeploymentConfig) {
+				adc.Spec.DataNetwork = DataNetwork{
+					Name: "VM Network 1",
+					CIDR: "2002::1234:abcd:ffff:c0a8:101/64",
+					IPPools: []IPPool{
+						{
+							Start: "2002::1234:abcd:ffff:c0a8:101",
+							End:   "2002::1234:abcd:ffff:c0a8:102",
+							Type:  "V6",
+						},
+					},
+				}
+				return adminSecret, certificateSecret, adc
+			},
+			expectErr: false,
+		},
 	}
 
 	for _, tc := range testcases {

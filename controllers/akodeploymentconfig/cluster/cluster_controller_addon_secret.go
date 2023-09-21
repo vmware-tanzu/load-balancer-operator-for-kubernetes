@@ -60,7 +60,7 @@ func (r *ClusterReconciler) ReconcileAddonSecret(
 	}
 
 	//Stop reconciling if AKO ip family doesn't match cluster ip family
-	if err = validateADCAndClusterIpFamily(cluster, obj, isVIPProvider, log); err != nil {
+	if err = ValidateADCAndClusterIpFamily(cluster, obj, isVIPProvider, log); err != nil {
 		errInfo := "Selected AKODeploymentConfig " + obj.Name + "'s IP family doesn't match cluster " + cluster.Namespace +
 			"-" + cluster.Name + "'s ip family, stop deploying AKO into cluster " + cluster.Namespace + "-" + cluster.Name
 		log.Error(err, errInfo)
@@ -358,7 +358,7 @@ func getAKOPackageRefFromClusterBootstrap(log logr.Logger, cb *runv1alpha3.Clust
 	return -1, nil
 }
 
-func validateADCAndClusterIpFamily(cluster *clusterv1.Cluster, adc *akoov1alpha1.AKODeploymentConfig, isVIPProvider bool, log logr.Logger) error {
+func ValidateADCAndClusterIpFamily(cluster *clusterv1.Cluster, adc *akoov1alpha1.AKODeploymentConfig, isVIPProvider bool, log logr.Logger) error {
 	adcIpFamily := "V4"
 	if adc.Spec.ExtraConfigs.IpFamily != "" {
 		adcIpFamily = adc.Spec.ExtraConfigs.IpFamily

@@ -4,6 +4,7 @@
 package cluster_test
 
 import (
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
@@ -13,6 +14,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 const expectedSecretYaml = `#@data/values
@@ -245,5 +248,321 @@ func unitTestAKODeploymentYaml() {
 				})
 			})
 		})
+	})
+}
+
+func unitTestValidateADCAndClusterIpFamily() {
+	Context("Validate AKODeploymentConfig ip family and cluster ip family", func() {
+		var (
+			akoDeploymentConfig *akoov1alpha1.AKODeploymentConfig
+			capiCluster         *clusterv1.Cluster
+			isVIPProvider       bool
+			logger              logr.Logger
+		)
+
+		BeforeEach(func() {
+			log.SetLogger(zap.New())
+			logger = log.Log
+		})
+
+		When("IpFamily of AKODeploymentConfig and cluster is valid", func() {
+			BeforeEach(func() {
+				akoDeploymentConfig = &akoov1alpha1.AKODeploymentConfig{
+					Spec: akoov1alpha1.AKODeploymentConfigSpec{
+						CloudName:          "test-cloud",
+						Controller:         "10.23.122.1",
+						ControllerVersion:  "20.1.3",
+						ServiceEngineGroup: "Default-SEG",
+						DataNetwork: akoov1alpha1.DataNetwork{
+							Name: "test-akdc",
+							CIDR: "10.0.0.0/24",
+						},
+						ControlPlaneNetwork: akoov1alpha1.ControlPlaneNetwork{
+							Name: "test-akdc-cp",
+							CIDR: "10.1.0.0/24",
+						},
+						ExtraConfigs: akoov1alpha1.ExtraConfigs{
+							IpFamily: "V4",
+							Rbac: akoov1alpha1.AKORbacConfig{
+								PspEnabled:          pointer.Bool(true),
+								PspPolicyAPIVersion: "test/1.2",
+							},
+							Log: akoov1alpha1.AKOLogConfig{
+								PersistentVolumeClaim: "true",
+								MountPath:             "/var/log",
+								LogFile:               "test-avi.log",
+							},
+							IngressConfigs: akoov1alpha1.AKOIngressConfig{
+								DisableIngressClass:      pointer.Bool(true),
+								DefaultIngressController: pointer.Bool(false),
+								ShardVSSize:              "MEDIUM",
+								ServiceType:              "NodePort",
+								NodeNetworkList: []akoov1alpha1.NodeNetwork{
+									{
+										NetworkName: "test-node-network-1",
+										Cidrs:       []string{"10.0.0.0/24", "192.168.0.0/24"},
+									},
+								},
+							},
+							DisableStaticRouteSync: pointer.BoolPtr(true),
+						},
+					},
+				}
+				capiCluster = &clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cluster",
+						Namespace: "default",
+					},
+					Spec: clusterv1.ClusterSpec{
+						ClusterNetwork: &clusterv1.ClusterNetwork{
+							Pods: &clusterv1.NetworkRanges{
+								CIDRBlocks: []string{"192.168.0.0/16"},
+							},
+							Services: &clusterv1.NetworkRanges{
+								CIDRBlocks: []string{"192.168.0.0/16"},
+							},
+						},
+					},
+				}
+				isVIPProvider = true
+			})
+
+			It("should return no error", func() {
+				err := cluster.ValidateADCAndClusterIpFamily(capiCluster, akoDeploymentConfig, isVIPProvider, logger)
+				Expect(err).ShouldNot(HaveOccurred())
+			})
+		})
+
+		When("IpFamily of AKODeploymentConfig and cluster is invalid", func() {
+			Context("Invalid cluster ip family", func() {
+				BeforeEach(func() {
+					akoDeploymentConfig = &akoov1alpha1.AKODeploymentConfig{
+						Spec: akoov1alpha1.AKODeploymentConfigSpec{
+							CloudName:          "test-cloud",
+							Controller:         "10.23.122.1",
+							ControllerVersion:  "20.1.3",
+							ServiceEngineGroup: "Default-SEG",
+							DataNetwork: akoov1alpha1.DataNetwork{
+								Name: "test-akdc",
+								CIDR: "10.0.0.0/24",
+							},
+							ControlPlaneNetwork: akoov1alpha1.ControlPlaneNetwork{
+								Name: "test-akdc-cp",
+								CIDR: "10.1.0.0/24",
+							},
+							ExtraConfigs: akoov1alpha1.ExtraConfigs{
+								IpFamily:               "V4",
+								DisableStaticRouteSync: pointer.BoolPtr(true),
+							},
+						},
+					}
+					capiCluster = &clusterv1.Cluster{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-cluster",
+							Namespace: "default",
+						},
+						Spec: clusterv1.ClusterSpec{
+							ClusterNetwork: &clusterv1.ClusterNetwork{
+								Pods: &clusterv1.NetworkRanges{
+									CIDRBlocks: []string{"aaaa"},
+								},
+								Services: &clusterv1.NetworkRanges{
+									CIDRBlocks: []string{"192.168.0.0/16"},
+								},
+							},
+						},
+					}
+					isVIPProvider = false
+				})
+
+				It("should return error since cluster ip family is invalid", func() {
+					err := cluster.ValidateADCAndClusterIpFamily(capiCluster, akoDeploymentConfig, isVIPProvider, logger)
+					Expect(err).Should(HaveOccurred())
+				})
+			})
+
+			Context("Invalid cluster ip family and AKODeploymentConfig ip family combination", func() {
+				When("AKODeploymentConfig ip family is V4 and cluster ip family is V6", func() {
+					BeforeEach(func() {
+						akoDeploymentConfig = &akoov1alpha1.AKODeploymentConfig{
+							Spec: akoov1alpha1.AKODeploymentConfigSpec{
+								CloudName:          "test-cloud",
+								Controller:         "10.23.122.1",
+								ControllerVersion:  "20.1.3",
+								ServiceEngineGroup: "Default-SEG",
+								DataNetwork: akoov1alpha1.DataNetwork{
+									Name: "test-akdc",
+									CIDR: "10.0.0.0/24",
+								},
+								ControlPlaneNetwork: akoov1alpha1.ControlPlaneNetwork{
+									Name: "test-akdc-cp",
+									CIDR: "10.1.0.0/24",
+								},
+								ExtraConfigs: akoov1alpha1.ExtraConfigs{
+									IpFamily:               "V4",
+									DisableStaticRouteSync: pointer.BoolPtr(true),
+								},
+							},
+						}
+						capiCluster = &clusterv1.Cluster{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "test-cluster",
+								Namespace: "default",
+							},
+							Spec: clusterv1.ClusterSpec{
+								ClusterNetwork: &clusterv1.ClusterNetwork{
+									Pods: &clusterv1.NetworkRanges{
+										CIDRBlocks: []string{"2002::1234:abcd:ffff:c0a8:101/64"},
+									},
+								},
+							},
+						}
+						isVIPProvider = false
+					})
+
+					It("should return error since the ipfamily combination is not supported", func() {
+						err := cluster.ValidateADCAndClusterIpFamily(capiCluster, akoDeploymentConfig, isVIPProvider, logger)
+						Expect(err).Should(HaveOccurred())
+					})
+				})
+
+				When("AKODeploymentConfig ip family is V6 and cluster ip family is V4", func() {
+					BeforeEach(func() {
+						akoDeploymentConfig = &akoov1alpha1.AKODeploymentConfig{
+							Spec: akoov1alpha1.AKODeploymentConfigSpec{
+								CloudName:          "test-cloud",
+								Controller:         "10.23.122.1",
+								ControllerVersion:  "20.1.3",
+								ServiceEngineGroup: "Default-SEG",
+								DataNetwork: akoov1alpha1.DataNetwork{
+									Name: "test-akdc",
+									CIDR: "10.0.0.0/24",
+								},
+								ControlPlaneNetwork: akoov1alpha1.ControlPlaneNetwork{
+									Name: "test-akdc-cp",
+									CIDR: "10.1.0.0/24",
+								},
+								ExtraConfigs: akoov1alpha1.ExtraConfigs{
+									IpFamily:               "V6",
+									DisableStaticRouteSync: pointer.BoolPtr(true),
+								},
+							},
+						}
+						capiCluster = &clusterv1.Cluster{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "test-cluster",
+								Namespace: "default",
+							},
+							Spec: clusterv1.ClusterSpec{
+								ClusterNetwork: &clusterv1.ClusterNetwork{
+									Pods: &clusterv1.NetworkRanges{
+										CIDRBlocks: []string{"10.0.0.0/24"},
+									},
+								},
+							},
+						}
+						isVIPProvider = false
+					})
+
+					It("should return error since the ipfamily combination is not supported", func() {
+						err := cluster.ValidateADCAndClusterIpFamily(capiCluster, akoDeploymentConfig, isVIPProvider, logger)
+						Expect(err).Should(HaveOccurred())
+					})
+				})
+
+			})
+
+			Context("When enabling avi control plane HA, invalid cluster ip family and AKODeploymentConfig ip family combination", func() {
+				When("AKODeploymentConfig ip family is V4 and cluster ip family is dual-stack IPv6 Primary", func() {
+					BeforeEach(func() {
+						akoDeploymentConfig = &akoov1alpha1.AKODeploymentConfig{
+							Spec: akoov1alpha1.AKODeploymentConfigSpec{
+								CloudName:          "test-cloud",
+								Controller:         "10.23.122.1",
+								ControllerVersion:  "20.1.3",
+								ServiceEngineGroup: "Default-SEG",
+								DataNetwork: akoov1alpha1.DataNetwork{
+									Name: "test-akdc",
+									CIDR: "10.0.0.0/24",
+								},
+								ControlPlaneNetwork: akoov1alpha1.ControlPlaneNetwork{
+									Name: "test-akdc-cp",
+									CIDR: "10.1.0.0/24",
+								},
+								ExtraConfigs: akoov1alpha1.ExtraConfigs{
+									IpFamily:               "V4",
+									DisableStaticRouteSync: pointer.BoolPtr(true),
+								},
+							},
+						}
+						capiCluster = &clusterv1.Cluster{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "test-cluster",
+								Namespace: "default",
+							},
+							Spec: clusterv1.ClusterSpec{
+								ClusterNetwork: &clusterv1.ClusterNetwork{
+									Pods: &clusterv1.NetworkRanges{
+										CIDRBlocks: []string{"2002::1234:abcd:ffff:c0a8:101/64", "192.168.0.0/16"},
+									},
+								},
+							},
+						}
+						isVIPProvider = true
+					})
+
+					It("should return error since the ipfamily combination is not supported", func() {
+						err := cluster.ValidateADCAndClusterIpFamily(capiCluster, akoDeploymentConfig, isVIPProvider, logger)
+						Expect(err).Should(HaveOccurred())
+					})
+				})
+
+				When("AKODeploymentConfig ip family is V6 and cluster ip family is dual-stack IPv4 Primary", func() {
+					BeforeEach(func() {
+						akoDeploymentConfig = &akoov1alpha1.AKODeploymentConfig{
+							Spec: akoov1alpha1.AKODeploymentConfigSpec{
+								CloudName:          "test-cloud",
+								Controller:         "10.23.122.1",
+								ControllerVersion:  "20.1.3",
+								ServiceEngineGroup: "Default-SEG",
+								DataNetwork: akoov1alpha1.DataNetwork{
+									Name: "test-akdc",
+									CIDR: "10.0.0.0/24",
+								},
+								ControlPlaneNetwork: akoov1alpha1.ControlPlaneNetwork{
+									Name: "test-akdc-cp",
+									CIDR: "10.1.0.0/24",
+								},
+								ExtraConfigs: akoov1alpha1.ExtraConfigs{
+									IpFamily:               "V6",
+									DisableStaticRouteSync: pointer.BoolPtr(true),
+								},
+							},
+						}
+						capiCluster = &clusterv1.Cluster{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "test-cluster",
+								Namespace: "default",
+							},
+							Spec: clusterv1.ClusterSpec{
+								ClusterNetwork: &clusterv1.ClusterNetwork{
+									Pods: &clusterv1.NetworkRanges{
+										CIDRBlocks: []string{"10.0.0.0/24", "2002::1234:abcd:ffff:c0a8:101/64"},
+									},
+								},
+							},
+						}
+						isVIPProvider = true
+					})
+
+					It("should return error since the ipfamily combination is not supported", func() {
+						err := cluster.ValidateADCAndClusterIpFamily(capiCluster, akoDeploymentConfig, isVIPProvider, logger)
+						Expect(err).Should(HaveOccurred())
+					})
+				})
+
+			})
+		})
+
 	})
 }

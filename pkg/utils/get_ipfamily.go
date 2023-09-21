@@ -134,3 +134,18 @@ func GetClusterIPFamily(c *capi.Cluster) (string, error) {
 	}
 	return podsIPFamily, nil
 }
+
+// GetPrimaryIPFamily returns a cluster primary IPFamily from the configuration provided.
+// 1. V4: single-stack ipv4/dual-stack ipv4 primary cluster
+// 2. V6: single-stack ipv6/dual-stack ipv6 primary cluster
+// 3. INVALID: invalid cluster
+func GetPrimaryIPFamily(c *capi.Cluster) (string, error) {
+	ipFamily, err := GetClusterIPFamily(c)
+	if err != nil {
+		return InvalidIPFamily, fmt.Errorf("Invalid IP Family: %s", err)
+	}
+	if ipFamily == IPv4IpFamily || ipFamily == DualStackIPv4Primary{
+		return IPv4IpFamily, nil
+	}
+	return IPv6IpFamily, nil
+}

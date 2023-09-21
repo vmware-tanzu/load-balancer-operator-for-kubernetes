@@ -134,7 +134,8 @@ func (r *HAProvider) createService(
 		r.log.Error(err, "can't unmarshal cluster variables ", "endpoint", endpoint)
 		return nil, err
 	} else if endpoint != "" {
-		// "endpoint" can be ipv4 or hostname, add ipv4 or hostname as annotation: ako.vmware.com/load-balancer-ip:<ip>
+		// "endpoint" can be ipv4/ipv6 or hostname, add ipv4/ipv6 or hostname as annotation: ako.vmware.com/load-balancer-ip:<ip>
+		// doesn't support ipv6 endpoint because of AKO limitation: https://avinetworks.com/docs/ako/1.10/support-for-ipv6-in-ako/
 		if net.ParseIP(endpoint) == nil {
 			endpoint, err = QueryFQDN(endpoint)
 			if err != nil {
@@ -270,11 +271,11 @@ func (r *HAProvider) syncEndpointMachineIP(address corev1.EndpointAddress, machi
 			if machineAddress.Type != clusterv1.MachineExternalIP {
 				continue
 			}
-			if net.ParseIP(machineAddress.Address) != nil && net.ParseIP(machineAddress.Address).To4() != nil {
+			if net.ParseIP(machineAddress.Address) != nil {
 				address.IP = machineAddress.Address
 				r.log.Info("sync endpoints object, update machine: " + machine.Name + "'s ip to:" + address.IP)
 			} else {
-				r.log.Info(machineAddress.Address + " is not a valid IPv4 address")
+				r.log.Info(machineAddress.Address + " is not a valid IP address")
 			}
 		}
 	}
@@ -301,7 +302,7 @@ func (r *HAProvider) removeMachineIpFromEndpoints(endpoints *corev1.Endpoints, m
 	}
 }
 
-func (r *HAProvider) addMachineIpToEndpoints(endpoints *corev1.Endpoints, machine *clusterv1.Machine) {
+func (r *HAProvider) addMachineIpToEndpoints(endpoints *corev1.Endpoints, machine *clusterv1.Machine, ipFamily string) {
 	if endpoints.Subsets == nil {
 		// create a Subset if Endpoint doesn't have one
 		endpoints.Subsets = []corev1.EndpointSubset{{
@@ -327,16 +328,26 @@ func (r *HAProvider) addMachineIpToEndpoints(endpoints *corev1.Endpoints, machin
 			continue
 		}
 		// check machineAddress.Address is valid
-		// only support IPv4 for now
-		if net.ParseIP(machineAddress.Address) != nil && net.ParseIP(machineAddress.Address).To4() != nil {
+		// Support IPv4 and IPv6
+		if net.ParseIP(machineAddress.Address) != nil {
 			newAddress := corev1.EndpointAddress{
 				IP:       machineAddress.Address,
 				NodeName: &machine.Name,
 			}
-			endpoints.Subsets[0].Addresses = append(endpoints.Subsets[0].Addresses, newAddress)
-			break
+			//Validate MachineIP before adding to Endpoint
+			if ipFamily == "V6" {
+				if net.ParseIP(machineAddress.Address).To4() == nil {
+					endpoints.Subsets[0].Addresses = append(endpoints.Subsets[0].Addresses, newAddress)
+					break
+				}
+			} else if ipFamily == "V4" {
+				if net.ParseIP(machineAddress.Address).To4() != nil {
+					endpoints.Subsets[0].Addresses = append(endpoints.Subsets[0].Addresses, newAddress)
+					break
+				}
+			}
 		} else {
-			r.log.Info(machineAddress.Address + " is not a valid IPv4 address")
+			r.log.Info(machineAddress.Address + " is not a valid IP address")
 		}
 	}
 }
@@ -364,13 +375,24 @@ func (r *HAProvider) CreateOrUpdateHAEndpoints(ctx context.Context, machine *clu
 		return err
 	}
 
+	// Get control plane endpoint ip family
+	adcForCluster, err := r.getADCForCluster(ctx, cluster)
+	if err != nil {
+		r.log.Error(err, "Failed to get cluster AKODeploymentConfig")
+		return err
+	}
+	ipFamily := "V4"
+	if adcForCluster != nil && adcForCluster.Spec.ExtraConfigs.IpFamily != "" {
+		ipFamily = adcForCluster.Spec.ExtraConfigs.IpFamily
+
+	}
 	if !machine.DeletionTimestamp.IsZero() {
 		r.log.Info("machine" + machine.Name + " is being deleted, remove the endpoint of the machine from " + r.getHAServiceName(cluster) + " Endpoints")
 		r.removeMachineIpFromEndpoints(endpoints, machine)
 	} else {
 		// Add machine ip to the Endpoints object no matter it's ready or not
 		// Because avi controller checks the status of machine. If it's not ready, avi won't use it as an endpoint
-		r.addMachineIpToEndpoints(endpoints, machine)
+		r.addMachineIpToEndpoints(endpoints, machine, ipFamily)
 	}
 	if err := r.Update(ctx, endpoints); err != nil {
 		return errors.Wrapf(err, "Failed to update endpoints <%s>, control plane machine IP doesn't get allocated yet\n", endpoints.Name)
