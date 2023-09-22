@@ -251,6 +251,20 @@ func TestCreateNewAKODeploymentConfig(t *testing.T) {
 			expectErr: true,
 		},
 		{
+			name:              "show throw error since ipv6 control plane network cidr is not supported",
+			adminSecret:       staticAdminSecret.DeepCopy(),
+			certificateSecret: staticCASecret.DeepCopy(),
+			adc:               staticADC.DeepCopy(),
+			customizeInput: func(adminSecret, certificateSecret *corev1.Secret, adc *AKODeploymentConfig) (*corev1.Secret, *corev1.Secret, *AKODeploymentConfig) {
+				adc.Spec.ControlPlaneNetwork = ControlPlaneNetwork{
+					Name: "VM Network 1",
+					CIDR: "2002::1234:abcd:ffff:c0a8:101/64",
+				}
+				return adminSecret, certificateSecret, adc
+			},
+			expectErr: true,
+		},
+		{
 			name:              "should throw error if not find avi data plane network",
 			adminSecret:       staticAdminSecret.DeepCopy(),
 			certificateSecret: staticCASecret.DeepCopy(),
@@ -339,7 +353,7 @@ func TestCreateNewAKODeploymentConfig(t *testing.T) {
 			expectErr: true,
 		},
 		{
-			name:              "valid ipv6 cidr",
+			name:              "show throw error since ipv6 data network cidr is not supported",
 			adminSecret:       staticAdminSecret.DeepCopy(),
 			certificateSecret: staticCASecret.DeepCopy(),
 			adc:               staticADC.DeepCopy(),
@@ -357,7 +371,7 @@ func TestCreateNewAKODeploymentConfig(t *testing.T) {
 				}
 				return adminSecret, certificateSecret, adc
 			},
-			expectErr: false,
+			expectErr: true,
 		},
 	}
 

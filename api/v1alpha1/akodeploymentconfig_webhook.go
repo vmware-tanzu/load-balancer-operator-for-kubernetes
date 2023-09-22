@@ -304,11 +304,18 @@ func (r *AKODeploymentConfig) validateAviControlPlaneNetworks() field.ErrorList 
 			"failed to get control plane network "+r.Spec.ControlPlaneNetwork.Name+" from avi controller:"+err.Error()))
 	}
 	// check network cidr validate or not
-	_, _, err := net.ParseCIDR(r.Spec.ControlPlaneNetwork.CIDR)
+	addr, _, err := net.ParseCIDR(r.Spec.ControlPlaneNetwork.CIDR)
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "controlPlaneNetwork", "cidr"),
 			r.Spec.ControlPlaneNetwork.CIDR,
 			"control plane network cidr "+r.Spec.ControlPlaneNetwork.CIDR+" is not valid:"+err.Error()))
+	}
+	// doesn't support ipv6 Frontend VIP because of AKO limitation: https://avinetworks.com/docs/ako/1.10/support-for-ipv6-in-ako/
+	// TODO:(chenlin) Remove validation after AKO supports IPv6 Frontend VIP
+	if addr.To4() == nil {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "controlPlaneNetwork", "cidr"),
+			r.Spec.ControlPlaneNetwork.CIDR,
+			"IPv6 type of control plane network cidr "+r.Spec.ControlPlaneNetwork.CIDR+" is not valid"))
 	}
 	return allErrs
 }
@@ -330,13 +337,16 @@ func (r *AKODeploymentConfig) validateAviDataNetworks() field.ErrorList {
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "dataNetwork", "cidr"),
 			r.Spec.DataNetwork.CIDR,
-			"data plane network cidr "+r.Spec.DataNetwork.CIDR+" is not valid:"+err.Error()))
+			"IPv6 type of data plane network cidr "+r.Spec.DataNetwork.CIDR+" is not valid:"+err.Error()))
 	}
-	addrType := "INVALID"
-	if addr.To4() != nil {
-		addrType = "V4"
-	} else if addr.To16() != nil {
+	addrType := "V4"
+	if addr.To4() == nil {
+		// doesn't support ipv6 Frontend VIP because of AKO limitation: https://avinetworks.com/docs/ako/1.10/support-for-ipv6-in-ako/
+		// TODO:(chenlin) Remove validation after AKO supports IPv6 Frontend VIP
 		addrType = "V6"
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "dataNetwork", "cidr"),
+			r.Spec.DataNetwork.CIDR,
+			"IPv6 type of data plane network cidr "+r.Spec.DataNetwork.CIDR+" is not valid"))
 	}
 
 	// check data network ip pools
