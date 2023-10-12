@@ -448,7 +448,7 @@ var _ = ginkgo.Describe("Test get primary ipFamily", func() {
 			Spec: capi.ClusterSpec{
 				ClusterNetwork: &capi.ClusterNetwork{
 					Pods: &capi.NetworkRanges{
-						CIDRBlocks: []string{"192.168.0.0/16","2002::1234:abcd:ffff:c0a8:101/64","10.10.0.0/16"},
+						CIDRBlocks: []string{"192.168.0.0/16", "2002::1234:abcd:ffff:c0a8:101/64", "10.10.0.0/16"},
 					},
 					Services: &capi.NetworkRanges{
 						CIDRBlocks: []string{"192.168.0.0/16"},
