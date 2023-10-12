@@ -108,6 +108,7 @@ func (r *HAProvider) createService(
 		},
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceTypeLoadBalancer,
+			IPFamilies: []string{"IPv6"},
 			Ports: []corev1.ServicePort{{
 				Protocol:   "TCP",
 				Port:       port,
