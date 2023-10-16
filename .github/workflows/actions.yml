@@ -6,7 +6,7 @@ on:
       - "config/**/*"
       - go.mod
       - go.sum
-      - "hack/*.sh"
+      - "hack/*"
       - Makefile
       - ".github/workflows/*.yml"
       - "codecov.yml"
