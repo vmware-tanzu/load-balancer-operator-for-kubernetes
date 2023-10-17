@@ -5,6 +5,7 @@ package haprovider
 
 import (
 	"context"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/utils"
 	"net"
 	"sync"
 
@@ -23,6 +24,12 @@ import (
 	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	ako_operator "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
+)
+
+const (
+	IPv4IpFamily = "IPv4"
+	IPv6IpFamily = "IPv6"
+	IPv6IpType   = "V6"
 )
 
 type HAProvider struct {
@@ -96,6 +103,17 @@ func (r *HAProvider) createService(
 		return nil, err
 	}
 
+	// Get cluster primary ip family, which is used for HA service
+	primaryIPFamily, err := utils.GetPrimaryIPFamily(cluster)
+	if err != nil {
+		return nil, err
+	}
+	if primaryIPFamily == IPv6IpType {
+		primaryIPFamily = IPv6IpFamily
+	} else {
+		primaryIPFamily = IPv4IpFamily
+	}
+
 	service := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Service",
@@ -108,6 +126,8 @@ func (r *HAProvider) createService(
 		},
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceTypeLoadBalancer,
+			//TODO:(chenlin) Add two ip families after AKO fully supports dual-stack load balancer type of service
+			IPFamilies: []corev1.IPFamily{corev1.IPFamily(primaryIPFamily)},
 			Ports: []corev1.ServicePort{{
 				Protocol:   "TCP",
 				Port:       port,

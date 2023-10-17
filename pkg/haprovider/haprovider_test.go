@@ -215,6 +215,86 @@ var _ = Describe("Control Plane HA provider", func() {
 			})
 		})
 
+		When("cluster is dual-stack IPv4 Primary", func() {
+			BeforeEach(func() {
+				cluster = &clusterv1.Cluster{
+					ObjectMeta: v1.ObjectMeta{
+						Name:        "test-cluster",
+						Namespace:   "default",
+						Annotations: map[string]string{"tkg.tanzu.vmware.com/cluster-controlplane-endpoint": "2.2.2.2"},
+					},
+					Spec: clusterv1.ClusterSpec{
+						ClusterNetwork: &clusterv1.ClusterNetwork{
+							Pods: &clusterv1.NetworkRanges{
+								CIDRBlocks: []string{"10.0.0.0/24", "2002::1234:abcd:ffff:c0a8:101/64"},
+							},
+						},
+					},
+				}
+			})
+			It("should create service successfully", func() {
+				svc, err = haProvider.createService(ctx, cluster)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(svc.Spec.LoadBalancerIP).Should(Equal("2.2.2.2"))
+				Expect(svc.Spec.IPFamilies[0]).Should(Equal(corev1.IPFamily("IPv4")))
+				Expect(svc.Annotations[akoov1alpha1.AkoPreferredIPAnnotation]).Should(Equal("2.2.2.2"))
+				Expect(haProvider.Client.Delete(ctx, svc)).ShouldNot(HaveOccurred())
+			})
+		})
+
+		When("cluster is dual-stack IPv6 Primary", func() {
+			BeforeEach(func() {
+				cluster = &clusterv1.Cluster{
+					ObjectMeta: v1.ObjectMeta{
+						Name:        "test-cluster",
+						Namespace:   "default",
+						Annotations: map[string]string{"tkg.tanzu.vmware.com/cluster-controlplane-endpoint": "2.2.2.2"},
+					},
+					Spec: clusterv1.ClusterSpec{
+						ClusterNetwork: &clusterv1.ClusterNetwork{
+							Pods: &clusterv1.NetworkRanges{
+								CIDRBlocks: []string{"2002::1234:abcd:ffff:c0a8:101/64", "10.0.0.0/24"},
+							},
+						},
+					},
+				}
+			})
+			It("should create service successfully", func() {
+				svc, err = haProvider.createService(ctx, cluster)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(svc.Spec.LoadBalancerIP).Should(Equal("2.2.2.2"))
+				Expect(svc.Spec.IPFamilies[0]).Should(Equal(corev1.IPFamily("IPv6")))
+				Expect(svc.Annotations[akoov1alpha1.AkoPreferredIPAnnotation]).Should(Equal("2.2.2.2"))
+				Expect(haProvider.Client.Delete(ctx, svc)).ShouldNot(HaveOccurred())
+			})
+		})
+
+		When("cluster is single-stack IPv4", func() {
+			BeforeEach(func() {
+				cluster = &clusterv1.Cluster{
+					ObjectMeta: v1.ObjectMeta{
+						Name:        "test-cluster",
+						Namespace:   "default",
+						Annotations: map[string]string{"tkg.tanzu.vmware.com/cluster-controlplane-endpoint": "2.2.2.2"},
+					},
+					Spec: clusterv1.ClusterSpec{
+						ClusterNetwork: &clusterv1.ClusterNetwork{
+							Pods: &clusterv1.NetworkRanges{
+								CIDRBlocks: []string{"10.0.0.0/24"},
+							},
+						},
+					},
+				}
+			})
+			It("should create service successfully", func() {
+				svc, err = haProvider.createService(ctx, cluster)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(svc.Spec.LoadBalancerIP).Should(Equal("2.2.2.2"))
+				Expect(svc.Spec.IPFamilies[0]).Should(Equal(corev1.IPFamily("IPv4")))
+				Expect(svc.Annotations[akoov1alpha1.AkoPreferredIPAnnotation]).Should(Equal("2.2.2.2"))
+				Expect(haProvider.Client.Delete(ctx, svc)).ShouldNot(HaveOccurred())
+			})
+		})
 	})
 
 	Context("Test_CreateOrUpdateHAEndpoints", func() {

@@ -144,7 +144,7 @@ func GetPrimaryIPFamily(c *capi.Cluster) (string, error) {
 	if err != nil {
 		return InvalidIPFamily, fmt.Errorf("Invalid IP Family: %s", err)
 	}
-	if ipFamily == IPv4IpFamily || ipFamily == DualStackIPv4Primary{
+	if ipFamily == IPv4IpFamily || ipFamily == DualStackIPv4Primary {
 		return IPv4IpFamily, nil
 	}
 	return IPv6IpFamily, nil
