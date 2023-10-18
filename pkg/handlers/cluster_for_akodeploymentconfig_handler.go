@@ -22,8 +22,7 @@ import (
 // AkoDeploymentConfigForCluster returns a handler map function for mapping Cluster
 // resources to the AkoDeploymentConfig of this cluster
 func AkoDeploymentConfigForCluster(c client.Client, log logr.Logger) handler.MapFunc {
-	return func(o client.Object) []reconcile.Request {
-		ctx := context.Background()
+	return func(ctx context.Context, o client.Object) []reconcile.Request {
 		cluster, ok := o.(*clusterv1.Cluster)
 		if !ok {
 			log.Error(errors.New("invalid type"),

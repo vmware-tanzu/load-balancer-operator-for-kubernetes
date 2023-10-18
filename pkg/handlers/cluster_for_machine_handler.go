@@ -22,8 +22,7 @@ import (
 // resources to the Machines of this cluster
 func MachinesForCluster(c client.Client, log logr.Logger) handler.MapFunc {
 
-	return func(o client.Object) []reconcile.Request {
-		ctx := context.Background()
+	return func(ctx context.Context, o client.Object) []reconcile.Request {
 
 		cluster, ok := o.(*clusterv1.Cluster)
 		if !ok {
@@ -42,7 +41,7 @@ func MachinesForCluster(c client.Client, log logr.Logger) handler.MapFunc {
 
 		listOptions := []client.ListOption{
 			client.InNamespace(cluster.Namespace),
-			client.MatchingLabels(map[string]string{clusterv1.ClusterLabelName: cluster.Name}),
+			client.MatchingLabels(map[string]string{clusterv1.ClusterNameLabel: cluster.Name}),
 		}
 
 		log.V(3).Info("Start listing machines for cluster", "cluster", cluster.Namespace+"/"+cluster.Name)

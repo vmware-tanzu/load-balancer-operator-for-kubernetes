@@ -53,7 +53,7 @@ var _ = Describe("Machine Cluster Handler", func() {
 
 	JustBeforeEach(func() {
 		machineClusterHandler = MachinesForCluster(fclient, logger)
-		requests = machineClusterHandler(input)
+		requests = machineClusterHandler(ctx, input)
 	})
 	When("the cluster is from the system namespace", func() {
 		BeforeEach(func() {
@@ -72,7 +72,7 @@ var _ = Describe("Machine Cluster Handler", func() {
 					Name:      "machine1",
 					Namespace: "test",
 					Labels: map[string]string{
-						clusterv1.ClusterLabelName: "test",
+						clusterv1.ClusterNameLabel: "test",
 					},
 				},
 			}
@@ -81,7 +81,7 @@ var _ = Describe("Machine Cluster Handler", func() {
 					Name:      "machine2",
 					Namespace: "test",
 					Labels: map[string]string{
-						clusterv1.ClusterLabelName: "test",
+						clusterv1.ClusterNameLabel: "test",
 					},
 				},
 			}
@@ -120,7 +120,7 @@ var _ = Describe("Machine Cluster Handler", func() {
 					Name:      "machine1",
 					Namespace: "test",
 					Labels: map[string]string{
-						clusterv1.ClusterLabelName: "test",
+						clusterv1.ClusterNameLabel: "test",
 					},
 				},
 			}
@@ -129,7 +129,7 @@ var _ = Describe("Machine Cluster Handler", func() {
 					Name:      "machine2",
 					Namespace: "test",
 					Labels: map[string]string{
-						clusterv1.ClusterLabelName: "test",
+						clusterv1.ClusterNameLabel: "test",
 					},
 				},
 			}

@@ -15,7 +15,6 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/go-logr/logr"
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
@@ -37,7 +36,7 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// Watch Cluster resources.
 		For(&clusterv1.Cluster{}).
 		Watches(
-			&source.Kind{Type: &corev1.Service{}},
+			&corev1.Service{},
 			handler.EnqueueRequestsFromMapFunc(r.serviceToCluster(r.Client, r.Log)),
 		).
 		Complete(r)
@@ -127,8 +126,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ 
 // serviceToCluster returns a handler map function for mapping Service
 // resources to the cluster
 func (r *ClusterReconciler) serviceToCluster(c client.Client, log logr.Logger) handler.MapFunc {
-	return func(o client.Object) []reconcile.Request {
-		ctx := context.Background()
+	return func(ctx context.Context, o client.Object) []reconcile.Request {
 		service, ok := o.(*corev1.Service)
 		if !ok {
 			log.Error(errors.New("invalid type"),

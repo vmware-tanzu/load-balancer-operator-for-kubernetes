@@ -9,7 +9,7 @@ import (
 	"net/http/pprof"
 	"os"
 
-	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
+	akov1beta1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1beta1"
 	"go.uber.org/zap/zapcore"
 
 	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
@@ -49,7 +49,7 @@ func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 	_ = clusterv1.AddToScheme(scheme)
 	_ = akoov1alpha1.AddToScheme(scheme)
-	_ = akov1alpha1.AddToScheme(scheme)
+	_ = akov1beta1.AddToScheme(scheme)
 	_ = runv1alpha3.AddToScheme(scheme)
 }
 

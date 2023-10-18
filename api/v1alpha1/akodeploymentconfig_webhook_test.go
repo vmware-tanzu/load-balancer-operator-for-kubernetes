@@ -373,7 +373,7 @@ func TestCreateNewAKODeploymentConfig(t *testing.T) {
 				g.Expect(err).ShouldNot(HaveOccurred())
 			}
 
-			err := tc.adc.ValidateCreate()
+			_, err := tc.adc.ValidateCreate()
 			if !tc.expectErr {
 				g.Expect(err).ShouldNot(HaveOccurred())
 			} else {
@@ -518,7 +518,7 @@ func TestUpdateExistingAKODeploymentConfig(t *testing.T) {
 				err := kclient.Create(context.Background(), tc.certificateSecret)
 				g.Expect(err).ShouldNot(HaveOccurred())
 			}
-			err := tc.new.ValidateUpdate(tc.old)
+			_, err := tc.new.ValidateUpdate(tc.old)
 			if !tc.expectErr {
 				g.Expect(err).ShouldNot(HaveOccurred())
 			} else {
@@ -576,7 +576,7 @@ func TestDeleteAKODeploymentConfig(t *testing.T) {
 				g.Expect(err).ShouldNot(HaveOccurred())
 			}
 
-			err := tc.adc.ValidateDelete()
+			_, err := tc.adc.ValidateDelete()
 			if !tc.expectErr {
 				g.Expect(err).ShouldNot(HaveOccurred())
 			} else {

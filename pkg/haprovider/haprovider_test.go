@@ -331,7 +331,7 @@ var _ = Describe("Control Plane HA provider", func() {
 
 		When("machine is a control plane machine", func() {
 			BeforeEach(func() {
-				mc.ObjectMeta.Labels = map[string]string{clusterv1.MachineControlPlaneLabelName: ""}
+				mc.ObjectMeta.Labels = map[string]string{clusterv1.MachineControlPlaneLabel: ""}
 				mc.Spec.ClusterName = "test-cluster"
 			})
 

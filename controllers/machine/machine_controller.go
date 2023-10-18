@@ -23,7 +23,6 @@ import (
 	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // SetupWithManager adds this reconciler to a new controller then to the
@@ -33,7 +32,7 @@ func (r *MachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// Watch Cluster API Machine resources.
 		For(&clusterv1.Machine{}).
 		Watches(
-			&source.Kind{Type: &clusterv1.Cluster{}},
+			&clusterv1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(handlers.MachinesForCluster(r.Client, r.Log)),
 		).
 		Complete(r)
@@ -76,7 +75,7 @@ func (r *MachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ 
 	}()
 
 	// Get the name of the cluster to which the current machine belongs
-	clusterName, exist := obj.Labels[clusterv1.ClusterLabelName]
+	clusterName, exist := obj.Labels[clusterv1.ClusterNameLabel]
 	if !exist {
 		log.Info("machine doesn't have cluster name label, skip reconciling")
 		return res, nil
