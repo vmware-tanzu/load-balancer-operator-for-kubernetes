@@ -161,6 +161,7 @@ func (r *AKODeploymentConfigReconciler) reconcileDelete(
 
 func (r *AKODeploymentConfigReconciler) secretToAKODeploymentConfig(c client.Client, log logr.Logger) handler.MapFunc {
 	return func(ctx context.Context, o client.Object) []reconcile.Request {
+		ctx = context.Background()
 		secret, ok := o.(*corev1.Secret)
 		if !ok {
 			log.Error(errors.New("invalid type"),

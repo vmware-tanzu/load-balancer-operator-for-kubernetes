@@ -127,6 +127,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ 
 // resources to the cluster
 func (r *ClusterReconciler) serviceToCluster(c client.Client, log logr.Logger) handler.MapFunc {
 	return func(ctx context.Context, o client.Object) []reconcile.Request {
+		ctx = context.Background()
 		service, ok := o.(*corev1.Service)
 		if !ok {
 			log.Error(errors.New("invalid type"),

@@ -23,7 +23,7 @@ import (
 func MachinesForCluster(c client.Client, log logr.Logger) handler.MapFunc {
 
 	return func(ctx context.Context, o client.Object) []reconcile.Request {
-
+		ctx = context.Background()
 		cluster, ok := o.(*clusterv1.Cluster)
 		if !ok {
 			log.Error(errors.New("invalid type"),
