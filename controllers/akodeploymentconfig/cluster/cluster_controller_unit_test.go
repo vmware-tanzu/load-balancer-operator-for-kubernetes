@@ -92,6 +92,8 @@ loadBalancerAndIngressService:
             username: admin
             password: Admin!23
             certificate_authority_data: '-----BEGIN CERTIFICATE-----jf5Hlg==-----END CERTIFICATE-----'
+        feature_gates:
+            gateway_api: "true"
 `
 
 func unitTestAKODeploymentYaml() {
@@ -149,6 +151,9 @@ func unitTestAKODeploymentYaml() {
 								},
 							},
 							DisableStaticRouteSync: pointer.BoolPtr(true),
+							FeatureGates: akoov1alpha1.FeatureGates{
+								GatewayAPI: "true",
+							},
 						},
 					},
 				}

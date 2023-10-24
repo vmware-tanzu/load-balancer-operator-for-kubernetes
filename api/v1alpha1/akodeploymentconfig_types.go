@@ -205,6 +205,9 @@ type ExtraConfigs struct {
 	// Rbac specifies the configuration for AKO Rbac
 	// +optional
 	Rbac AKORbacConfig `json:"rbac,omitempty"`
+
+	// FeatureGates specifies the configuration for AKO features
+	FeatureGates FeatureGates `json:"featureGates,omitempty"`
 }
 
 // NameSpaceSelector contains label key and value used for namespace migration
@@ -339,6 +342,12 @@ type AKORbacConfig struct {
 	// AKO the proper role
 	// +optional
 	PspEnabled *bool `json:"pspEnabled,omitempty"`
+}
+
+// FeatureGates describes the configuration for AKO features
+type FeatureGates struct {
+	// GatewayAPI enables/disables processing of Kubernetes Gateway API CRDs.
+	GatewayAPI string `json:"GatewayAPI,omitempty"`
 }
 
 // AVITenant describes settings for an AVI Tenant object

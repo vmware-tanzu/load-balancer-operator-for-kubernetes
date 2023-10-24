@@ -48,6 +48,7 @@ func NewValues(obj *akoov1alpha1.AKODeploymentConfig, clusterNameSpacedName stri
 	l4Settings := NewL4Settings(&obj.Spec.ExtraConfigs.L4Configs)
 	nodePortSelector := NewNodePortSelector(&obj.Spec.ExtraConfigs.NodePortSelector)
 	rbac := NewRbac(obj.Spec.ExtraConfigs.Rbac)
+	featureGates := NewFeatureGates(obj.Spec.ExtraConfigs.FeatureGates)
 
 	return &Values{
 		LoadBalancerAndIngressService: LoadBalancerAndIngressService{
@@ -66,6 +67,7 @@ func NewValues(obj *akoov1alpha1.AKODeploymentConfig, clusterNameSpacedName stri
 				PersistentVolumeClaim: obj.Spec.ExtraConfigs.Log.PersistentVolumeClaim,
 				MountPath:             obj.Spec.ExtraConfigs.Log.MountPath,
 				LogFile:               obj.Spec.ExtraConfigs.Log.LogFile,
+				FeatureGates:          featureGates,
 			},
 		},
 	}, nil
@@ -120,6 +122,7 @@ type Config struct {
 	MountPath             string              `yaml:"mount_path"`
 	LogFile               string              `yaml:"log_file"`
 	Avicredentials        Avicredentials      `yaml:"avi_credentials"`
+	FeatureGates          *FeatureGates       `yaml:"feature_gates"`
 }
 
 // NamespaceSelector contains label key and value used for namespace migration.
@@ -500,4 +503,19 @@ type Avicredentials struct {
 func (v Values) GetName() string {
 	return "ako-" + strconv.FormatInt(rand.New(rand.NewSource(time.Now().UnixNano())).Int63n(10000000000), 10)
 	//Be aware that during upgrades, templates are re-executed. When a template run generates data that differs from the last run, that will trigger an update of that resource.
+}
+
+// FeatureGates describes the configuration for AKO features
+type FeatureGates struct {
+	GatewayAPI string `yaml:"gateway_api"`
+}
+
+func NewFeatureGates(config v1alpha1.FeatureGates) *FeatureGates {
+	gatewayAPIEnabled := "false"
+	if config.GatewayAPI != "" {
+		gatewayAPIEnabled = config.GatewayAPI
+	}
+	return &FeatureGates{
+		GatewayAPI: gatewayAPIEnabled,
+	}
 }
