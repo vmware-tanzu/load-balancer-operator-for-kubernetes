@@ -35,6 +35,7 @@ var _ = Describe("AKO", func() {
 			networkSettings := config.NetworkSettings
 			l7Settings := config.L7Settings
 			rbac := config.Rbac
+			featureGates := config.FeatureGates
 
 			expectedPairs := map[string]string{
 				akoSettings.ClusterName:                   "test",
@@ -53,11 +54,13 @@ var _ = Describe("AKO", func() {
 				config.PersistentVolumeClaim:              akoDeploymentConfig.Spec.ExtraConfigs.Log.PersistentVolumeClaim,
 				config.MountPath:                          akoDeploymentConfig.Spec.ExtraConfigs.Log.MountPath,
 				config.LogFile:                            akoDeploymentConfig.Spec.ExtraConfigs.Log.LogFile,
+				config.AKOGatewayLogFile:                  akoDeploymentConfig.Spec.ExtraConfigs.Log.AKOGatewayLogFile,
 				value.LoadBalancerAndIngressService.Name:  "ako-test",
 				rbac.PspPolicyApiVersion:                  akoDeploymentConfig.Spec.ExtraConfigs.Rbac.PspPolicyAPIVersion,
 				rbac.PspPolicyApiVersion:                  "test/1.2",
 				l7Settings.ShardVSSize:                    akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.ShardVSSize,
 				l7Settings.ServiceType:                    akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.ServiceType,
+				featureGates.GatewayAPI:                   akoDeploymentConfig.Spec.ExtraConfigs.FeatureGates.GatewayAPI,
 			}
 			for k, v := range expectedPairs {
 				Expect(k).To(Equal(v))
@@ -115,6 +118,7 @@ var _ = Describe("AKO", func() {
 								PersistentVolumeClaim: "true",
 								MountPath:             "/var/log",
 								LogFile:               "test-avi.log",
+								AKOGatewayLogFile:     "test-gateway-api.log",
 							},
 							IngressConfigs: akoov1alpha1.AKOIngressConfig{
 								DisableIngressClass:      pointer.Bool(true),
@@ -130,6 +134,9 @@ var _ = Describe("AKO", func() {
 							},
 							DisableStaticRouteSync: pointer.BoolPtr(true),
 							CniPlugin:              "antrea",
+							FeatureGates: akoov1alpha1.FeatureGates{
+								GatewayAPI: "true",
+							},
 						},
 					},
 				}
@@ -181,6 +188,9 @@ var _ = Describe("AKO", func() {
 							},
 							DisableStaticRouteSync: pointer.BoolPtr(true),
 							CniPlugin:              "antrea",
+							FeatureGates: akoov1alpha1.FeatureGates{
+								GatewayAPI: "false",
+							},
 						},
 					},
 				}
@@ -195,6 +205,7 @@ var _ = Describe("AKO", func() {
 				networkSettings := rendered.LoadBalancerAndIngressService.Config.NetworkSettings
 				Expect(jsonerr).ShouldNot(HaveOccurred())
 				Expect(networkSettings.VIPNetworkListJson).To(Equal(string(vipNetworkList)))
+				Expect(rendered.LoadBalancerAndIngressService.Config.FeatureGates.GatewayAPI).To(Equal("false"))
 			})
 		})
 	})

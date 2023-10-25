@@ -233,6 +233,15 @@ spec:
                     description: Defines Enable or disable Event broadcasting via
                       AKO
                     type: boolean
+                  featureGates:
+                    description: FeatureGates specifies the configuration for AKO
+                      features
+                    properties:
+                      GatewayAPI:
+                        description: GatewayAPI enables/disables processing of Kubernetes
+                          Gateway API CRDs.
+                        type: string
+                    type: object
                   fullSyncFrequency:
                     description: FullSyncFrequency controls how often AKO polls the
                       Avi controller to update itself with cloud configurations. Default
@@ -344,6 +353,10 @@ spec:
                   log:
                     description: Log specifies the configuration for AKO logging
                     properties:
+                      akoGatewayLogFile:
+                        description: AKOGatewayLogFile specifies the AKO Gateway log
+                          file name
+                        type: string
                       logFile:
                         description: LogFile specifies the log file name
                         type: string

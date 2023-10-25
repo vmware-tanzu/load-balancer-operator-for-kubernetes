@@ -88,10 +88,13 @@ loadBalancerAndIngressService:
         persistent_volume_claim: "true"
         mount_path: /var/log
         log_file: test-avi.log
+        ako_gateway_log_file: test-gateway-api.log
         avi_credentials:
             username: admin
             password: Admin!23
             certificate_authority_data: '-----BEGIN CERTIFICATE-----jf5Hlg==-----END CERTIFICATE-----'
+        feature_gates:
+            gateway_api: "true"
 `
 
 func unitTestAKODeploymentYaml() {
@@ -135,6 +138,7 @@ func unitTestAKODeploymentYaml() {
 								PersistentVolumeClaim: "true",
 								MountPath:             "/var/log",
 								LogFile:               "test-avi.log",
+								AKOGatewayLogFile:     "test-gateway-api.log",
 							},
 							IngressConfigs: akoov1alpha1.AKOIngressConfig{
 								DisableIngressClass:      pointer.Bool(true),
@@ -149,6 +153,9 @@ func unitTestAKODeploymentYaml() {
 								},
 							},
 							DisableStaticRouteSync: pointer.BoolPtr(true),
+							FeatureGates: akoov1alpha1.FeatureGates{
+								GatewayAPI: "true",
+							},
 						},
 					},
 				}
