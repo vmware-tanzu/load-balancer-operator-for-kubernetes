@@ -67,6 +67,7 @@ func NewValues(obj *akoov1alpha1.AKODeploymentConfig, clusterNameSpacedName stri
 				PersistentVolumeClaim: obj.Spec.ExtraConfigs.Log.PersistentVolumeClaim,
 				MountPath:             obj.Spec.ExtraConfigs.Log.MountPath,
 				LogFile:               obj.Spec.ExtraConfigs.Log.LogFile,
+				AKOGatewayLogFile:     obj.Spec.ExtraConfigs.Log.AKOGatewayLogFile,
 				FeatureGates:          featureGates,
 			},
 		},
@@ -121,6 +122,7 @@ type Config struct {
 	PersistentVolumeClaim string              `yaml:"persistent_volume_claim"`
 	MountPath             string              `yaml:"mount_path"`
 	LogFile               string              `yaml:"log_file"`
+	AKOGatewayLogFile     string              `yaml:"ako_gateway_log_file"`
 	Avicredentials        Avicredentials      `yaml:"avi_credentials"`
 	FeatureGates          *FeatureGates       `yaml:"feature_gates"`
 }

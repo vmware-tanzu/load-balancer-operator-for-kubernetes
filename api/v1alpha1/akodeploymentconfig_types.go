@@ -332,6 +332,10 @@ type AKOLogConfig struct {
 	// LogFile specifies the log file name
 	// +optional
 	LogFile string `json:"logFile,omitempty"`
+
+	// AKOGatewayLogFile specifies the AKO Gateway log file name
+	// +optional
+	AKOGatewayLogFile string `json:"akoGatewayLogFile,omitempty"`
 }
 
 type AKORbacConfig struct {

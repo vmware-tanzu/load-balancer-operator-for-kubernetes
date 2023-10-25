@@ -54,6 +54,7 @@ var _ = Describe("AKO", func() {
 				config.PersistentVolumeClaim:              akoDeploymentConfig.Spec.ExtraConfigs.Log.PersistentVolumeClaim,
 				config.MountPath:                          akoDeploymentConfig.Spec.ExtraConfigs.Log.MountPath,
 				config.LogFile:                            akoDeploymentConfig.Spec.ExtraConfigs.Log.LogFile,
+				config.AKOGatewayLogFile:                  akoDeploymentConfig.Spec.ExtraConfigs.Log.AKOGatewayLogFile,
 				value.LoadBalancerAndIngressService.Name:  "ako-test",
 				rbac.PspPolicyApiVersion:                  akoDeploymentConfig.Spec.ExtraConfigs.Rbac.PspPolicyAPIVersion,
 				rbac.PspPolicyApiVersion:                  "test/1.2",
@@ -117,6 +118,7 @@ var _ = Describe("AKO", func() {
 								PersistentVolumeClaim: "true",
 								MountPath:             "/var/log",
 								LogFile:               "test-avi.log",
+								AKOGatewayLogFile:     "test-gateway-api.log",
 							},
 							IngressConfigs: akoov1alpha1.AKOIngressConfig{
 								DisableIngressClass:      pointer.Bool(true),

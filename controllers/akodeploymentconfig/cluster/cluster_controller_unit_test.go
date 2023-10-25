@@ -88,6 +88,7 @@ loadBalancerAndIngressService:
         persistent_volume_claim: "true"
         mount_path: /var/log
         log_file: test-avi.log
+        ako_gateway_log_file: test-gateway-api.log
         avi_credentials:
             username: admin
             password: Admin!23
@@ -137,6 +138,7 @@ func unitTestAKODeploymentYaml() {
 								PersistentVolumeClaim: "true",
 								MountPath:             "/var/log",
 								LogFile:               "test-avi.log",
+								AKOGatewayLogFile:     "test-gateway-api.log",
 							},
 							IngressConfigs: akoov1alpha1.AKOIngressConfig{
 								DisableIngressClass:      pointer.Bool(true),

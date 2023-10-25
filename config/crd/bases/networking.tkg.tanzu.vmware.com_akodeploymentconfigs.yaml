@@ -353,6 +353,10 @@ spec:
                   log:
                     description: Log specifies the configuration for AKO logging
                     properties:
+                      akoGatewayLogFile:
+                        description: AKOGatewayLogFile specifies the AKO Gateway log
+                          file name
+                        type: string
                       logFile:
                         description: LogFile specifies the log file name
                         type: string
