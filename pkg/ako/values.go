@@ -512,12 +512,18 @@ type FeatureGates struct {
 	GatewayAPI string `yaml:"gateway_api"`
 }
 
+// NewFeatureGates creates a FeatureGates from the v1alpha1.FeatureGates
 func NewFeatureGates(config v1alpha1.FeatureGates) *FeatureGates {
-	gatewayAPIEnabled := "false"
-	if config.GatewayAPI != "" {
-		gatewayAPIEnabled = config.GatewayAPI
+	settings := DefaultFeatureGates()
+	if config.GatewayAPI != nil {
+		settings.GatewayAPI = strconv.FormatBool(*config.GatewayAPI)
 	}
+	return settings
+}
+
+// DefaultFeatureGates returns default FeatureGates
+func DefaultFeatureGates() *FeatureGates {
 	return &FeatureGates{
-		GatewayAPI: gatewayAPIEnabled,
+		// GatewayAPI: don't set, populate in runtime
 	}
 }

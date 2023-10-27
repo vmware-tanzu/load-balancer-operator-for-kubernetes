@@ -242,7 +242,7 @@ spec:
                       GatewayAPI:
                         description: GatewayAPI enables/disables processing of Kubernetes
                           Gateway API CRDs.
-                        type: string
+                        type: boolean
                     type: object
                   fullSyncFrequency:
                     description: FullSyncFrequency controls how often AKO polls the
