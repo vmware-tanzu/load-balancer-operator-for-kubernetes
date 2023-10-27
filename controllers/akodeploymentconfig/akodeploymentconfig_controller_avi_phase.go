@@ -15,6 +15,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/vmware/alb-sdk/go/models"
+	"k8s.io/utils/pointer"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -340,6 +341,10 @@ func (r *AKODeploymentConfigReconciler) createAviInfraSetting(adc *akoov1alpha1.
 			},
 			L7Settings: akov1beta1.AviInfraL7Settings{
 				ShardSize: shardSize,
+			},
+			// Known issue: T1LR value is required when reconciling AKODeploymentConfig
+			NSXSettings: akov1beta1.AviInfraNSXSettings{
+				T1LR: pointer.StringPtr(""),
 			},
 		},
 	}
