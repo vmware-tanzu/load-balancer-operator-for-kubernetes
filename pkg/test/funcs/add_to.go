@@ -17,7 +17,7 @@ import (
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/controllers/cluster"
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/aviclient"
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/test/builder"
-	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
+	akov1beta1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1beta1"
 )
 
 var AddAllToSchemeFunc builder.AddToSchemeFunc = func(scheme *runtime.Scheme) (err error) {
@@ -29,7 +29,7 @@ var AddAllToSchemeFunc builder.AddToSchemeFunc = func(scheme *runtime.Scheme) (e
 	if err != nil {
 		return err
 	}
-	err = akov1alpha1.AddToScheme(scheme)
+	err = akov1beta1.AddToScheme(scheme)
 	if err != nil {
 		return err
 	}

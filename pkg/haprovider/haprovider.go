@@ -23,7 +23,7 @@ import (
 
 	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	ako_operator "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
-	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
+	akov1beta1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1beta1"
 )
 
 const (
@@ -223,9 +223,9 @@ func (r *HAProvider) getADCForCluster(ctx context.Context, cluster *clusterv1.Cl
 	return adcForCluster, nil
 }
 
-func (r *HAProvider) getAviInfraSettingFromAdc(ctx context.Context, adcForCluster *akoov1alpha1.AKODeploymentConfig) (*akov1alpha1.AviInfraSetting, error) {
+func (r *HAProvider) getAviInfraSettingFromAdc(ctx context.Context, adcForCluster *akoov1alpha1.AKODeploymentConfig) (*akov1beta1.AviInfraSetting, error) {
 
-	aviInfraSetting := &akov1alpha1.AviInfraSetting{}
+	aviInfraSetting := &akov1beta1.AviInfraSetting{}
 	aviInfraSettingName := GetAviInfraSettingName(adcForCluster)
 	if err := r.Client.Get(ctx, client.ObjectKey{
 		Name: aviInfraSettingName,
@@ -374,7 +374,7 @@ func (r *HAProvider) addMachineIpToEndpoints(endpoints *corev1.Endpoints, machin
 
 func (r *HAProvider) CreateOrUpdateHAEndpoints(ctx context.Context, machine *clusterv1.Machine) error {
 	// return if it's not a control plane machine
-	if _, ok := machine.ObjectMeta.Labels[clusterv1.MachineControlPlaneLabelName]; !ok {
+	if _, ok := machine.ObjectMeta.Labels[clusterv1.MachineControlPlaneLabel]; !ok {
 		r.log.Info("not a control plane machine, skip")
 		return nil
 	}

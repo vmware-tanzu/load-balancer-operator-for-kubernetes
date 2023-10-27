@@ -24,7 +24,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -159,7 +158,7 @@ func (s *TestSuite) Register(t *testing.T, name string, runIntegrationTestsFn, r
 	if s.flags.IntegrationTestsEnabled {
 		SetDefaultEventuallyTimeout(time.Second * 10)
 		SetDefaultEventuallyPollingInterval(time.Second)
-		RunSpecsWithDefaultAndCustomReporters(t, name, []Reporter{printer.NewlineReporter{}})
+		RunSpecs(t, name)
 	} else if s.flags.UnitTestsEnabled {
 		RunSpecs(t, name)
 	}
@@ -205,7 +204,7 @@ func (s *TestSuite) createManager() {
 		MetricsBindAddress: "0",
 		NewCache: func(config *rest.Config, opts cache.Options) (cache.Cache, error) {
 			syncPeriod := 1 * time.Second
-			opts.Resync = &syncPeriod
+			opts.SyncPeriod = &syncPeriod
 			return cache.New(config, opts)
 		},
 	})

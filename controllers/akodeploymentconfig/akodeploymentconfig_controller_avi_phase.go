@@ -15,6 +15,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/vmware/alb-sdk/go/models"
+	"k8s.io/utils/pointer"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -28,7 +29,7 @@ import (
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/haprovider"
 
 	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
-	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
+	akov1beta1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1beta1"
 
 	ako_operator "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 )
@@ -292,7 +293,7 @@ func (r *AKODeploymentConfigReconciler) reconcileAviInfraSetting(
 	}
 
 	newAviInfraSetting := r.createAviInfraSetting(adc)
-	aviInfraSetting := &akov1alpha1.AviInfraSetting{}
+	aviInfraSetting := &akov1beta1.AviInfraSetting{}
 
 	if err := r.Get(ctx, client.ObjectKey{
 		Name: haprovider.GetAviInfraSettingName(adc),
@@ -308,38 +309,42 @@ func (r *AKODeploymentConfigReconciler) reconcileAviInfraSetting(
 	return res, r.Update(ctx, aviInfraSetting)
 }
 
-func (r *AKODeploymentConfigReconciler) createAviInfraSetting(adc *akoov1alpha1.AKODeploymentConfig) *akov1alpha1.AviInfraSetting {
+func (r *AKODeploymentConfigReconciler) createAviInfraSetting(adc *akoov1alpha1.AKODeploymentConfig) *akov1beta1.AviInfraSetting {
 	// ShardVSSize describes ingress shared virtual service size, default value is SMALL
 	shardSize := "SMALL"
 	if adc.Spec.ExtraConfigs.IngressConfigs.ShardVSSize != "" {
 		shardSize = adc.Spec.ExtraConfigs.IngressConfigs.ShardVSSize
 	}
 
-	vipNetwork := []akov1alpha1.AviInfraSettingVipNetwork{{
+	vipNetwork := []akov1beta1.AviInfraSettingVipNetwork{{
 		NetworkName: adc.Spec.ControlPlaneNetwork.Name,
 		Cidr:        adc.Spec.ControlPlaneNetwork.CIDR,
 	}}
 	//Use V6Cidr field if cidr of control plane network is IPv6
 	if utils.GetIPFamilyFromCidr(adc.Spec.ControlPlaneNetwork.CIDR) == "V6" {
-		vipNetwork = []akov1alpha1.AviInfraSettingVipNetwork{{
+		vipNetwork = []akov1beta1.AviInfraSettingVipNetwork{{
 			NetworkName: adc.Spec.ControlPlaneNetwork.Name,
 			V6Cidr:      adc.Spec.ControlPlaneNetwork.CIDR,
 		}}
 	}
 
-	return &akov1alpha1.AviInfraSetting{
+	return &akov1beta1.AviInfraSetting{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: haprovider.GetAviInfraSettingName(adc),
 		},
-		Spec: akov1alpha1.AviInfraSettingSpec{
-			SeGroup: akov1alpha1.AviInfraSettingSeGroup{
+		Spec: akov1beta1.AviInfraSettingSpec{
+			SeGroup: akov1beta1.AviInfraSettingSeGroup{
 				Name: adc.Spec.ServiceEngineGroup,
 			},
-			Network: akov1alpha1.AviInfraSettingNetwork{
+			Network: akov1beta1.AviInfraSettingNetwork{
 				VipNetworks: vipNetwork,
 			},
-			L7Settings: akov1alpha1.AviInfraL7Settings{
+			L7Settings: akov1beta1.AviInfraL7Settings{
 				ShardSize: shardSize,
+			},
+			// Known issue: T1LR value is required when reconciling AKODeploymentConfig
+			NSXSettings: akov1beta1.AviInfraNSXSettings{
+				T1LR: pointer.StringPtr(""),
 			},
 		},
 	}
@@ -366,7 +371,7 @@ func (r *AKODeploymentConfigReconciler) reconcileAviInfraSettingDelete(
 		return res, nil
 	}
 
-	aviInfraSetting := &akov1alpha1.AviInfraSetting{}
+	aviInfraSetting := &akov1beta1.AviInfraSetting{}
 	if err := r.Get(ctx, client.ObjectKey{
 		Name: haprovider.GetAviInfraSettingName(adc),
 	}, aviInfraSetting); err != nil {

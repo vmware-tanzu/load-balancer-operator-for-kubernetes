@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/vmware/alb-sdk/go/models"
 	"github.com/vmware/alb-sdk/go/session"
-	akov1alpha1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1alpha1"
+	akov1beta1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -335,7 +335,7 @@ func intgTestAkoDeploymentConfigController() {
 			aviInfraSettingName = akoDeploymentConfig.Name + "-ais"
 			ensureRuntimeObjectMatchExpectation(client.ObjectKey{
 				Name: aviInfraSettingName,
-			}, &akov1alpha1.AviInfraSetting{}, true)
+			}, &akov1beta1.AviInfraSetting{}, true)
 
 			service := &corev1.Service{}
 			ensureRuntimeObjectMatchExpectation(client.ObjectKey{
@@ -351,7 +351,7 @@ func intgTestAkoDeploymentConfigController() {
 			aviInfraSettingName = akoDeploymentConfig.Name + "-ais"
 			ensureRuntimeObjectMatchExpectation(client.ObjectKey{
 				Name: aviInfraSettingName,
-			}, &akov1alpha1.AviInfraSetting{}, true)
+			}, &akov1beta1.AviInfraSetting{}, true)
 
 			service := &corev1.Service{}
 			ensureRuntimeObjectMatchExpectation(client.ObjectKey{

@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/aviclient"
 )
@@ -44,24 +45,24 @@ func (r *AKODeploymentConfig) SetupWebhookWithManager(mgr ctrl.Manager) error {
 var _ webhook.Validator = &AKODeploymentConfig{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *AKODeploymentConfig) ValidateCreate() error {
+func (r *AKODeploymentConfig) ValidateCreate() (admission.Warnings, error) {
 	akoDeploymentConfigLog.Info("validate create", "name", r.Name)
 
 	var allErrs field.ErrorList
 	allErrs = append(allErrs, r.validateClusterSelector(nil)...)
 	allErrs = append(allErrs, r.validateAVI(nil)...)
 	if len(allErrs) == 0 {
-		return nil
+		return nil, nil
 	}
-	return apierrors.NewInvalid(GroupVersion.WithKind("AKODeploymentConfig").GroupKind(), r.Name, allErrs)
+	return nil, apierrors.NewInvalid(GroupVersion.WithKind("AKODeploymentConfig").GroupKind(), r.Name, allErrs)
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *AKODeploymentConfig) ValidateUpdate(old runtime.Object) error {
+func (r *AKODeploymentConfig) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	akoDeploymentConfigLog.Info("validate update", "name", r.Name)
 	oldADC, ok := old.(*AKODeploymentConfig)
 	if !ok {
-		return apierrors.NewBadRequest(fmt.Sprintf("expected a AKODeploymentConfig but got a %T", old))
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected a AKODeploymentConfig but got a %T", old))
 	}
 	var allErrs field.ErrorList
 	if oldADC != nil {
@@ -69,21 +70,21 @@ func (r *AKODeploymentConfig) ValidateUpdate(old runtime.Object) error {
 		allErrs = append(allErrs, r.validateAVI(oldADC)...)
 	}
 	if len(allErrs) == 0 {
-		return nil
+		return nil, nil
 	}
-	return apierrors.NewInvalid(GroupVersion.WithKind("AKODeploymentConfig").GroupKind(), r.Name, allErrs)
+	return nil, apierrors.NewInvalid(GroupVersion.WithKind("AKODeploymentConfig").GroupKind(), r.Name, allErrs)
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *AKODeploymentConfig) ValidateDelete() error {
+func (r *AKODeploymentConfig) ValidateDelete() (admission.Warnings, error) {
 	akoDeploymentConfigLog.Info("validate delete", "name", r.Name)
 	// should not delete the akodeploymentconfig selects management cluster
 	if r.Name == ManagementClusterAkoDeploymentConfig {
-		return field.Invalid(field.NewPath("spec", "ClusterSelector"),
+		return nil, field.Invalid(field.NewPath("spec", "ClusterSelector"),
 			r.Spec.ClusterSelector,
 			"can't delete akodeploymentconfig object for management cluster")
 	}
-	return nil
+	return nil, nil
 }
 
 // validateClusterSelector checks AKODeploymentConfig object's cluster selector field input is valid or not
