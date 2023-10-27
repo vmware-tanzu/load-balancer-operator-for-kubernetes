@@ -207,6 +207,7 @@ type ExtraConfigs struct {
 	Rbac AKORbacConfig `json:"rbac,omitempty"`
 
 	// FeatureGates specifies the configuration for AKO features
+	// +optional
 	FeatureGates FeatureGates `json:"featureGates,omitempty"`
 }
 
@@ -351,7 +352,8 @@ type AKORbacConfig struct {
 // FeatureGates describes the configuration for AKO features
 type FeatureGates struct {
 	// GatewayAPI enables/disables processing of Kubernetes Gateway API CRDs.
-	GatewayAPI string `json:"GatewayAPI,omitempty"`
+	// +optional
+	GatewayAPI *bool `json:"GatewayAPI,omitempty"`
 }
 
 // AVITenant describes settings for an AVI Tenant object

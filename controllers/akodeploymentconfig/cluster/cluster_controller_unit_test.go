@@ -154,7 +154,7 @@ func unitTestAKODeploymentYaml() {
 							},
 							DisableStaticRouteSync: pointer.BoolPtr(true),
 							FeatureGates: akoov1alpha1.FeatureGates{
-								GatewayAPI: "true",
+								GatewayAPI: pointer.Bool(true),
 							},
 						},
 					},
