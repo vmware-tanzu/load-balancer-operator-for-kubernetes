@@ -328,6 +328,11 @@ func (r *AKODeploymentConfigReconciler) createAviInfraSetting(adc *akoov1alpha1.
 		}}
 	}
 
+	t1LR := pointer.StringPtr("")
+	if adc.Spec.ExtraConfigs.NetworksConfig.NsxtT1LR != "" {
+		t1LR = pointer.StringPtr(adc.Spec.ExtraConfigs.NetworksConfig.NsxtT1LR)
+	}
+
 	return &akov1beta1.AviInfraSetting{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: haprovider.GetAviInfraSettingName(adc),
@@ -344,7 +349,7 @@ func (r *AKODeploymentConfigReconciler) createAviInfraSetting(adc *akoov1alpha1.
 			},
 			// Known issue: T1LR value is required when reconciling AKODeploymentConfig
 			NSXSettings: akov1beta1.AviInfraNSXSettings{
-				T1LR: pointer.StringPtr(""),
+				T1LR: t1LR,
 			},
 		},
 	}
