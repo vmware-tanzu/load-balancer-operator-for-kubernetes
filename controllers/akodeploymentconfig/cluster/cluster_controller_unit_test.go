@@ -258,7 +258,123 @@ func unitTestAKODeploymentYaml() {
 	})
 }
 
-func unitTestValidateADCAndClusterIpFamily() {
+func unitTestValidateClusterIpFamily() {
+	Context("Validate ipv6 cluster ip family", func() {
+		var (
+			akoDeploymentConfig *akoov1alpha1.AKODeploymentConfig
+			capiCluster         *clusterv1.Cluster
+			logger              logr.Logger
+			isVIPProvider       bool
+		)
+
+		BeforeEach(func() {
+			log.SetLogger(zap.New())
+			logger = log.Log
+		})
+
+		When("cluster is valid", func() {
+			BeforeEach(func() {
+				akoDeploymentConfig = &akoov1alpha1.AKODeploymentConfig{
+					Spec: akoov1alpha1.AKODeploymentConfigSpec{
+						ExtraConfigs: akoov1alpha1.ExtraConfigs{
+							IpFamily: "V4",
+						},
+					},
+				}
+
+				capiCluster = &clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cluster",
+						Namespace: "default",
+					},
+					Spec: clusterv1.ClusterSpec{
+						ClusterNetwork: &clusterv1.ClusterNetwork{
+							Pods: &clusterv1.NetworkRanges{
+								CIDRBlocks: []string{"192.168.0.0/16"},
+							},
+							Services: &clusterv1.NetworkRanges{
+								CIDRBlocks: []string{"192.168.0.0/16"},
+							},
+						},
+					},
+				}
+			})
+
+			It("should return no error", func() {
+				err := cluster.ValidateClusterIpFamily(capiCluster, akoDeploymentConfig, isVIPProvider, logger)
+				Expect(err).ShouldNot(HaveOccurred())
+			})
+		})
+
+		When("cluster is invalid single-stack IPv6", func() {
+			BeforeEach(func() {
+				akoDeploymentConfig = &akoov1alpha1.AKODeploymentConfig{
+					Spec: akoov1alpha1.AKODeploymentConfigSpec{
+						ExtraConfigs: akoov1alpha1.ExtraConfigs{
+							IpFamily: "V4",
+						},
+					},
+				}
+
+				capiCluster = &clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cluster",
+						Namespace: "default",
+					},
+					Spec: clusterv1.ClusterSpec{
+						ClusterNetwork: &clusterv1.ClusterNetwork{
+							Pods: &clusterv1.NetworkRanges{
+								CIDRBlocks: []string{"2002::1234:abcd:ffff:c0a8:101/64"},
+							},
+							Services: &clusterv1.NetworkRanges{
+								CIDRBlocks: []string{"2002::1234:abcd:ffff:c0a8:101/64"},
+							},
+						},
+					},
+				}
+			})
+
+			It("should return no error", func() {
+				err := cluster.ValidateClusterIpFamily(capiCluster, akoDeploymentConfig, isVIPProvider, logger)
+				Expect(err).Should(HaveOccurred())
+			})
+		})
+
+		When("cluster is invalid dual-stack IPv6 Primary", func() {
+			BeforeEach(func() {
+				akoDeploymentConfig = &akoov1alpha1.AKODeploymentConfig{
+					Spec: akoov1alpha1.AKODeploymentConfigSpec{
+						ExtraConfigs: akoov1alpha1.ExtraConfigs{
+							IpFamily: "V4",
+						},
+					},
+				}
+
+				capiCluster = &clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cluster",
+						Namespace: "default",
+					},
+					Spec: clusterv1.ClusterSpec{
+						ClusterNetwork: &clusterv1.ClusterNetwork{
+							Pods: &clusterv1.NetworkRanges{
+								CIDRBlocks: []string{"2002::1234:abcd:ffff:c0a8:101/64, 192.168.0.0/16"},
+							},
+							Services: &clusterv1.NetworkRanges{
+								CIDRBlocks: []string{"2002::1234:abcd:ffff:c0a8:101/64, 192.168.0.0/16"},
+							},
+						},
+					},
+				}
+			})
+
+			It("should return no error", func() {
+				err := cluster.ValidateClusterIpFamily(capiCluster, akoDeploymentConfig, isVIPProvider, logger)
+				Expect(err).Should(HaveOccurred())
+			})
+		})
+	})
+
 	Context("Validate AKODeploymentConfig ip family and cluster ip family", func() {
 		var (
 			akoDeploymentConfig *akoov1alpha1.AKODeploymentConfig
@@ -335,7 +451,7 @@ func unitTestValidateADCAndClusterIpFamily() {
 			})
 
 			It("should return no error", func() {
-				err := cluster.ValidateADCAndClusterIpFamily(capiCluster, akoDeploymentConfig, isVIPProvider, logger)
+				err := cluster.ValidateClusterIpFamily(capiCluster, akoDeploymentConfig, isVIPProvider, logger)
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 		})
@@ -383,7 +499,7 @@ func unitTestValidateADCAndClusterIpFamily() {
 				})
 
 				It("should return error since cluster ip family is invalid", func() {
-					err := cluster.ValidateADCAndClusterIpFamily(capiCluster, akoDeploymentConfig, isVIPProvider, logger)
+					err := cluster.ValidateClusterIpFamily(capiCluster, akoDeploymentConfig, isVIPProvider, logger)
 					Expect(err).Should(HaveOccurred())
 				})
 			})
@@ -428,7 +544,7 @@ func unitTestValidateADCAndClusterIpFamily() {
 					})
 
 					It("should return error since the ipfamily combination is not supported", func() {
-						err := cluster.ValidateADCAndClusterIpFamily(capiCluster, akoDeploymentConfig, isVIPProvider, logger)
+						err := cluster.ValidateClusterIpFamily(capiCluster, akoDeploymentConfig, isVIPProvider, logger)
 						Expect(err).Should(HaveOccurred())
 					})
 				})
@@ -472,7 +588,7 @@ func unitTestValidateADCAndClusterIpFamily() {
 					})
 
 					It("should return error since the ipfamily combination is not supported", func() {
-						err := cluster.ValidateADCAndClusterIpFamily(capiCluster, akoDeploymentConfig, isVIPProvider, logger)
+						err := cluster.ValidateClusterIpFamily(capiCluster, akoDeploymentConfig, isVIPProvider, logger)
 						Expect(err).Should(HaveOccurred())
 					})
 				})
@@ -519,7 +635,7 @@ func unitTestValidateADCAndClusterIpFamily() {
 					})
 
 					It("should return error since the ipfamily combination is not supported", func() {
-						err := cluster.ValidateADCAndClusterIpFamily(capiCluster, akoDeploymentConfig, isVIPProvider, logger)
+						err := cluster.ValidateClusterIpFamily(capiCluster, akoDeploymentConfig, isVIPProvider, logger)
 						Expect(err).Should(HaveOccurred())
 					})
 				})
@@ -563,7 +679,7 @@ func unitTestValidateADCAndClusterIpFamily() {
 					})
 
 					It("should return error since the ipfamily combination is not supported", func() {
-						err := cluster.ValidateADCAndClusterIpFamily(capiCluster, akoDeploymentConfig, isVIPProvider, logger)
+						err := cluster.ValidateClusterIpFamily(capiCluster, akoDeploymentConfig, isVIPProvider, logger)
 						Expect(err).Should(HaveOccurred())
 					})
 				})
