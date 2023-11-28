@@ -27,6 +27,13 @@ import (
 	runv1alpha3 "github.com/vmware-tanzu/tanzu-framework/apis/run/v1alpha3"
 )
 
+const (
+	IPv4IpFamily         = "V4"
+	IPv6IpFamily         = "V6"
+	DualStackIPv6Primary = "V6,V4"
+	DualStackIPv4Primary = "V4,V6"
+)
+
 func (r *ClusterReconciler) ReconcileAddonSecret(
 	ctx context.Context,
 	log logr.Logger,
@@ -59,13 +66,13 @@ func (r *ClusterReconciler) ReconcileAddonSecret(
 		}
 	}
 
-	//Stop reconciling if AKO ip family doesn't match cluster ip family
-	if err = ValidateADCAndClusterIpFamily(cluster, obj, isVIPProvider, log); err != nil {
-		errInfo := "Selected AKODeploymentConfig " + obj.Name + "'s IP family doesn't match cluster " + cluster.Namespace +
-			"-" + cluster.Name + "'s ip family, stop deploying AKO into cluster " + cluster.Namespace + "-" + cluster.Name
+	//Stop reconciling if cluster ip family doesn't satisfy the condition
+	if err = ValidateClusterIpFamily(cluster, obj, isVIPProvider, log); err != nil {
+		errInfo := "cluster " + cluster.Namespace +
+			"-" + cluster.Name + "'s ip family is not allowed, stop deploying AKO into cluster " + cluster.Namespace + "-" + cluster.Name
 		log.Error(err, errInfo)
 		clusterCondition := &clusterv1.Condition{
-			Type:    akoov1alpha1.AKOIpFamilyValidationSucceededCondition,
+			Type:    akoov1alpha1.ClusterIpFamilyValidationSucceededCondition,
 			Status:  corev1.ConditionFalse,
 			Message: errInfo,
 		}
@@ -358,30 +365,32 @@ func getAKOPackageRefFromClusterBootstrap(log logr.Logger, cb *runv1alpha3.Clust
 	return -1, nil
 }
 
-func ValidateADCAndClusterIpFamily(cluster *clusterv1.Cluster, adc *akoov1alpha1.AKODeploymentConfig, isVIPProvider bool, log logr.Logger) error {
-	adcIpFamily := "V4"
-	if adc.Spec.ExtraConfigs.IpFamily != "" {
-		adcIpFamily = adc.Spec.ExtraConfigs.IpFamily
-	}
+func ValidateClusterIpFamily(cluster *clusterv1.Cluster, adc *akoov1alpha1.AKODeploymentConfig, isVIPProvider bool, log logr.Logger) error {
 	clusterIpFamily, err := utils.GetClusterIPFamily(cluster)
 	if err != nil {
 		log.Error(err, "can't get cluster ip family")
 		return err
 	}
+	// AKO limitations: AKO doesn't work in IPv6 single-stack and IPv6 Primary dual-stack cluster
+	if clusterIpFamily == IPv6IpFamily || clusterIpFamily == DualStackIPv6Primary {
+		return errors.New("AKO doesn't work in IPv6 single-stack and IPv6 Primary dual-stack cluster")
+	}
+
+	adcIpFamily := IPv4IpFamily
+	if adc.Spec.ExtraConfigs.IpFamily != "" {
+		adcIpFamily = adc.Spec.ExtraConfigs.IpFamily
+	}
+
 	// AKO limitations: AKO can't configure backend pool ip family
 	// TODO:(chenlin) Remove validation after AKO supports configurable ip pool
-	if (adcIpFamily == "V4" && clusterIpFamily == "V6") || (adcIpFamily == "V6" && clusterIpFamily == "V4") {
+	if adcIpFamily == IPv6IpFamily && clusterIpFamily == IPv4IpFamily {
 		errInfo := "AKO with IP family " + adcIpFamily + " can not work together with cluster with IP family " + clusterIpFamily
 		return errors.New(errInfo)
 	}
 	// When enable avi as control plane ha, backend server shouldn't use secondary ip type
 	// TODO:(chenlin) Remove validation after AKO supports configurable ip pool
-	if isVIPProvider {
-		if adcIpFamily == "V4" && clusterIpFamily == "V6,V4" {
-			return errors.New("When enabling avi as control plane HA, AKO with IP family V4 can not work together with ipv6 primary dual-stack cluster")
-		} else if adcIpFamily == "V6" && clusterIpFamily == "V4,V6" {
-			return errors.New("When enabling avi as control plane HA, AKO with IP family V6 can not work together with ipv4 primary dual-stack cluster")
-		}
+	if isVIPProvider && adcIpFamily == IPv6IpFamily && clusterIpFamily == DualStackIPv4Primary {
+		return errors.New("When enabling avi as control plane HA, AKO with IP family V6 can not work together with ipv4 primary dual-stack cluster")
 	}
 	return nil
 }
