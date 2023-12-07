@@ -172,6 +172,31 @@ var _ = Describe("Control Plane HA provider", func() {
 			})
 		})
 
+		When("cluster has ControlPlaneEndpoint.Host set", func() {
+			BeforeEach(func() {
+				cluster = &clusterv1.Cluster{
+					ObjectMeta: v1.ObjectMeta{
+						Name:        "test-cluster",
+						Namespace:   "default",
+						Annotations: map[string]string{"tkg.tanzu.vmware.com/cluster-controlplane-endpoint": "2.2.2.2"},
+					},
+					Spec: clusterv1.ClusterSpec{
+						ControlPlaneEndpoint: clusterv1.APIEndpoint{
+							Host: "2.2.2.2",
+							Port: 6443,
+						},
+					},
+				}
+			})
+			It("should create service successfully", func() {
+				svc, err = haProvider.createService(ctx, cluster)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(svc.Spec.LoadBalancerIP).Should(Equal("2.2.2.2"))
+				Expect(svc.Annotations[akoov1alpha1.AkoPreferredIPAnnotation]).Should(Equal("2.2.2.2"))
+				Expect(haProvider.Client.Delete(ctx, svc)).ShouldNot(HaveOccurred())
+			})
+		})
+
 		When("cluster has valid FQDN control plane endpoint", func() {
 			BeforeEach(func() {
 				cluster = &clusterv1.Cluster{

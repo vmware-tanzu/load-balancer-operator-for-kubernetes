@@ -353,6 +353,16 @@ var _ = Describe("AKO Operator lib unit test", func() {
 					Expect(endpoint).Should(Equal(""))
 					Expect(err).ShouldNot(HaveOccurred())
 				})
+				When("ControlPlaneEndpoint.Hosts is set", func() {
+					BeforeEach(func() {
+						cluster.Spec.ControlPlaneEndpoint.Host = "10.1.10.1"
+					})
+					It("returns that value for the endpoint", func() {
+						endpoint, err := GetControlPlaneEndpoint(cluster)
+						Expect(endpoint).Should(Equal("10.1.10.1"))
+						Expect(err).ShouldNot(HaveOccurred())
+					})
+				})
 			})
 			When("invalid input ", func() {
 				var cluster *clusterv1.Cluster

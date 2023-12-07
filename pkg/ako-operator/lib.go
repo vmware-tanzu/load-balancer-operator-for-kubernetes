@@ -110,6 +110,10 @@ func GetControlPlaneEndpoint(cluster *clusterv1.Cluster) (string, error) {
 			}
 		}
 	}
+	if apiServerEndpoint == "" {
+		apiServerEndpoint = cluster.Spec.ControlPlaneEndpoint.Host
+	}
+
 	return apiServerEndpoint, nil
 }
 
