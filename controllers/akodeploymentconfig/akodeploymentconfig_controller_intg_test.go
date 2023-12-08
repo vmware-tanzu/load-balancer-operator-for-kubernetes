@@ -309,7 +309,6 @@ func intgTestAkoDeploymentConfigController() {
 			latestCluster := &clusterv1.Cluster{}
 			if err := getCluster(latestCluster, cluster.Name, cluster.Namespace); err == nil {
 				latestCluster.Finalizers = nil
-				updateObjects(latestCluster)
 				deleteObjects(latestCluster)
 				ensureRuntimeObjectMatchExpectation(client.ObjectKey{
 					Name:      cluster.Name,
@@ -378,7 +377,6 @@ func intgTestAkoDeploymentConfigController() {
 			latestCluster := &clusterv1.Cluster{}
 			if err := getCluster(latestCluster, cluster.Name, cluster.Namespace); err == nil {
 				latestCluster.Finalizers = nil
-				updateObjects(latestCluster)
 				deleteObjects(latestCluster)
 				ensureRuntimeObjectMatchExpectation(client.ObjectKey{
 					Name:      cluster.Name,

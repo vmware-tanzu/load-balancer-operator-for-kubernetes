@@ -93,13 +93,15 @@ func intgTestMachineController() {
 			})
 			It("Corresponding Endpoints should be created", func() {
 				ep := &corev1.Endpoints{}
-				Eventually(func() bool {
-					err := ctx.Client.Get(ctx.Context, client.ObjectKey{Name: cluster.Namespace + "-" + cluster.Name + "-control-plane", Namespace: cluster.Namespace}, ep)
-					return err == nil
-				}).Should(BeTrue())
-				Expect(ep.Subsets).ShouldNot(BeNil())
-				Expect(ep.Subsets[0].Addresses).ShouldNot(BeNil())
-				Expect(len(ep.Subsets[0].Addresses)).Should(Equal(1))
+				Eventually(func() error {
+					return ctx.Client.Get(ctx.Context, client.ObjectKey{Name: cluster.Namespace + "-" + cluster.Name + "-control-plane", Namespace: cluster.Namespace}, ep)
+				}).Should(Succeed())
+				Eventually(func() int {
+					if len(ep.Subsets) == 0 {
+						return 0
+					}
+					return len(ep.Subsets[0].Addresses)
+				}).Should(Equal(1))
 				Expect(ep.Subsets[0].Addresses[0].IP).Should(Equal("1.1.1.1"))
 			})
 			It("Should add one more machine", func() {
