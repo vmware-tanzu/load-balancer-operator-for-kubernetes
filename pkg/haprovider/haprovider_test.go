@@ -43,7 +43,7 @@ var _ = Describe("Control Plane HA provider", func() {
 		haProvider = *NewProvider(fc, logger)
 	})
 
-	FContext("Test_CreateOrUpdateHAService", func() {
+	Context("Test_CreateOrUpdateHAService", func() {
 		var (
 			cluster *clusterv1.Cluster
 			svc     *corev1.Service
@@ -146,7 +146,11 @@ var _ = Describe("Control Plane HA provider", func() {
 					Spec: corev1.ServiceSpec{},
 					Status: corev1.ServiceStatus{
 						LoadBalancer: corev1.LoadBalancerStatus{
-							Ingress: []corev1.LoadBalancerIngress{},
+							Ingress: []corev1.LoadBalancerIngress{
+								{
+									IP: "1.1.1.1",
+								},
+							},
 						},
 					},
 				}
