@@ -5,9 +5,10 @@ package haprovider
 
 import (
 	"context"
-	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/utils"
 	"net"
 	"sync"
+
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/utils"
 
 	"github.com/pkg/errors"
 
@@ -37,9 +38,11 @@ type HAProvider struct {
 	log logr.Logger
 }
 
-var instance *HAProvider
-var once sync.Once
-var QueryFQDN = queryFQDNEndpoint
+var (
+	instance  *HAProvider
+	once      sync.Once
+	QueryFQDN = queryFQDNEndpoint
+)
 
 // NewProvider make HAProvider as a singleton
 func NewProvider(c client.Client, log logr.Logger) *HAProvider {
@@ -126,13 +129,14 @@ func (r *HAProvider) createService(
 		},
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceTypeLoadBalancer,
-			//TODO:(chenlin) Add two ip families after AKO fully supports dual-stack load balancer type of service
+			// TODO:(chenlin) Add two ip families after AKO fully supports dual-stack load balancer type of service
 			IPFamilies: []corev1.IPFamily{corev1.IPFamily(primaryIPFamily)},
-			Ports: []corev1.ServicePort{{
-				Protocol:   "TCP",
-				Port:       port,
-				TargetPort: intstr.FromInt(int(6443)),
-			},
+			Ports: []corev1.ServicePort{
+				{
+					Protocol:   "TCP",
+					Port:       port,
+					TargetPort: intstr.FromInt(int(6443)),
+				},
 			},
 		},
 	}
@@ -184,7 +188,7 @@ func (r *HAProvider) annotateService(ctx context.Context, cluster *clusterv1.Clu
 	if err != nil {
 		return serviceAnnotation, err
 	}
-	//no adc is selected for cluster, no annotation is needed.
+	// no adc is selected for cluster, no annotation is needed.
 	if adcForCluster == nil {
 		// for the management cluster, it needs to requeue until the install-ako-for-management-cluster AKODeploymentConfig created
 		if _, ok := cluster.Labels[akoov1alpha1.TKGManagememtClusterRoleLabel]; ok {
@@ -206,7 +210,7 @@ func (r *HAProvider) annotateService(ctx context.Context, cluster *clusterv1.Clu
 		}
 	}
 	if aviInfraSetting != nil {
-		//add AVIInfraSetting annotation when creating HA svc
+		// add AVIInfraSetting annotation when creating HA svc
 		serviceAnnotation[akoov1alpha1.HAAVIInfraSettingAnnotationsKey] = aviInfraSetting.Name
 	}
 	return serviceAnnotation, nil
@@ -224,7 +228,6 @@ func (r *HAProvider) getADCForCluster(ctx context.Context, cluster *clusterv1.Cl
 }
 
 func (r *HAProvider) getAviInfraSettingFromAdc(ctx context.Context, adcForCluster *akoov1alpha1.AKODeploymentConfig) (*akov1beta1.AviInfraSetting, error) {
-
 	aviInfraSetting := &akov1beta1.AviInfraSetting{}
 	aviInfraSettingName := GetAviInfraSettingName(adcForCluster)
 	if err := r.Client.Get(ctx, client.ObjectKey{
@@ -261,11 +264,20 @@ func (r *HAProvider) updateClusterControlPlaneEndpoint(cluster *clusterv1.Cluste
 }
 
 func (r *HAProvider) updateControlPlaneEndpointToService(ctx context.Context, cluster *clusterv1.Cluster, service *corev1.Service) error {
-	service.Spec.LoadBalancerIP = cluster.Spec.ControlPlaneEndpoint.Host
+	host := cluster.Spec.ControlPlaneEndpoint.Host
+	var err error
+	if net.ParseIP(host) == nil {
+		host, err = QueryFQDN(host)
+		if err != nil {
+			r.log.Error(err, "Failed to resolve control plane endpoint ", "endpoint", host)
+			return err
+		}
+	}
+	service.Spec.LoadBalancerIP = host
 	if service.Annotations == nil {
 		service.Annotations = make(map[string]string)
 	}
-	service.Annotations[akoov1alpha1.AkoPreferredIPAnnotation] = cluster.Spec.ControlPlaneEndpoint.Host
+	service.Annotations[akoov1alpha1.AkoPreferredIPAnnotation] = host
 	if err := r.Update(ctx, service); err != nil {
 		return errors.Wrapf(err, "Failed to update cluster endpoint to cluster control plane load balancer type of service <%s>\n", service.Name)
 	}
@@ -354,7 +366,7 @@ func (r *HAProvider) addMachineIpToEndpoints(endpoints *corev1.Endpoints, machin
 				IP:       machineAddress.Address,
 				NodeName: &machine.Name,
 			}
-			//Validate MachineIP before adding to Endpoint
+			// Validate MachineIP before adding to Endpoint
 			if ipFamily == "V6" {
 				if net.ParseIP(machineAddress.Address).To4() == nil {
 					endpoints.Subsets[0].Addresses = append(endpoints.Subsets[0].Addresses, newAddress)
@@ -404,7 +416,6 @@ func (r *HAProvider) CreateOrUpdateHAEndpoints(ctx context.Context, machine *clu
 	ipFamily := "V4"
 	if adcForCluster != nil && adcForCluster.Spec.ExtraConfigs.IpFamily != "" {
 		ipFamily = adcForCluster.Spec.ExtraConfigs.IpFamily
-
 	}
 	if !machine.DeletionTimestamp.IsZero() {
 		r.log.Info("machine" + machine.Name + " is being deleted, remove the endpoint of the machine from " + r.getHAServiceName(cluster) + " Endpoints")
