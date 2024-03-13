@@ -128,7 +128,7 @@ func EnsureClusterAviLabelMatchExpectation(ctx *builder.IntegrationTestContext, 
 
 func UpdateObjectLabels(ctx *builder.IntegrationTestContext, key client.ObjectKey, labels map[string]string) {
 	Eventually(func() error {
-		var cluster = new(clusterv1.Cluster)
+		cluster := new(clusterv1.Cluster)
 
 		if err := ctx.Client.Get(ctx, client.ObjectKey{
 			Name:      key.Name,
