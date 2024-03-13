@@ -93,10 +93,11 @@ func intgTestMachineController() {
 			})
 			It("Corresponding Endpoints should be created", func() {
 				ep := &corev1.Endpoints{}
-				Eventually(func() error {
-					return ctx.Client.Get(ctx.Context, client.ObjectKey{Name: cluster.Namespace + "-" + cluster.Name + "-control-plane", Namespace: cluster.Namespace}, ep)
-				}).Should(Succeed())
 				Eventually(func() int {
+					err := ctx.Client.Get(ctx.Context, client.ObjectKey{Name: cluster.Namespace + "-" + cluster.Name + "-control-plane", Namespace: cluster.Namespace}, ep)
+					if err != nil {
+						return 0
+					}
 					if len(ep.Subsets) == 0 {
 						return 0
 					}
