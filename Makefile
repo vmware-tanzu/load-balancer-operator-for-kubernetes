@@ -88,7 +88,13 @@ docker-push:
 # TODO:(xudongl) This is used to silence the ginkgo complain, can be removed once upgrade ginkgo to v2
 export ACK_GINKGO_DEPRECATIONS=1.16.4
 integration-test: $(GINKGO) $(ETCD)
+	$(GINKGO) -v controllers/akodeploymentconfig/phases -- -enable-integration-tests -enable-unit-tests=false -root-dir="../../.."
+	$(GINKGO) -v controllers/akodeploymentconfig/user -- -enable-integration-tests -enable-unit-tests=false -root-dir="../../.."
+	$(GINKGO) -v controllers/akodeploymentconfig -- -enable-integration-tests -enable-unit-tests=false
 	$(GINKGO) -v controllers/machine -- -enable-integration-tests -enable-unit-tests=false
+	$(GINKGO) -v controllers/cluster -- -enable-integration-tests -enable-unit-tests=false
+	$(GINKGO) -v controllers/tests/cluster_for_akodeploymentconfig/default_adc -- -enable-integration-tests -enable-unit-tests=false -root-dir="../../../.."
+	$(GINKGO) -v controllers/tests/cluster_for_akodeploymentconfig/default_adc_non_empty_selectors -- -enable-integration-tests -enable-unit-tests=false -root-dir="../../../.."
 
 .PHONY: kind-e2e-test
 kind-e2e-test: $(KUSTOMIZE) $(KIND) $(KUBECTL) $(JQ) $(YTT)
