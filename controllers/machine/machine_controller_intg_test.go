@@ -4,6 +4,7 @@
 package machine_test
 
 import (
+	"fmt"
 	"os"
 
 	. "github.com/onsi/ginkgo"
@@ -96,11 +97,15 @@ func intgTestMachineController() {
 				Eventually(func() int {
 					err := ctx.Client.Get(ctx.Context, client.ObjectKey{Name: cluster.Namespace + "-" + cluster.Name + "-control-plane", Namespace: cluster.Namespace}, ep)
 					if err != nil {
+						fmt.Println("error#############")
 						return 0
 					}
+					fmt.Println(ep)
 					if len(ep.Subsets) == 0 {
 						return 0
 					}
+					fmt.Println("here????????")
+					fmt.Println(ep.Subsets[0])
 					return len(ep.Subsets[0].Addresses)
 				}).Should(Equal(1))
 				Expect(ep.Subsets[0].Addresses[0].IP).Should(Equal("1.1.1.1"))
