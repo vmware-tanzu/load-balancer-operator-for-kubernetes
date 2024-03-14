@@ -134,6 +134,40 @@ var _ = Describe("Control Plane HA provider", func() {
 				Expect(svc.Annotations[akoov1alpha1.AkoPreferredIPAnnotation]).Should(Equal("fd01:3:4:2877:250:56ff:feb4:adaf"))
 			})
 		})
+
+		When("ControlPlaneEndpoint.host has FQDN, it should be resolved before adding to service", func() {
+			BeforeEach(func() {
+				cluster.Spec.ControlPlaneEndpoint.Host = "google.com"
+				svc = &corev1.Service{
+					ObjectMeta: v1.ObjectMeta{
+						Name:      "default-test-cluster-control-plane",
+						Namespace: "default",
+					},
+					Spec: corev1.ServiceSpec{},
+					Status: corev1.ServiceStatus{
+						LoadBalancer: corev1.LoadBalancerStatus{
+							Ingress: []corev1.LoadBalancerIngress{
+								{
+									IP: "1.1.1.1",
+								},
+							},
+						},
+					},
+				}
+				key = client.ObjectKey{Name: haProvider.getHAServiceName(cluster), Namespace: cluster.Namespace}
+				Expect(haProvider.Client.Create(ctx, svc)).ShouldNot(HaveOccurred())
+				QueryFQDN = func(fqdn string) (string, error) {
+					return "3.3.3.3", nil
+				}
+			})
+
+			It("test should pass without error", func() {
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(haProvider.Client.Get(ctx, key, svc)).ShouldNot(HaveOccurred())
+				Expect(svc.Spec.LoadBalancerIP).Should(Equal("3.3.3.3"))
+				Expect(svc.Annotations[akoov1alpha1.AkoPreferredIPAnnotation]).Should(Equal("3.3.3.3"))
+			})
+		})
 	})
 
 	Describe("Test_CreateService", func() {
@@ -503,8 +537,6 @@ var _ = Describe("Control Plane HA provider", func() {
 					Expect(ep.Subsets[0].Addresses[0].IP).Should(Equal("1.1.1.1"))
 				})
 			})
-
 		})
-
 	})
 })

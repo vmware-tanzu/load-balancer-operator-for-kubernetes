@@ -97,7 +97,8 @@ func IsLoadBalancerProvider(cluster *clusterv1.Cluster) (bool, error) {
 	return true, nil
 }
 
-// GetControlPlaneEndpoint returns cluster's API server address
+// GetControlPlaneEndpoint returns cluster's API server address, this could be an FQDN, if
+// that's the case, need to resolve to IP before putting it as service's address.
 func GetControlPlaneEndpoint(cluster *clusterv1.Cluster) (string, error) {
 	apiServerEndpoint, _ := cluster.ObjectMeta.Annotations[ClusterControlPlaneAnnotations]
 	if IsClusterClassBasedCluster(cluster) {

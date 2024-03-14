@@ -23,7 +23,6 @@ import (
 )
 
 func intgTestEnsureClusterHAProvider() {
-
 	Context("EnsureHAService", func() {
 		var (
 			ctx           *builder.IntegrationTestContext
@@ -104,7 +103,6 @@ func intgTestEnsureClusterHAProvider() {
 						Name:      serviceName,
 						Namespace: ctx.Namespace,
 					}, &corev1.Endpoints{}, testutil.EXIST)
-
 				})
 			})
 
@@ -143,9 +141,25 @@ func intgTestEnsureClusterHAProvider() {
 					err := ctx.Client.Get(ctx, client.ObjectKey{Name: serviceName, Namespace: ctx.Namespace}, service)
 					Expect(err).ShouldNot(HaveOccurred())
 					Expect(service.Annotations[akoov1alpha1.AkoPreferredIPAnnotation]).Should(Equal("10.1.2.1"))
+					// Simulate AKO updates the ip for service.
+					service.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{{
+						IP: "10.1.2.1",
+					}}
+					err = ctx.Client.Status().Update(ctx, service)
+					Expect(err).To(BeNil())
+					// Ensure updateControlPlaneEndpointToService won't set fqdn as ingress.ip
+					Consistently(func() bool {
+						err := ctx.Client.Get(ctx, client.ObjectKey{Name: serviceName, Namespace: ctx.Namespace}, service)
+						if err != nil {
+							return false
+						}
+						if service.Status.LoadBalancer.Ingress[0].IP != "10.1.2.1" {
+							return false
+						}
+						return true
+					}, "30s").Should(BeTrue())
 				})
 			})
 		})
-
 	})
 }
