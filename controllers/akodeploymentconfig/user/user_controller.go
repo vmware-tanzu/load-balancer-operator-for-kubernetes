@@ -5,6 +5,7 @@ package user
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -35,11 +36,14 @@ type AkoUserReconciler struct {
 func NewProvider(client client.Client,
 	aviClient aviclient.Client,
 	logger logr.Logger,
-	scheme *runtime.Scheme) *AkoUserReconciler {
-	return &AkoUserReconciler{Client: client,
+	scheme *runtime.Scheme,
+) *AkoUserReconciler {
+	return &AkoUserReconciler{
+		Client:    client,
 		aviClient: aviClient,
 		Log:       logger,
-		Scheme:    scheme}
+		Scheme:    scheme,
+	}
 }
 
 // ReconcileAviUser reconcile akodeploymentconfig clusters' avi user
@@ -236,7 +240,7 @@ func (r *AkoUserReconciler) reconcileAviUserNormal(
 		aviPassword := string(mcSecret.Data["password"][:])
 
 		// ensures the AVI User exists and matches the mc secret
-		if _, err = r.createOrUpdateAviUser(aviUsername, aviPassword, obj.Spec.Tenant.Name); err != nil {
+		if _, err = r.createOrUpdateAviUser(log, aviUsername, aviPassword, obj.Spec.Tenant.Name); err != nil {
 			log.Error(err, "Failed to create/update cluster avi user")
 			return res, err
 		} else {
@@ -258,20 +262,24 @@ func (r *AkoUserReconciler) getAVIControllerCA(ctx context.Context, obj *akoov1a
 }
 
 // createOrUpdateAviUser create an avi user in avi controller
-func (r *AkoUserReconciler) createOrUpdateAviUser(aviUsername, aviPassword, tenantName string) (*models.User, error) {
+func (r *AkoUserReconciler) createOrUpdateAviUser(log logr.Logger, aviUsername, aviPassword, tenantName string) (*models.User, error) {
+	log.Info("createOrUpdateAviUser")
 	aviUser, err := r.aviClient.UserGetByName(aviUsername)
 	// user not found, create one
 	if aviclient.IsAviUserNonExistentError(err) {
+		log.Info("if it's aviUserNonExistent error")
 		// for avi essential version the default tenant is admin
 		if tenantName == "" {
 			tenantName = "admin"
 		}
 		tenant, err := r.aviClient.TenantGet(tenantName)
 		if err != nil {
+			log.Error(err, "failed to get tenant")
 			return nil, err
 		}
-		role, err := r.getOrCreateAkoUserRole(tenant.URL)
+		role, err := r.getOrCreateAkoUserRole(log, tenant.URL)
 		if err != nil {
+			log.Error(err, "failed to get or create AKO user role")
 			return nil, err
 		}
 		aviUser = &models.User{
@@ -286,47 +294,59 @@ func (r *AkoUserReconciler) createOrUpdateAviUser(aviUsername, aviPassword, tena
 				},
 			},
 		}
+		log.Info("try create the user")
 		return r.aviClient.UserCreate(aviUser)
 	}
 
 	if err == nil {
+		log.Info("no error when findind the role")
 		// ensure user's role align with latest essential permission when user found
-		if _, err := r.ensureAkoUserRole(); err != nil {
+		if _, err := r.ensureAkoUserRole(log); err != nil {
+			log.Error(err, "error when ensuring ako user role")
 			return nil, err
 		}
 		// Update the password when user found, this is needed when the AVI user was
 		// created before the mc Secret. And this operation will sync
 		// the User's password to be the same as mc Secret's
 		aviUser.Password = &aviPassword
+		log.Info("try update user")
 		return r.aviClient.UserUpdate(aviUser)
 	}
+	log.Error(err, "error when finding the user")
 	return nil, err
 }
 
 // getOrCreateAkoUserRole get ako user's role, create one if not exist
-func (r *AkoUserReconciler) getOrCreateAkoUserRole(roleTenantRef *string) (*models.Role, error) {
+func (r *AkoUserReconciler) getOrCreateAkoUserRole(log logr.Logger, roleTenantRef *string) (*models.Role, error) {
 	role, err := r.aviClient.RoleGetByName(akoov1alpha1.AkoUserRoleName)
-	//not found ako user role, create one
+	// not found ako user role, create one
 	if aviclient.IsAviRoleNonExistentError(err) {
+		log.Info("it's avi role non existent error")
 		role = &models.Role{
 			Name:       pointer.StringPtr(akoov1alpha1.AkoUserRoleName),
 			Privileges: AkoRolePermission,
 			TenantRef:  roleTenantRef,
 		}
+		log.Info("creating a new role")
 		return r.aviClient.RoleCreate(role)
 	}
 	if err == nil {
-		return r.ensureAkoUserRole()
+		log.Info("role found, try ensure its role has expected permission")
+		return r.ensureAkoUserRole(log)
 	}
 	return role, err
 }
 
 // ensureAkoUserRole ensure ako-essential-role has the latest permission
-func (r *AkoUserReconciler) ensureAkoUserRole() (*models.Role, error) {
+func (r *AkoUserReconciler) ensureAkoUserRole(log logr.Logger) (*models.Role, error) {
+	log.Info("ensureAkoUserRole")
 	role, err := r.aviClient.RoleGetByName(akoov1alpha1.AkoUserRoleName)
 	if err != nil {
+		log.Error(err, "failed to get role")
 		return role, err
 	}
+	log.Info("Role before upgrade")
+	fmt.Printf("%v\n", role.Privileges)
 	// check if role needs to be sync
 	needSync := false
 	for i, permission := range role.Privileges {
@@ -338,8 +358,12 @@ func (r *AkoUserReconciler) ensureAkoUserRole() (*models.Role, error) {
 		}
 	}
 	if needSync {
+		log.Info("found difference in the role, try update the role")
+		log.Info("Role after update")
+		fmt.Printf("%v\n", role.Privileges)
 		return r.aviClient.RoleUpdate(role)
 	}
+	log.Info("no need to sync role, skip")
 	return role, nil
 }
 
@@ -373,7 +397,6 @@ func (r *AkoUserReconciler) createAviUserSecret(name, namespace, username, passw
 				APIVersion:         akoov1alpha1.AkoDeploymentConfigVersion,
 			},
 		}
-
 	}
 	secret.Data["username"] = []byte(username)
 	secret.Data["password"] = []byte(password)
