@@ -1,16 +1,7 @@
 name: Load Balancer Operator for Kubernetes Checks
 on:
   pull_request:
-    paths:
-      - "**/*.go"
-      - "config/**/*"
-      - go.mod
-      - go.sum
-      - "hack/*"
-      - Makefile
-      - ".github/workflows/*.yml"
-      - "codecov.yml"
-      - Dockerfile
+    types: [opened, synchronize]
 
 jobs:
   lint:
