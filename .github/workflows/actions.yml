@@ -3,6 +3,9 @@ on:
   pull_request:
     types: [opened, synchronize]
 
+env:
+  GO_VERSION: '1.20'
+
 jobs:
   lint:
     name: lint-check
@@ -12,7 +15,7 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           stable: 'true'
-          go-version: '1.20' # The Go version to download (if necessary) and use.
+          go-version: ${{ env.GO_VERSION }}
 
       - name: Build hack tools for linting
         run: cd hack/tools && make golangci-lint
@@ -42,7 +45,7 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           stable: 'true'
-          go-version: '1.20' # The Go version to download (if necessary) and use.
+          go-version: ${{ env.GO_VERSION }}
       - name: Build hack tools for unit testing
         run: cd hack/tools && make controller-gen etcd ginkgo kustomize
 
@@ -66,7 +69,7 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           stable: 'true'
-          go-version: '1.20' # The Go version to download (if necessary) and use.
+          go-version: ${{ env.GO_VERSION }}
       - name: Build hack tools for integration testing
         run: cd hack/tools && make controller-gen etcd ginkgo kustomize
       - name: Perform integration tests
@@ -80,7 +83,7 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           stable: 'true'
-          go-version: '1.20' # The Go version to download (if necessary) and use.
+          go-version: ${{ env.GO_VERSION }}
 
       # uncomment this step for debugging: tmate session
 #      - name: Setup tmate session

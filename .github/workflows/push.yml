@@ -5,6 +5,8 @@ on:
       - 'main'
       - 'release-**'
 
+env:
+  GO_VERSION: '1.20'
 
 jobs:
   lint:
@@ -15,7 +17,7 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           stable: 'true'
-          go-version: '1.20' # The Go version to download (if necessary) and use.
+          go-version: ${{ env.GO_VERSION }}
 
       - name: Build hack tools for linting
         run: cd hack/tools && make golangci-lint
@@ -45,7 +47,7 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           stable: 'true'
-          go-version: '1.19' # The Go version to download (if necessary) and use.
+          go-version: ${{ env.GO_VERSION }}
       - name: Build hack tools for unit testing
         run: cd hack/tools && make controller-gen etcd ginkgo kustomize
 
