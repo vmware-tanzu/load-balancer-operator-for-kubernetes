@@ -104,7 +104,7 @@ kind-e2e-test: $(KUSTOMIZE) $(KIND) $(KUBECTL) $(JQ) $(YTT)
 ytt: $(YTT)
 
 $(YTT): $(TOOLS_DIR)/go.mod # Build ytt from tools folder.
-	cd $(TOOLS_DIR); go build -tags=tools -o $(BIN_DIR)/ytt github.com/k14s/ytt/cmd/ytt
+	cd $(TOOLS_DIR); go build -tags=tools -o $(BIN_DIR)/ytt carvel.dev/ytt/cmd/ytt
 
 ## --------------------------------------
 ## AKO Operator
