@@ -13,7 +13,7 @@ require (
 	github.com/vmware-tanzu/tanzu-framework/apis/run v0.0.0-20221104044415-a462bbe793b9
 	github.com/vmware/alb-sdk v0.0.0-20230202152455-af9d49bac7ea
 	github.com/vmware/load-balancer-and-ingress-services-for-kubernetes v0.0.0-20231012053946-537d99c1eba2
-	go.uber.org/zap v1.24.0
+	go.uber.org/zap v1.27.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.27.2
 	k8s.io/apiextensions-apiserver v0.27.2
@@ -63,8 +63,7 @@ require (
 	github.com/prometheus/common v0.42.0 // indirect
 	github.com/prometheus/procfs v0.10.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	go.uber.org/atomic v1.9.0 // indirect
-	go.uber.org/multierr v1.8.0 // indirect
+	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/oauth2 v0.10.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
