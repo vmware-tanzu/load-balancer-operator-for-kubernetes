@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
 var (
@@ -68,14 +69,21 @@ func main() {
 			"profiler-addr", profilerAddress)
 		go runProfiler(profilerAddress)
 	}
+
+	// Default webserver port is 9443.
 	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: metricsAddr,
-		LeaderElection:     enableLeaderElection,
-		Port:               9443,
-		ClientDisableCacheFor: []client.Object{
-			&corev1.ConfigMap{},
-			&corev1.Secret{},
+		Scheme:         scheme,
+		LeaderElection: enableLeaderElection,
+		Metrics: metricsserver.Options{
+			BindAddress: metricsAddr,
+		},
+		Client: client.Options{
+			Cache: &client.CacheOptions{
+				DisableFor: []client.Object{
+					&corev1.ConfigMap{},
+					&corev1.Secret{},
+				},
+			},
 		},
 	})
 	if err != nil {
