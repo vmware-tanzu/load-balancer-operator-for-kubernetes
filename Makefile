@@ -189,7 +189,7 @@ lint-markdown: ## Lint the project's markdown
 ifdef GITHUB_ACTIONS
 	markdownlint -c md-config.json .
 else
-	docker run -i --rm -v "$$(pwd)":/work $(CACHE_IMAGE_REGISTRY)/tmknom/markdownlint -c /work/md-config.json .
+	docker run -i --rm -v "$$(pwd)":/work ghcr.io/tmknom/dockerfiles/markdownlint -c /work/md-config.json .
 endif
 
 .PHONY: lint-shell
