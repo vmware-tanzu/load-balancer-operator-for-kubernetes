@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
 // AddToScheme is the function TestSuite calls to register schemes for a manager
@@ -200,8 +201,10 @@ func (s *TestSuite) createManager() {
 	Expect(err).NotTo(HaveOccurred())
 
 	s.manager, err = manager.New(s.config, manager.Options{
-		Scheme:             managerScheme,
-		MetricsBindAddress: "0",
+		Scheme: managerScheme,
+		Metrics: metricsserver.Options{
+			BindAddress: "0",
+		},
 		NewCache: func(config *rest.Config, opts cache.Options) (cache.Cache, error) {
 			syncPeriod := 1 * time.Second
 			opts.SyncPeriod = &syncPeriod
