@@ -11,6 +11,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -190,7 +191,7 @@ func (r *realAviClient) GetControllerVersion() (string, error) {
 }
 
 func (r *realAviClient) GetObjectByName(obj string, name string, cloudName string, result interface{}, options ...session.ApiOptionsParams) error {
-	uri := "/api/" + obj + "/?include_name&name=" + name + "&cloud_ref.name=" + cloudName
+	uri := "/api/" + obj + "/?include_name&name=" + url.QueryEscape(name) + "&cloud_ref.name=" + url.QueryEscape(cloudName)
 	res, err := r.AviSession.GetCollectionRaw(uri, options...)
 	if err != nil {
 		return err

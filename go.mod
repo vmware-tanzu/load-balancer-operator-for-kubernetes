@@ -11,7 +11,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/satori/go.uuid v1.2.0
 	github.com/vmware-tanzu/tanzu-framework/apis/run v0.0.0-20221104044415-a462bbe793b9
-	github.com/vmware/alb-sdk v0.0.0-20230202152455-af9d49bac7ea
+	github.com/vmware/alb-sdk v0.0.0-20240502042605-947bfcf176dd
 	github.com/vmware/load-balancer-and-ingress-services-for-kubernetes v0.0.0-20231012053946-537d99c1eba2
 	go.uber.org/zap v1.27.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -82,4 +82,3 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
-
