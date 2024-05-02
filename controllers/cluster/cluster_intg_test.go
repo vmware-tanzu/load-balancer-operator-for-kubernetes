@@ -153,6 +153,9 @@ func intgTestEnsureClusterHAProvider() {
 						if err != nil {
 							return false
 						}
+						if len(service.Status.LoadBalancer.Ingress) == 0 {
+							return false
+						}
 						if service.Status.LoadBalancer.Ingress[0].IP != "10.1.2.1" {
 							return false
 						}
