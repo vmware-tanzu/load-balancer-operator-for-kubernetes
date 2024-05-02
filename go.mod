@@ -1,6 +1,8 @@
 module github.com/vmware-tanzu/load-balancer-operator-for-kubernetes
 
-go 1.20
+go 1.21
+
+toolchain go1.22.2
 
 require (
 	github.com/bitly/go-simplejson v0.5.1
@@ -82,4 +84,3 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
-
