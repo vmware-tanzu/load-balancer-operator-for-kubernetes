@@ -20,12 +20,12 @@ export GOPROXY
 export GO111MODULE := on
 
 # Directories.
-BIN_DIR := bin
+BIN_DIR := $(shell pwd)/bin
 SRCS := go.mod go.sum
 
 # Versions.
-KUBEBUILDER_VERSION=2.3.0
-KUBECTL_VERSION=1.16.4
+KUBEBUILDER_VERSION=3.14.2
+K8S_VERSION=1.29.3
 
 # Host information.
 HOST_OS=$(shell go env GOOS)
@@ -43,6 +43,7 @@ KUBECTL         := $(BIN_DIR)/kubectl
 ETCD            := $(BIN_DIR)/etcd
 KIND            := $(BIN_DIR)/kind
 JQ              := $(BIN_DIR)/jq
+ENVTEST 		:= $(BIN_DIR)/setup-envtest
 
 ## --------------------------------------
 ## Help
@@ -90,20 +91,24 @@ $(JQ):
 	curl -o $(@) -L https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 && \
 		chmod a+x $(@)
 
+.PHONY: envtest
+envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
+$(ENVTEST):
+	GOBIN=$(BIN_DIR) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
 etcd: $(ETCD) ## Install etcd
 kube-apiserver: $(KUBE_APISERVER) ## Install kube-apiserver
+kubectl: $(KUBECTL) ## Install kubectl
+$(ETCD) $(KUBE_APISERVER) $(KUBECTL): envtest
+	TEMP_DL_DIR=$(shell mktemp -d) && \
+	GOBIN=$(BIN_DIR) $(ENVTEST) use $(K8S_VERSION) --bin-dir "$${TEMP_DL_DIR}" && \
+	cp "$${TEMP_DL_DIR}"/k8s/*/* $(@D)
+
 kubebuilder: $(KUBEBUILDER) ## Install kubebuilder
-$(ETCD) $(KUBE_APISERVER) $(KUBEBUILDER):
+$(KUBEBUILDER):
 	@mkdir -p $(@D)
 	TEMP_DL_DIR=$$(mktemp -d) && \
-	curl -sL https://github.com/kubernetes-sigs/kubebuilder/releases/download/v$(KUBEBUILDER_VERSION)/kubebuilder_$(KUBEBUILDER_VERSION)_$(HOST_OS)_$(HOST_ARCH).tar.gz | \
-	tar -xz -C "$${TEMP_DL_DIR}" --exclude=kubectl && \
-	mv "$${TEMP_DL_DIR}/"*/bin/* $(@D)
-
-kubectl: $(KUBECTL) ## Install kubectl
-$(KUBECTL):
-	curl -sL https://storage.googleapis.com/kubernetes-release/release/v$(KUBECTL_VERSION)/bin/$(HOST_OS)/$(HOST_ARCH)/kubectl -o $(@) && \
-	chmod a+x $(@)
+	curl -sL https://github.com/kubernetes-sigs/kubebuilder/releases/download/v$(KUBEBUILDER_VERSION)/kubebuilder_$(KUBEBUILDER_VERSION)_$(HOST_OS)_$(HOST_ARCH) -O $(KUBEBUILDER)
 
 ## --------------------------------------
 ## Generate
