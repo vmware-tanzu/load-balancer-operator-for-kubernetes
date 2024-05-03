@@ -746,96 +746,121 @@ func intgTestAkoDeploymentConfigController() {
 				})
 			})
 
+			// Tests when there are multpile ADC selecting the same cluster.
+			// When there is matching cluster for ADC -> and when there is another ADC install-ako-for-all
 			When("there are multiple matching ADCs", func() {
-				// Tests when there are multpile ADC selecting the same cluster.
-				// When there is matching cluster for ADC -> and when there is another ADC install-ako-for-all
-				defaultAkoDeploymentConfig := staticDefaultAkoDeploymentConfig.DeepCopy()
-				defaultAkoDeploymentConfigWithNonEmptyClusterSelector := staticDefaultAkoDeploymentConfig.DeepCopy()
-				defaultAkoDeploymentConfigWithNonEmptyClusterSelector.Spec.ClusterSelector = metav1.LabelSelector{
-					MatchLabels: testLabels,
-				}
+				var defaultADC *akoov1alpha1.AKODeploymentConfig
+				When("there is a default ADC install-ako-for-all which doesn't have selector besides the custom ADC with selector", func() {
+					BeforeEach(func() {
+						By("creating install-ako-for-all ADC without selector")
+						defaultADC = staticDefaultAkoDeploymentConfig.DeepCopy()
+						createObjects(defaultADC)
+						ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+							Name: akoov1alpha1.WorkloadClusterAkoDeploymentConfig,
+						}, &akoov1alpha1.AKODeploymentConfig{}, true)
 
-				defaultADCTestCaseInputs := []DefaultADCTestCaseInput{
-					{
-						Name:        "there is default ADC install-ako-for-all",
-						DefaultADC:  defaultAkoDeploymentConfig,
-						HasSelector: false,
-					},
-					{
-						// This test case covers the bug https://github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pull/81
-						// The bug was triggerred when the default workload ADC install-ako-for-all has non-empty cluster selector
-						Name:        "there is default ADC with non-empty clusterSelector",
-						DefaultADC:  defaultAkoDeploymentConfigWithNonEmptyClusterSelector,
-						HasSelector: true,
-					},
-				}
-
-				for _, tc := range defaultADCTestCaseInputs {
-					var defaultADC *akoov1alpha1.AKODeploymentConfig
-					When(tc.Name, func() {
-						BeforeEach(func() {
-							defaultADC = tc.DefaultADC.DeepCopy()
-							createObjects(defaultADC)
-							ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-								Name: akoov1alpha1.WorkloadClusterAkoDeploymentConfig,
-							}, &akoov1alpha1.AKODeploymentConfig{}, true)
-
-							ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-								Name: util.CustomADCName,
-							}, &akoov1alpha1.AKODeploymentConfig{}, true)
-						})
-
-						AfterEach(func() {
-							Eventually(func() bool {
-								return ensureObjectsDeleted(defaultADC, akoDeploymentConfig)
-							}, "60s", "5s").Should(BeTrue())
-							ensureClusterAviLabelMatchExpectation(client.ObjectKey{
-								Name:      cluster.Name,
-								Namespace: cluster.Namespace,
-							}, akoov1alpha1.AviClusterLabel, false)
-						})
-
-						It("is selected by a customized ADC", func() {
-							ensureClusterAviLabelValueMatchExpectation(client.ObjectKey{
-								Name:      cluster.Name,
-								Namespace: cluster.Namespace,
-							}, akoov1alpha1.AviClusterLabel, util.CustomADCName, true)
-						})
-
-						When("no longer selected by a customized ADC", func() {
-							BeforeEach(func() {
-								latestCluster := &clusterv1.Cluster{
-									ObjectMeta: metav1.ObjectMeta{
-										Name:      cluster.Name,
-										Namespace: cluster.Namespace,
-									},
-								}
-								Expect(getCluster(latestCluster, cluster.Name, cluster.Namespace)).To(BeNil())
-								delete(latestCluster.Labels, "test")
-								updateObjects(latestCluster)
-
-								ensureClusterAviLabelMatchExpectation(client.ObjectKey{
-									Name:      cluster.Name,
-									Namespace: cluster.Namespace,
-								}, "test", false)
-							})
-
-							It("picks up the default ADC if there is no selector on default ADC", func() {
-								ensureClusterAviLabelValueMatchExpectation(client.ObjectKey{
-									Name:      cluster.Name,
-									Namespace: cluster.Namespace,
-								}, akoov1alpha1.AviClusterLabel, akoov1alpha1.WorkloadClusterAkoDeploymentConfig, !tc.HasSelector)
-							})
-
-							It("should drop the AviClusterLabel for custom ADC", func() {
-								ensureClusterAviLabelValueMatchExpectation(client.ObjectKey{
-									Name:      cluster.Name,
-									Namespace: cluster.Namespace,
-								}, akoov1alpha1.AviClusterLabel, util.CustomADCName, false)
-							})
-						})
+						ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+							Name: util.CustomADCName,
+						}, &akoov1alpha1.AKODeploymentConfig{}, true)
 					})
-				}
+
+					AfterEach(func() {
+						Eventually(func() bool {
+							return ensureObjectsDeleted(defaultADC, akoDeploymentConfig)
+						}, "60s", "5s").Should(BeTrue())
+						ensureClusterAviLabelMatchExpectation(client.ObjectKey{
+							Name:      cluster.Name,
+							Namespace: cluster.Namespace,
+						}, akoov1alpha1.AviClusterLabel, false)
+					})
+
+					It("is selected by a customized ADC then no longer selected if label is removed", func() {
+						By("checking the cluster's AviClusterLabel label having the value of custom ADC")
+						ensureClusterAviLabelValueMatchExpectation(client.ObjectKey{
+							Name:      cluster.Name,
+							Namespace: cluster.Namespace,
+						}, akoov1alpha1.AviClusterLabel, util.CustomADCName, true)
+
+						By("removing cluster's label")
+						latestCluster := &clusterv1.Cluster{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      cluster.Name,
+								Namespace: cluster.Namespace,
+							},
+						}
+						Expect(getCluster(latestCluster, cluster.Name, cluster.Namespace)).To(BeNil())
+						delete(latestCluster.Labels, "test")
+						updateObjects(latestCluster)
+						ensureClusterAviLabelMatchExpectation(client.ObjectKey{
+							Name:      cluster.Name,
+							Namespace: cluster.Namespace,
+						}, "test", false)
+
+						By("checking the cluster's AviClusterLabel label having the value of install-ako-for-all ADC instead")
+						ensureClusterAviLabelValueMatchExpectation(client.ObjectKey{
+							Name:      cluster.Name,
+							Namespace: cluster.Namespace,
+						}, akoov1alpha1.AviClusterLabel, akoov1alpha1.WorkloadClusterAkoDeploymentConfig, true)
+					})
+				})
+
+				// This test case covers the bug https://github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pull/81
+				// The bug was triggerred when the default workload ADC install-ako-for-all has a cluster selector
+				When("there is default ADC install-ako-for-all with a selector", func() {
+					var defaultADC *akoov1alpha1.AKODeploymentConfig
+					BeforeEach(func() {
+						By("creating default ADC with selector")
+						defaultADC = staticDefaultAkoDeploymentConfig.DeepCopy()
+						defaultADC.Spec.ClusterSelector = metav1.LabelSelector{MatchLabels: testLabels}
+						createObjects(defaultADC)
+						ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+							Name: akoov1alpha1.WorkloadClusterAkoDeploymentConfig,
+						}, &akoov1alpha1.AKODeploymentConfig{}, true)
+
+						ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+							Name: util.CustomADCName,
+						}, &akoov1alpha1.AKODeploymentConfig{}, true)
+					})
+
+					AfterEach(func() {
+						Eventually(func() bool {
+							return ensureObjectsDeleted(defaultADC, akoDeploymentConfig)
+						}, "60s", "5s").Should(BeTrue())
+						ensureClusterAviLabelMatchExpectation(client.ObjectKey{
+							Name:      cluster.Name,
+							Namespace: cluster.Namespace,
+						}, akoov1alpha1.AviClusterLabel, false)
+					})
+
+					It("is selected by a customized ADC then no longer selected if label is removed", func() {
+						By("checking the cluster's AviClusterLabel label having the value of custom ADC")
+						ensureClusterAviLabelValueMatchExpectation(client.ObjectKey{
+							Name:      cluster.Name,
+							Namespace: cluster.Namespace,
+						}, akoov1alpha1.AviClusterLabel, util.CustomADCName, true)
+
+						By("removing cluster's label")
+						latestCluster := &clusterv1.Cluster{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      cluster.Name,
+								Namespace: cluster.Namespace,
+							},
+						}
+						Expect(getCluster(latestCluster, cluster.Name, cluster.Namespace)).To(BeNil())
+						delete(latestCluster.Labels, "test")
+						updateObjects(latestCluster)
+						ensureClusterAviLabelMatchExpectation(client.ObjectKey{
+							Name:      cluster.Name,
+							Namespace: cluster.Namespace,
+						}, "test", false)
+
+						By("checking the cluster's AviClusterLabel label being removed")
+						ensureClusterAviLabelMatchExpectation(client.ObjectKey{
+							Name:      cluster.Name,
+							Namespace: cluster.Namespace,
+						}, akoov1alpha1.AviClusterLabel, false)
+					})
+				})
 			})
 		})
 	})

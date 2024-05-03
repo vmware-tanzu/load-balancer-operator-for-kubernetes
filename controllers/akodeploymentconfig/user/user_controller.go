@@ -16,7 +16,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -281,7 +280,7 @@ func (r *AkoUserReconciler) createOrUpdateAviUser(aviUsername, aviPassword, tena
 			DefaultTenantRef: tenant.URL,
 			Access: []*models.UserRole{
 				{
-					AllTenants: pointer.BoolPtr(false),
+					AllTenants: ptr.To(false),
 					RoleRef:    role.URL,
 					TenantRef:  tenant.URL,
 				},
@@ -366,8 +365,8 @@ func (r *AkoUserReconciler) createAviUserSecret(name, namespace, username, passw
 			{
 				UID:                obj.UID,
 				Name:               obj.Name,
-				Controller:         pointer.BoolPtr(true),
-				BlockOwnerDeletion: pointer.BoolPtr(true),
+				Controller:         ptr.To(true),
+				BlockOwnerDeletion: ptr.To(true),
 				Kind:               akoov1alpha1.AkoDeploymentConfigKind,
 				APIVersion:         akoov1alpha1.AkoDeploymentConfigVersion,
 			},

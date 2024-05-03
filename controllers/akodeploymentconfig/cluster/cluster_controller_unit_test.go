@@ -12,7 +12,7 @@ import (
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -131,7 +131,7 @@ func unitTestAKODeploymentYaml() {
 						},
 						ExtraConfigs: akoov1alpha1.ExtraConfigs{
 							Rbac: akoov1alpha1.AKORbacConfig{
-								PspEnabled:          pointer.Bool(true),
+								PspEnabled:          ptr.To(true),
 								PspPolicyAPIVersion: "test/1.2",
 							},
 							Log: akoov1alpha1.AKOLogConfig{
@@ -141,8 +141,8 @@ func unitTestAKODeploymentYaml() {
 								AKOGatewayLogFile:     "test-gateway-api.log",
 							},
 							IngressConfigs: akoov1alpha1.AKOIngressConfig{
-								DisableIngressClass:      pointer.Bool(true),
-								DefaultIngressController: pointer.Bool(false),
+								DisableIngressClass:      ptr.To(true),
+								DefaultIngressController: ptr.To(false),
 								ShardVSSize:              "MEDIUM",
 								ServiceType:              "NodePort",
 								NodeNetworkList: []akoov1alpha1.NodeNetwork{
@@ -152,9 +152,9 @@ func unitTestAKODeploymentYaml() {
 									},
 								},
 							},
-							DisableStaticRouteSync: pointer.BoolPtr(true),
+							DisableStaticRouteSync: ptr.To(true),
 							FeatureGates: akoov1alpha1.FeatureGates{
-								GatewayAPI: pointer.Bool(true),
+								GatewayAPI: ptr.To(true),
 							},
 						},
 					},
@@ -407,7 +407,7 @@ func unitTestValidateClusterIpFamily() {
 						ExtraConfigs: akoov1alpha1.ExtraConfigs{
 							IpFamily: "V4",
 							Rbac: akoov1alpha1.AKORbacConfig{
-								PspEnabled:          pointer.Bool(true),
+								PspEnabled:          ptr.To(true),
 								PspPolicyAPIVersion: "test/1.2",
 							},
 							Log: akoov1alpha1.AKOLogConfig{
@@ -416,8 +416,8 @@ func unitTestValidateClusterIpFamily() {
 								LogFile:               "test-avi.log",
 							},
 							IngressConfigs: akoov1alpha1.AKOIngressConfig{
-								DisableIngressClass:      pointer.Bool(true),
-								DefaultIngressController: pointer.Bool(false),
+								DisableIngressClass:      ptr.To(true),
+								DefaultIngressController: ptr.To(false),
 								ShardVSSize:              "MEDIUM",
 								ServiceType:              "NodePort",
 								NodeNetworkList: []akoov1alpha1.NodeNetwork{
@@ -427,7 +427,7 @@ func unitTestValidateClusterIpFamily() {
 									},
 								},
 							},
-							DisableStaticRouteSync: pointer.BoolPtr(true),
+							DisableStaticRouteSync: ptr.To(true),
 						},
 					},
 				}
@@ -475,7 +475,7 @@ func unitTestValidateClusterIpFamily() {
 							},
 							ExtraConfigs: akoov1alpha1.ExtraConfigs{
 								IpFamily:               "V4",
-								DisableStaticRouteSync: pointer.BoolPtr(true),
+								DisableStaticRouteSync: ptr.To(true),
 							},
 						},
 					}
@@ -523,7 +523,7 @@ func unitTestValidateClusterIpFamily() {
 								},
 								ExtraConfigs: akoov1alpha1.ExtraConfigs{
 									IpFamily:               "V4",
-									DisableStaticRouteSync: pointer.BoolPtr(true),
+									DisableStaticRouteSync: ptr.To(true),
 								},
 							},
 						}
@@ -567,7 +567,7 @@ func unitTestValidateClusterIpFamily() {
 								},
 								ExtraConfigs: akoov1alpha1.ExtraConfigs{
 									IpFamily:               "V6",
-									DisableStaticRouteSync: pointer.BoolPtr(true),
+									DisableStaticRouteSync: ptr.To(true),
 								},
 							},
 						}
@@ -614,7 +614,7 @@ func unitTestValidateClusterIpFamily() {
 								},
 								ExtraConfigs: akoov1alpha1.ExtraConfigs{
 									IpFamily:               "V4",
-									DisableStaticRouteSync: pointer.BoolPtr(true),
+									DisableStaticRouteSync: ptr.To(true),
 								},
 							},
 						}
@@ -658,7 +658,7 @@ func unitTestValidateClusterIpFamily() {
 								},
 								ExtraConfigs: akoov1alpha1.ExtraConfigs{
 									IpFamily:               "V6",
-									DisableStaticRouteSync: pointer.BoolPtr(true),
+									DisableStaticRouteSync: ptr.To(true),
 								},
 							},
 						}
