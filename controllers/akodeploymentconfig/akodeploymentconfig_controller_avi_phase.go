@@ -7,19 +7,20 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/utils"
 	"sync"
+
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/utils"
 
 	"net"
 	"sort"
 
 	"github.com/go-logr/logr"
 	"github.com/vmware/alb-sdk/go/models"
-	"k8s.io/utils/pointer"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -328,9 +329,9 @@ func (r *AKODeploymentConfigReconciler) createAviInfraSetting(adc *akoov1alpha1.
 		}}
 	}
 
-	t1LR := pointer.StringPtr("")
+	t1LR := ptr.To("")
 	if adc.Spec.ExtraConfigs.NetworksConfig.NsxtT1LR != "" {
-		t1LR = pointer.StringPtr(adc.Spec.ExtraConfigs.NetworksConfig.NsxtT1LR)
+		t1LR = ptr.To(adc.Spec.ExtraConfigs.NetworksConfig.NsxtT1LR)
 	}
 
 	return &akov1beta1.AviInfraSetting{

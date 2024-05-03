@@ -15,7 +15,8 @@ import (
 
 const (
 	// CharSet defines the alphanumeric set for random string generation.
-	CharSet = "0123456789abcdefghijklmnopqrstuvwxyz"
+	CharSet       = "0123456789abcdefghijklmnopqrstuvwxyz"
+	CustomADCName = "ako-deployment-config"
 )
 
 var rnd = rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
@@ -96,7 +97,7 @@ func GetCustomizedADC(labels map[string]string) *akoov1alpha1.AKODeploymentConfi
 	}
 	return &akoov1alpha1.AKODeploymentConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "ako-deployment-config",
+			Name: CustomADCName,
 		},
 		Spec: *spec,
 	}

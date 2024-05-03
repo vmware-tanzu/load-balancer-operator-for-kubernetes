@@ -12,7 +12,7 @@ import (
 	"github.com/vmware/alb-sdk/go/models"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
@@ -103,17 +103,17 @@ func afterEach(adminSecret, certificateSecret *corev1.Secret, g *WithT) {
 
 func configureAVIController() {
 	aviClient.ServiceEngineGroupCreate(&models.ServiceEngineGroup{
-		Name: pointer.StringPtr("fake-seg"),
+		Name: ptr.To("fake-seg"),
 	})
 	aviClient.CloudCreate(&models.Cloud{
-		Name:            pointer.StringPtr("fake-cloud"),
-		IPAMProviderRef: pointer.StringPtr("https://10.0.0.x/api/ipamdnsproviderprofile/test"),
+		Name:            ptr.To("fake-cloud"),
+		IPAMProviderRef: ptr.To("https://10.0.0.x/api/ipamdnsproviderprofile/test"),
 	})
 	aviClient.NetworkCreate(&models.Network{
-		Name: pointer.StringPtr("fake-control-plane"),
+		Name: ptr.To("fake-control-plane"),
 	})
 	aviClient.NetworkCreate(&models.Network{
-		Name: pointer.StringPtr("fake-data-plane"),
+		Name: ptr.To("fake-data-plane"),
 	})
 }
 
@@ -404,14 +404,14 @@ func TestUpdateExistingAKODeploymentConfig(t *testing.T) {
 			new:               staticADC.DeepCopy(),
 			customizeInput: func(adminSecret, certificateSecret *corev1.Secret, adc *AKODeploymentConfig) (*corev1.Secret, *corev1.Secret, *AKODeploymentConfig) {
 				aviClient.CloudCreate(&models.Cloud{
-					Name:            pointer.StringPtr("fake-new-cloud"),
-					IPAMProviderRef: pointer.StringPtr("https://10.0.0.x/api/ipamdnsproviderprofile/test"),
+					Name:            ptr.To("fake-new-cloud"),
+					IPAMProviderRef: ptr.To("https://10.0.0.x/api/ipamdnsproviderprofile/test"),
 				})
 				aviClient.ServiceEngineGroupCreate(&models.ServiceEngineGroup{
-					Name: pointer.StringPtr("fake-seg"),
+					Name: ptr.To("fake-seg"),
 				})
 				aviClient.NetworkCreate(&models.Network{
-					Name: pointer.StringPtr("fake-new-data-plane"),
+					Name: ptr.To("fake-new-data-plane"),
 				})
 				adc.Spec.CloudName = "fake-new-cloud"
 				adc.Spec.ServiceEngineGroup = "fake-new-seg"
