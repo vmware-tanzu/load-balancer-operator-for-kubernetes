@@ -43,7 +43,7 @@ KUBECTL         := $(BIN_DIR)/kubectl
 ETCD            := $(BIN_DIR)/etcd
 KIND            := $(BIN_DIR)/kind
 JQ              := $(BIN_DIR)/jq
-ENVTEST 		:= $(BIN_DIR)/setup-envtest
+ENVTEST         := $(BIN_DIR)/setup-envtest
 
 ## --------------------------------------
 ## Help
