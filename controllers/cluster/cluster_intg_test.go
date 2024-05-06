@@ -160,7 +160,7 @@ func intgTestEnsureClusterHAProvider() {
 							return false
 						}
 						return true
-					}, "30s").Should(BeTrue())
+					}, "30s", "3s").Should(BeTrue())
 				})
 			})
 		})

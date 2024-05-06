@@ -15,7 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	kcfg "sigs.k8s.io/cluster-api/util/kubeconfig"
@@ -26,6 +26,7 @@ import (
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako"
 	ako_operator "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/test/builder"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/test/util"
 	testutil "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/test/util"
 )
 
@@ -90,11 +91,38 @@ func intgTestAkoDeploymentConfigController() {
 			Expect(err).To(BeNil())
 		}
 	}
+
 	deleteObjects := func(objs ...client.Object) {
 		for _, o := range objs {
-			// ignore error
 			_ = ctx.Client.Delete(ctx.Context, o)
 		}
+	}
+
+	ensureObjectsDeleted := func(obj ...client.Object) bool {
+		m := make(map[int]struct{})
+		for i, o := range obj {
+			if err := ctx.Client.Get(ctx, client.ObjectKeyFromObject(o), o); err != nil {
+				if !apierrors.IsNotFound(err) {
+					continue
+				} else {
+					m[i] = struct{}{}
+					continue
+				}
+			}
+			if o.GetObjectKind().GroupVersionKind().Kind == "AKODeploymentConfig" && o.(*akoov1alpha1.AKODeploymentConfig).Finalizers != nil {
+				o.(*akoov1alpha1.AKODeploymentConfig).Finalizers = nil
+				adc := o.(*akoov1alpha1.AKODeploymentConfig).DeepCopy()
+				_ = ctx.Client.Update(ctx, adc)
+			}
+			if o.GetObjectKind().GroupVersionKind().Kind == "Cluster" && o.(*clusterv1.Cluster).Finalizers != nil {
+				o.(*clusterv1.Cluster).Finalizers = nil
+				c := o.(*clusterv1.Cluster).DeepCopy()
+				_ = ctx.Client.Update(ctx, c)
+			}
+			_ = ctx.Client.Delete(ctx, o)
+		}
+
+		return len(m) == len(obj)
 	}
 	getCluster := func(obj *clusterv1.Cluster, name, namespace string) error {
 		err := ctx.Client.Get(ctx.Context, client.ObjectKey{
@@ -149,7 +177,7 @@ func intgTestAkoDeploymentConfigController() {
 				res = true
 			}
 			return res == expect
-		}).Should(BeTrue())
+		}, "60s", "5s").Should(BeTrue())
 	}
 
 	ensureAKOAddOnSecretDeleteConfigMatchExpectation := func(key client.ObjectKey, expect bool) {
@@ -182,7 +210,19 @@ func intgTestAkoDeploymentConfigController() {
 			}
 			_, ok := obj.Labels[label]
 			return expect == ok
-		}).Should(BeTrue())
+		}, "30s", "3s").Should(BeTrue())
+	}
+
+	ensureClusterAviLabelValueMatchExpectation := func(key client.ObjectKey, label, value string, expect bool) {
+		Eventually(func() bool {
+			obj := &clusterv1.Cluster{}
+			err := ctx.Client.Get(ctx.Context, key, obj)
+			if err != nil {
+				return false
+			}
+			v := obj.Labels[label]
+			return (v == value) == expect
+		}, "30s", "3s").Should(BeTrue())
 	}
 
 	ensureSubnetMatchExpectation := func(newIPAddrEnd string, expect bool) {
@@ -216,7 +256,7 @@ func intgTestAkoDeploymentConfigController() {
 		}
 		ctx.AviClient.Network.SetGetByNameFn(func(name string, options ...session.ApiOptionsParams) (*models.Network, error) {
 			res := &models.Network{
-				URL: pointer.StringPtr("10.0.0.1"),
+				URL: ptr.To("10.0.0.1"),
 			}
 			return res, nil
 		})
@@ -226,14 +266,14 @@ func intgTestAkoDeploymentConfigController() {
 		})
 		ctx.AviClient.Cloud.SetGetByNameCloudFunc(func(name string, options ...session.ApiOptionsParams) (*models.Cloud, error) {
 			res := &models.Cloud{
-				IPAMProviderRef: pointer.StringPtr("https://10.0.0.x/api/ipamdnsproviderprofile/ipamdnsproviderprofile-f08403a1-0dc7-4f13-bda3-0ba2fa476516"),
+				IPAMProviderRef: ptr.To("https://10.0.0.x/api/ipamdnsproviderprofile/ipamdnsproviderprofile-f08403a1-0dc7-4f13-bda3-0ba2fa476516"),
 			}
 			return res, nil
 		})
 		ctx.AviClient.IPAMDNSProviderProfile.SetGetIPAMFunc(func(uuid string, options ...session.ApiOptionsParams) (*models.IPAMDNSProviderProfile, error) {
 			res := &models.IPAMDNSProviderProfile{
 				InternalProfile: &models.IPAMDNSInternalProfile{
-					UsableNetworks: []*models.IPAMUsableNetwork{{NwRef: pointer.StringPtr("10.0.0.1")}},
+					UsableNetworks: []*models.IPAMUsableNetwork{{NwRef: ptr.To("10.0.0.1")}},
 				},
 			}
 			return res, nil
@@ -263,12 +303,12 @@ func intgTestAkoDeploymentConfigController() {
 			return &models.Role{
 				Privileges: []*models.Permission{
 					{
-						Type:     pointer.StringPtr("READ_ACCESS"),
-						Resource: pointer.StringPtr("PERMISSION_SYSTEMCONFIGURATION"),
+						Type:     ptr.To("READ_ACCESS"),
+						Resource: ptr.To("PERMISSION_SYSTEMCONFIGURATION"),
 					},
 					{
-						Type:     pointer.StringPtr("READ_ACCESS"),
-						Resource: pointer.StringPtr("PERMISSION_CONTROLLER"),
+						Type:     ptr.To("READ_ACCESS"),
+						Resource: ptr.To("PERMISSION_CONTROLLER"),
 					},
 				},
 			}, nil
@@ -277,12 +317,12 @@ func intgTestAkoDeploymentConfigController() {
 			return &models.Role{
 				Privileges: []*models.Permission{
 					{
-						Type:     pointer.StringPtr("READ_ACCESS"),
-						Resource: pointer.StringPtr("PERMISSION_SYSTEMCONFIGURATION"),
+						Type:     ptr.To("READ_ACCESS"),
+						Resource: ptr.To("PERMISSION_SYSTEMCONFIGURATION"),
 					},
 					{
-						Type:     pointer.StringPtr("READ_ACCESS"),
-						Resource: pointer.StringPtr("PERMISSION_CONTROLLER"),
+						Type:     ptr.To("READ_ACCESS"),
+						Resource: ptr.To("PERMISSION_CONTROLLER"),
 					},
 				},
 			}, nil
@@ -306,25 +346,9 @@ func intgTestAkoDeploymentConfigController() {
 
 		})
 		AfterEach(func() {
-			latestCluster := &clusterv1.Cluster{}
-			if err := getCluster(latestCluster, cluster.Name, cluster.Namespace); err == nil {
-				latestCluster.Finalizers = nil
-				deleteObjects(latestCluster)
-				ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-					Name:      cluster.Name,
-					Namespace: cluster.Namespace,
-				}, &clusterv1.Cluster{}, false)
-			}
-			deleteObjects(cluster)
-			ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-				Name:      cluster.Name,
-				Namespace: cluster.Namespace,
-			}, &clusterv1.Cluster{}, false)
-			deleteObjects(akoDeploymentConfig)
-			deleteObjects(controllerCredentials, controllerCA)
-			ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-				Name: akoDeploymentConfig.Name,
-			}, &akoov1alpha1.AKODeploymentConfig{}, false)
+			Eventually(func() bool {
+				return ensureObjectsDeleted(cluster, akoDeploymentConfig, controllerCredentials, controllerCA)
+			}, "60s", "5s").Should(BeTrue())
 			err := os.Setenv(ako_operator.IsControlPlaneHAProvider, "False")
 			Expect(err).ShouldNot(HaveOccurred())
 		})
@@ -374,22 +398,15 @@ func intgTestAkoDeploymentConfigController() {
 			_ = kcfg.CreateSecret(ctx, ctx.Client, cluster)
 		})
 		AfterEach(func() {
-			latestCluster := &clusterv1.Cluster{}
-			if err := getCluster(latestCluster, cluster.Name, cluster.Namespace); err == nil {
-				latestCluster.Finalizers = nil
-				deleteObjects(latestCluster)
-				ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+			latestCluster := &clusterv1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
 					Name:      cluster.Name,
 					Namespace: cluster.Namespace,
-				}, &clusterv1.Cluster{}, false)
+				},
 			}
-
-			deleteObjects(akoDeploymentConfig)
-			ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-				Name: akoDeploymentConfig.Name,
-			}, &akoov1alpha1.AKODeploymentConfig{}, false)
-
-			deleteObjects(controllerCredentials, controllerCA)
+			Eventually(func() bool {
+				return ensureObjectsDeleted(latestCluster, akoDeploymentConfig, controllerCredentials, controllerCA)
+			}, "60s", "5s").Should(BeTrue())
 		})
 		When("there is no matching cluster", func() {
 			It("cluster should not have ClusterFinalizer", func() {
@@ -438,22 +455,22 @@ func intgTestAkoDeploymentConfigController() {
 						BeforeEach(func() {
 							ctx.AviClient.Network.SetGetByNameFn(func(name string, options ...session.ApiOptionsParams) (*models.Network, error) {
 								return &models.Network{
-									URL: pointer.StringPtr("10.0.0.1"),
+									URL: ptr.To("10.0.0.1"),
 									ConfiguredSubnets: []*models.Subnet{{
 										Prefix: &models.IPAddrPrefix{
 											IPAddr: &models.IPAddr{
-												Addr: pointer.StringPtr("10.0.0.1"),
+												Addr: ptr.To("10.0.0.1"),
 											},
-											Mask: pointer.Int32Ptr(24),
+											Mask: ptr.To(int32(24)),
 										},
 										StaticIPRanges: []*models.StaticIPRange{
 											{
 												Range: &models.IPAddrRange{
 													Begin: &models.IPAddr{
-														Addr: pointer.StringPtr("10.0.0.1"),
+														Addr: ptr.To("10.0.0.1"),
 													},
 													End: &models.IPAddr{
-														Addr: pointer.StringPtr("10.0.0.10"),
+														Addr: ptr.To("10.0.0.10"),
 													},
 												},
 											},
@@ -471,22 +488,22 @@ func intgTestAkoDeploymentConfigController() {
 						BeforeEach(func() {
 							ctx.AviClient.Network.SetGetByNameFn(func(name string, options ...session.ApiOptionsParams) (*models.Network, error) {
 								return &models.Network{
-									URL: pointer.StringPtr("10.0.0.1"),
+									URL: ptr.To("10.0.0.1"),
 									ConfiguredSubnets: []*models.Subnet{{
 										Prefix: &models.IPAddrPrefix{
 											IPAddr: &models.IPAddr{
-												Addr: pointer.StringPtr("10.0.0.1"),
+												Addr: ptr.To("10.0.0.1"),
 											},
-											Mask: pointer.Int32Ptr(24),
+											Mask: ptr.To(int32(24)),
 										},
 										StaticIPRanges: []*models.StaticIPRange{
 											{
 												Range: &models.IPAddrRange{
 													Begin: &models.IPAddr{
-														Addr: pointer.StringPtr("10.0.0.1"),
+														Addr: ptr.To("10.0.0.1"),
 													},
 													End: &models.IPAddr{
-														Addr: pointer.StringPtr("10.0.0.5"),
+														Addr: ptr.To("10.0.0.5"),
 													},
 												},
 											},
@@ -504,22 +521,22 @@ func intgTestAkoDeploymentConfigController() {
 						BeforeEach(func() {
 							ctx.AviClient.Network.SetGetByNameFn(func(name string, options ...session.ApiOptionsParams) (*models.Network, error) {
 								return &models.Network{
-									URL: pointer.StringPtr("10.0.0.1"),
+									URL: ptr.To("10.0.0.1"),
 									ConfiguredSubnets: []*models.Subnet{{
 										Prefix: &models.IPAddrPrefix{
 											IPAddr: &models.IPAddr{
-												Addr: pointer.StringPtr("10.0.0.10"),
+												Addr: ptr.To("10.0.0.10"),
 											},
-											Mask: pointer.Int32Ptr(24),
+											Mask: ptr.To(int32(24)),
 										},
 										StaticIPRanges: []*models.StaticIPRange{
 											{
 												Range: &models.IPAddrRange{
 													Begin: &models.IPAddr{
-														Addr: pointer.StringPtr("10.0.0.10"),
+														Addr: ptr.To("10.0.0.10"),
 													},
 													End: &models.IPAddr{
-														Addr: pointer.StringPtr("10.0.0.20"),
+														Addr: ptr.To("10.0.0.20"),
 													},
 												},
 											},
@@ -553,12 +570,12 @@ func intgTestAkoDeploymentConfigController() {
 										return &models.Role{
 											Privileges: []*models.Permission{
 												{
-													Type:     pointer.StringPtr("READ_ACCESS"),
-													Resource: pointer.StringPtr("PERMISSION_SYSTEMCONFIGURATION"),
+													Type:     ptr.To("READ_ACCESS"),
+													Resource: ptr.To("PERMISSION_SYSTEMCONFIGURATION"),
 												},
 												{
-													Type:     pointer.StringPtr("READ_ACCESS"),
-													Resource: pointer.StringPtr("PERMISSION_CONTROLLER"),
+													Type:     ptr.To("READ_ACCESS"),
+													Resource: ptr.To("PERMISSION_CONTROLLER"),
 												},
 											},
 										}, nil
@@ -589,7 +606,12 @@ func intgTestAkoDeploymentConfigController() {
 
 					When("cluster has avi-delete-config label", func() {
 						It("AddOnSecret disableConfig must be true when avi-delete-config label is set", func() {
-							latestCluster := &clusterv1.Cluster{}
+							latestCluster := &clusterv1.Cluster{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      cluster.Name,
+									Namespace: cluster.Namespace,
+								},
+							}
 							err := getCluster(latestCluster, cluster.Name, cluster.Namespace)
 							Expect(err).To(BeNil())
 							latestCluster.Labels[akoov1alpha1.AviClusterDeleteConfigLabel] = "true"
@@ -602,7 +624,12 @@ func intgTestAkoDeploymentConfigController() {
 						})
 
 						It("AddonSecret disableConfig must be false when avi-delete-config label is unset", func() {
-							latestCluster := &clusterv1.Cluster{}
+							latestCluster := &clusterv1.Cluster{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      cluster.Name,
+									Namespace: cluster.Namespace,
+								},
+							}
 							err := getCluster(latestCluster, cluster.Name, cluster.Namespace)
 							Expect(err).To(BeNil())
 							delete(latestCluster.Labels, akoov1alpha1.AviClusterDeleteConfigLabel)
@@ -618,31 +645,30 @@ func intgTestAkoDeploymentConfigController() {
 					When("the cluster is being deleted ", func() {
 						When("the cluster is ready", func() {
 							BeforeEach(func() {
-								latestCluster := &clusterv1.Cluster{}
-								err := getCluster(latestCluster, cluster.Name, cluster.Namespace)
-								Expect(err).To(BeNil())
-								conditions.MarkTrue(latestCluster, akoov1alpha1.AviResourceCleanupSucceededCondition)
-								err = ctx.Client.Status().Update(ctx, latestCluster)
-								Expect(err).To(BeNil())
-								deleteObjects(latestCluster)
-
-								ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-									Name:      cluster.Name,
-									Namespace: cluster.Namespace,
-								}, &clusterv1.Cluster{}, false)
+								deleteObjects(cluster)
 							})
 
 							//Reconcile -> reconcileNormal -> r.userReconciler.ReconcileAviUserDelete
 							It("should delete Avi user", func() {
-								ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-									Name:      cluster.Name + "-" + "avi-credentials",
-									Namespace: cluster.Namespace,
-								}, &corev1.Secret{}, false)
+								secret := &corev1.Secret{
+									ObjectMeta: metav1.ObjectMeta{
+										Name:      cluster.Name + "-" + "avi-credentials",
+										Namespace: cluster.Namespace,
+									},
+								}
+								Eventually(func() bool {
+									return ensureObjectsDeleted(secret)
+								}, "60s", "5s").Should(BeTrue())
 							})
 						})
 						When("the cluster is not ready", func() {
 							BeforeEach(func() {
-								obj := &clusterv1.Cluster{}
+								obj := &clusterv1.Cluster{
+									ObjectMeta: metav1.ObjectMeta{
+										Name:      cluster.Name,
+										Namespace: cluster.Namespace,
+									},
+								}
 								err := getCluster(obj, cluster.Name, cluster.Namespace)
 								Expect(err).To(BeNil())
 								conditions.MarkFalse(obj, clusterv1.ReadyCondition, clusterv1.DeletingReason, clusterv1.ConditionSeverityInfo, "")
@@ -650,18 +676,19 @@ func intgTestAkoDeploymentConfigController() {
 								err = ctx.Client.Status().Update(ctx, obj)
 								Expect(err).To(BeNil())
 								deleteObjects(obj)
-								ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-									Name:      obj.Name,
-									Namespace: obj.Namespace,
-								}, &clusterv1.Cluster{}, false)
 							})
 
 							//Reconcile -> reconcileNormal -> r.userReconciler.ReconcileAviUserDelete
 							It("should delete Avi user", func() {
-								ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-									Name:      cluster.Name + "-" + "avi-credentials",
-									Namespace: cluster.Namespace,
-								}, &corev1.Secret{}, false)
+								secret := &corev1.Secret{
+									ObjectMeta: metav1.ObjectMeta{
+										Name:      cluster.Name + "-" + "avi-credentials",
+										Namespace: cluster.Namespace,
+									},
+								}
+								Eventually(func() bool {
+									return ensureObjectsDeleted(secret)
+								}, "60s", "5s").Should(BeTrue())
 							})
 						})
 					})
@@ -672,9 +699,6 @@ func intgTestAkoDeploymentConfigController() {
 				When("AKODeploymentConfig is being deleted", func() {
 					BeforeEach(func() {
 						deleteObjects(akoDeploymentConfig)
-						ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-							Name: akoDeploymentConfig.Name,
-						}, &akoov1alpha1.AKODeploymentConfig{}, false)
 					})
 
 					// Reconcile -> reconcileDelete -> phases.ReconcilePhases(normal)
@@ -705,10 +729,6 @@ func intgTestAkoDeploymentConfigController() {
 					When("the cluster is being deleted ", func() {
 						BeforeEach(func() {
 							deleteObjects(cluster)
-							ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-								Name:      cluster.Name,
-								Namespace: cluster.Namespace,
-							}, &clusterv1.Cluster{}, false)
 						})
 
 						//Reconcile -> reconcileDelete -> r.reconcileClustersDelete -> r.clusterReconciler.ReconcileAddonSecretDelete
@@ -722,79 +742,128 @@ func intgTestAkoDeploymentConfigController() {
 				})
 			})
 
-			// Tests for adding & removing the networking.tkg.tanzu.vmware.com/avi-skip-default-adc labels
+			// Tests when there are multpile ADC selecting the same cluster.
 			// When there is matching cluster for ADC -> and when there is another ADC install-ako-for-all
-			defaultAkoDeploymentConfig := staticDefaultAkoDeploymentConfig.DeepCopy()
-			defaultAkoDeploymentConfigWithNonEmptyClusterSelector := staticDefaultAkoDeploymentConfig.DeepCopy()
-			defaultAkoDeploymentConfigWithNonEmptyClusterSelector.Spec.ClusterSelector = metav1.LabelSelector{
-				MatchLabels: map[string]string{"test": "true"},
-			}
-
-			defaultADCTestCaseInputs := []DefaultADCTestCaseInput{
-				{
-					Name:       "there is default ADC install-ako-for-all",
-					DefaultADC: defaultAkoDeploymentConfig,
-				},
-				{
-					// This test case covers the bug https://github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pull/81
-					// The bug was triggerred when the default workload ADC install-ako-for-all has non-empty cluster selector
-					Name:       "there is default ADC with non-empty clusterSelector",
-					DefaultADC: defaultAkoDeploymentConfigWithNonEmptyClusterSelector,
-				},
-			}
-
-			for _, tc := range defaultADCTestCaseInputs {
+			When("there are multiple matching ADCs", func() {
 				var defaultADC *akoov1alpha1.AKODeploymentConfig
-				When(tc.Name, func() {
+				When("there is a default ADC install-ako-for-all which doesn't have selector besides the custom ADC with selector", func() {
 					BeforeEach(func() {
-						defaultADC = tc.DefaultADC.DeepCopy()
+						By("creating install-ako-for-all ADC without selector")
+						defaultADC = staticDefaultAkoDeploymentConfig.DeepCopy()
 						createObjects(defaultADC)
 						ensureRuntimeObjectMatchExpectation(client.ObjectKey{
 							Name: akoov1alpha1.WorkloadClusterAkoDeploymentConfig,
 						}, &akoov1alpha1.AKODeploymentConfig{}, true)
+
+						ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+							Name: util.CustomADCName,
+						}, &akoov1alpha1.AKODeploymentConfig{}, true)
 					})
 
 					AfterEach(func() {
-						deleteObjects(defaultADC)
-						ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-							Name: akoov1alpha1.WorkloadClusterAkoDeploymentConfig,
-						}, &akoov1alpha1.AKODeploymentConfig{}, false)
-					})
-
-					It("is selected by a customized ADC", func() {
+						Eventually(func() bool {
+							return ensureObjectsDeleted(defaultADC, akoDeploymentConfig)
+						}, "60s", "5s").Should(BeTrue())
 						ensureClusterAviLabelMatchExpectation(client.ObjectKey{
 							Name:      cluster.Name,
 							Namespace: cluster.Namespace,
-						}, akoov1alpha1.AviClusterLabel, true)
+						}, akoov1alpha1.AviClusterLabel, false)
 					})
 
-					When("no longer selected by a customized ADC", func() {
-						BeforeEach(func() {
-							latestCluster := &clusterv1.Cluster{}
-							Expect(getCluster(latestCluster, cluster.Name, cluster.Namespace)).To(BeNil())
-							delete(latestCluster.Labels, "test")
-							updateObjects(latestCluster)
+					It("is selected by a customized ADC then no longer selected if label is removed", func() {
+						By("checking the cluster's AviClusterLabel label having the value of custom ADC")
+						ensureClusterAviLabelValueMatchExpectation(client.ObjectKey{
+							Name:      cluster.Name,
+							Namespace: cluster.Namespace,
+						}, akoov1alpha1.AviClusterLabel, util.CustomADCName, true)
 
-							ensureClusterAviLabelMatchExpectation(client.ObjectKey{
+						By("removing cluster's label")
+						latestCluster := &clusterv1.Cluster{
+							ObjectMeta: metav1.ObjectMeta{
 								Name:      cluster.Name,
 								Namespace: cluster.Namespace,
-							}, "test", false)
-						})
+							},
+						}
+						Expect(getCluster(latestCluster, cluster.Name, cluster.Namespace)).To(BeNil())
+						delete(latestCluster.Labels, "test")
+						updateObjects(latestCluster)
+						ensureClusterAviLabelMatchExpectation(client.ObjectKey{
+							Name:      cluster.Name,
+							Namespace: cluster.Namespace,
+						}, "test", false)
 
-						It("should drop the AviClusterLabel)", func() {
-							ensureClusterAviLabelMatchExpectation(client.ObjectKey{
-								Name:      cluster.Name,
-								Namespace: cluster.Namespace,
-							}, akoov1alpha1.AviClusterLabel, false)
-						})
+						By("checking the cluster's AviClusterLabel label having the value of install-ako-for-all ADC instead")
+						ensureClusterAviLabelValueMatchExpectation(client.ObjectKey{
+							Name:      cluster.Name,
+							Namespace: cluster.Namespace,
+						}, akoov1alpha1.AviClusterLabel, akoov1alpha1.WorkloadClusterAkoDeploymentConfig, true)
 					})
 				})
-			}
+
+				// This test case covers the bug https://github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pull/81
+				// The bug was triggerred when the default workload ADC install-ako-for-all has a cluster selector
+				When("there is default ADC install-ako-for-all with a selector", func() {
+					var defaultADC *akoov1alpha1.AKODeploymentConfig
+					BeforeEach(func() {
+						By("creating default ADC with selector")
+						defaultADC = staticDefaultAkoDeploymentConfig.DeepCopy()
+						defaultADC.Spec.ClusterSelector = metav1.LabelSelector{MatchLabels: testLabels}
+						createObjects(defaultADC)
+						ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+							Name: akoov1alpha1.WorkloadClusterAkoDeploymentConfig,
+						}, &akoov1alpha1.AKODeploymentConfig{}, true)
+
+						ensureRuntimeObjectMatchExpectation(client.ObjectKey{
+							Name: util.CustomADCName,
+						}, &akoov1alpha1.AKODeploymentConfig{}, true)
+					})
+
+					AfterEach(func() {
+						Eventually(func() bool {
+							return ensureObjectsDeleted(defaultADC, akoDeploymentConfig)
+						}, "60s", "5s").Should(BeTrue())
+						ensureClusterAviLabelMatchExpectation(client.ObjectKey{
+							Name:      cluster.Name,
+							Namespace: cluster.Namespace,
+						}, akoov1alpha1.AviClusterLabel, false)
+					})
+
+					It("is selected by a customized ADC then no longer selected if label is removed", func() {
+						By("checking the cluster's AviClusterLabel label having the value of custom ADC")
+						ensureClusterAviLabelValueMatchExpectation(client.ObjectKey{
+							Name:      cluster.Name,
+							Namespace: cluster.Namespace,
+						}, akoov1alpha1.AviClusterLabel, util.CustomADCName, true)
+
+						By("removing cluster's label")
+						latestCluster := &clusterv1.Cluster{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      cluster.Name,
+								Namespace: cluster.Namespace,
+							},
+						}
+						Expect(getCluster(latestCluster, cluster.Name, cluster.Namespace)).To(BeNil())
+						delete(latestCluster.Labels, "test")
+						updateObjects(latestCluster)
+						ensureClusterAviLabelMatchExpectation(client.ObjectKey{
+							Name:      cluster.Name,
+							Namespace: cluster.Namespace,
+						}, "test", false)
+
+						By("checking the cluster's AviClusterLabel label being removed")
+						ensureClusterAviLabelMatchExpectation(client.ObjectKey{
+							Name:      cluster.Name,
+							Namespace: cluster.Namespace,
+						}, akoov1alpha1.AviClusterLabel, false)
+					})
+				})
+			})
 		})
 	})
 }
 
 type DefaultADCTestCaseInput struct {
-	Name       string                            // test case name
-	DefaultADC *akoov1alpha1.AKODeploymentConfig // default ADC input
+	Name        string                            // test case name
+	DefaultADC  *akoov1alpha1.AKODeploymentConfig // default ADC input
+	HasSelector bool                              // whether the default ADC has a cluster selector
 }

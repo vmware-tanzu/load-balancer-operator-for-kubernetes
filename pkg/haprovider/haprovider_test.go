@@ -12,7 +12,7 @@ import (
 	fakeClient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -421,7 +421,7 @@ var _ = Describe("Control Plane HA provider", func() {
 					Expect(haProvider.Client.Get(ctx, key, ep)).ShouldNot(HaveOccurred())
 					Expect(len(ep.Subsets[0].Addresses)).Should(Equal(1))
 					Expect(ep.Subsets[0].Addresses[0].IP).Should(Equal("1.1.1.1"))
-					Expect(ep.Subsets[0].Addresses[0].NodeName).Should(Equal(pointer.StringPtr("test-mc")))
+					Expect(ep.Subsets[0].Addresses[0].NodeName).Should(Equal(ptr.To("test-mc")))
 				})
 
 				It("should not add a duplicated machine", func() {
@@ -431,7 +431,7 @@ var _ = Describe("Control Plane HA provider", func() {
 					Expect(haProvider.Client.Get(ctx, key, ep)).ShouldNot(HaveOccurred())
 					Expect(len(ep.Subsets[0].Addresses)).Should(Equal(1))
 					Expect(ep.Subsets[0].Addresses[0].IP).Should(Equal("1.1.1.1"))
-					Expect(ep.Subsets[0].Addresses[0].NodeName).Should(Equal(pointer.StringPtr("test-mc")))
+					Expect(ep.Subsets[0].Addresses[0].NodeName).Should(Equal(ptr.To("test-mc")))
 				})
 
 				It("should not add machine's other type IP", func() {
@@ -452,7 +452,7 @@ var _ = Describe("Control Plane HA provider", func() {
 					Expect(haProvider.Client.Get(ctx, key, ep)).ShouldNot(HaveOccurred())
 					Expect(len(ep.Subsets[0].Addresses)).Should(Equal(1))
 					Expect(ep.Subsets[0].Addresses[0].IP).Should(Equal("1.1.1.1"))
-					Expect(ep.Subsets[0].Addresses[0].NodeName).Should(Equal(pointer.StringPtr("test-mc")))
+					Expect(ep.Subsets[0].Addresses[0].NodeName).Should(Equal(ptr.To("test-mc")))
 				})
 
 				It("should update endpoints when machine ip changed", func() {
@@ -475,7 +475,7 @@ var _ = Describe("Control Plane HA provider", func() {
 					Expect(haProvider.Client.Get(ctx, key, ep)).ShouldNot(HaveOccurred())
 					Expect(len(ep.Subsets[0].Addresses)).Should(Equal(1))
 					Expect(ep.Subsets[0].Addresses[0].IP).Should(Equal("1.1.1.2"))
-					Expect(ep.Subsets[0].Addresses[0].NodeName).Should(Equal(pointer.StringPtr("test-mc")))
+					Expect(ep.Subsets[0].Addresses[0].NodeName).Should(Equal(ptr.To("test-mc")))
 				})
 
 				It("should remove machine from endpoints when machine deleting", func() {
@@ -508,7 +508,7 @@ var _ = Describe("Control Plane HA provider", func() {
 					Expect(haProvider.Client.Get(ctx, key, ep)).ShouldNot(HaveOccurred())
 					Expect(len(ep.Subsets[0].Addresses)).Should(Equal(1))
 					Expect(ep.Subsets[0].Addresses[0].IP).Should(Equal("1.1.1.2"))
-					Expect(ep.Subsets[0].Addresses[0].NodeName).Should(Equal(pointer.StringPtr("test-mc-2")))
+					Expect(ep.Subsets[0].Addresses[0].NodeName).Should(Equal(ptr.To("test-mc-2")))
 
 					mc2.DeletionTimestamp = &time
 

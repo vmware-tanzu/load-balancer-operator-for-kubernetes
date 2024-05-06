@@ -6,18 +6,17 @@ package ako
 import (
 	"encoding/json"
 	"errors"
-	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/utils"
 	"math/rand"
 	"net"
 	"strconv"
 	"time"
 
 	"gopkg.in/yaml.v3"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 
-	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	ako_operator "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/utils"
 )
 
 // Values defines the structures of an Ako addon secret string data
@@ -246,19 +245,19 @@ func NewAKOSettings(clusterName string, obj *akoov1alpha1.AKODeploymentConfig) (
 
 // NetworkSettings outlines the network settings for virtual services.
 type NetworkSettings struct {
-	SubnetIP                string                 `yaml:"subnet_ip"`                  // Subnet IP of the vip network
-	SubnetPrefix            string                 `yaml:"subnet_prefix"`              // Subnet Prefix of the vip network
-	NetworkName             string                 `yaml:"network_name"`               // Network Name of the vip network
-	ControlPlaneNetworkName string                 `yaml:"control_plane_network_name"` // Control Plane Network Name of the control plane vip network
-	ControlPlaneNetworkCIDR string                 `yaml:"control_plane_network_cidr"` // Control Plane Network Cidr of the control plane vip network
-	NodeNetworkList         []v1alpha1.NodeNetwork `yaml:"-"`                          // This list of network and cidrs are used in pool placement network for vcenter cloud.
-	NodeNetworkListJson     string                 `yaml:"node_network_list"`
-	VIPNetworkList          []v1alpha1.VIPNetwork  `yaml:"-"` // Network information of the VIP network. Multiple networks allowed only for AWS Cloud.
-	VIPNetworkListJson      string                 `yaml:"vip_network_list"`
-	EnableRHI               string                 `yaml:"enable_rhi"` // This is a cluster wide setting for BGP peering.
-	NsxtT1LR                string                 `yaml:"nsxt_t1_lr"`
-	BGPPeerLabels           []string               `yaml:"-"` // Select BGP peers using bgpPeerLabels, for selective VsVip advertisement.
-	BGPPeerLabelsJson       string                 `yaml:"bgp_peer_labels"`
+	SubnetIP                string                     `yaml:"subnet_ip"`                  // Subnet IP of the vip network
+	SubnetPrefix            string                     `yaml:"subnet_prefix"`              // Subnet Prefix of the vip network
+	NetworkName             string                     `yaml:"network_name"`               // Network Name of the vip network
+	ControlPlaneNetworkName string                     `yaml:"control_plane_network_name"` // Control Plane Network Name of the control plane vip network
+	ControlPlaneNetworkCIDR string                     `yaml:"control_plane_network_cidr"` // Control Plane Network Cidr of the control plane vip network
+	NodeNetworkList         []akoov1alpha1.NodeNetwork `yaml:"-"`                          // This list of network and cidrs are used in pool placement network for vcenter cloud.
+	NodeNetworkListJson     string                     `yaml:"node_network_list"`
+	VIPNetworkList          []akoov1alpha1.VIPNetwork  `yaml:"-"` // Network information of the VIP network. Multiple networks allowed only for AWS Cloud.
+	VIPNetworkListJson      string                     `yaml:"vip_network_list"`
+	EnableRHI               string                     `yaml:"enable_rhi"` // This is a cluster wide setting for BGP peering.
+	NsxtT1LR                string                     `yaml:"nsxt_t1_lr"`
+	BGPPeerLabels           []string                   `yaml:"-"` // Select BGP peers using bgpPeerLabels, for selective VsVip advertisement.
+	BGPPeerLabelsJson       string                     `yaml:"bgp_peer_labels"`
 }
 
 // DefaultNetworkSettings returns default NetworkSettings
@@ -290,9 +289,9 @@ func NewNetworkSettings(obj *akoov1alpha1.AKODeploymentConfig) (*NetworkSettings
 	settings.NodeNetworkList = obj.Spec.ExtraConfigs.IngressConfigs.NodeNetworkList
 	//V6CIDR will enable the VS networks to use ipv6
 	if utils.GetIPFamilyFromCidr(obj.Spec.DataNetwork.CIDR) == "V6" {
-		settings.VIPNetworkList = []v1alpha1.VIPNetwork{{NetworkName: obj.Spec.DataNetwork.Name, V6CIDR: obj.Spec.DataNetwork.CIDR}}
+		settings.VIPNetworkList = []akoov1alpha1.VIPNetwork{{NetworkName: obj.Spec.DataNetwork.Name, V6CIDR: obj.Spec.DataNetwork.CIDR}}
 	} else {
-		settings.VIPNetworkList = []v1alpha1.VIPNetwork{{NetworkName: obj.Spec.DataNetwork.Name, CIDR: obj.Spec.DataNetwork.CIDR}}
+		settings.VIPNetworkList = []akoov1alpha1.VIPNetwork{{NetworkName: obj.Spec.DataNetwork.Name, CIDR: obj.Spec.DataNetwork.CIDR}}
 	}
 
 	if len(settings.NodeNetworkList) != 0 {
@@ -366,7 +365,7 @@ func DefaultL7Settings() *L7Settings {
 	}
 }
 
-// NewL7Settings returns a customized L7Settings after parsing the v1alpha1.AKOIngressConfig
+// NewL7Settings returns a customized L7Settings after parsing the akoov1alpha1.AKOIngressConfig
 // it only modifies ServiceType and ShardVSSize when instructed by the ingressConfig
 func NewL7Settings(config *akoov1alpha1.AKOIngressConfig) *L7Settings {
 	settings := DefaultL7Settings()
@@ -484,8 +483,8 @@ type Rbac struct {
 	PspPolicyApiVersion string `yaml:"psp_policy_api_version"`
 }
 
-// NewRbac creates a Rbac from the v1alpha1.AKORbacConfig
-func NewRbac(config v1alpha1.AKORbacConfig) *Rbac {
+// NewRbac creates a Rbac from the akoov1alpha1.AKORbacConfig
+func NewRbac(config akoov1alpha1.AKORbacConfig) *Rbac {
 	pspEnabled := false
 	if config.PspEnabled != nil {
 		pspEnabled = *config.PspEnabled
@@ -512,8 +511,8 @@ type FeatureGates struct {
 	GatewayAPI string `yaml:"gateway_api"`
 }
 
-// NewFeatureGates creates a FeatureGates from the v1alpha1.FeatureGates
-func NewFeatureGates(config v1alpha1.FeatureGates) *FeatureGates {
+// NewFeatureGates creates a FeatureGates from the akoov1alpha1.FeatureGates
+func NewFeatureGates(config akoov1alpha1.FeatureGates) *FeatureGates {
 	settings := DefaultFeatureGates()
 	if config.GatewayAPI != nil {
 		settings.GatewayAPI = strconv.FormatBool(*config.GatewayAPI)

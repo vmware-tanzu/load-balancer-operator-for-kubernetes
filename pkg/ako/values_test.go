@@ -7,10 +7,10 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"k8s.io/utils/pointer"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/ptr"
+
 	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
 )
 
@@ -110,7 +110,7 @@ var _ = Describe("AKO", func() {
 						ExtraConfigs: akoov1alpha1.ExtraConfigs{
 							FullSyncFrequency: "1900",
 							Rbac: akoov1alpha1.AKORbacConfig{
-								PspEnabled:          pointer.Bool(true),
+								PspEnabled:          ptr.To(true),
 								PspPolicyAPIVersion: "test/1.2",
 							},
 							Log: akoov1alpha1.AKOLogConfig{
@@ -121,8 +121,8 @@ var _ = Describe("AKO", func() {
 								AKOGatewayLogFile:     "test-gateway-api.log",
 							},
 							IngressConfigs: akoov1alpha1.AKOIngressConfig{
-								DisableIngressClass:      pointer.Bool(true),
-								DefaultIngressController: pointer.Bool(true),
+								DisableIngressClass:      ptr.To(true),
+								DefaultIngressController: ptr.To(true),
 								ShardVSSize:              "MEDIUM",
 								ServiceType:              "NodePort",
 								NodeNetworkList: []akoov1alpha1.NodeNetwork{
@@ -132,10 +132,10 @@ var _ = Describe("AKO", func() {
 									},
 								},
 							},
-							DisableStaticRouteSync: pointer.BoolPtr(true),
+							DisableStaticRouteSync: ptr.To(true),
 							CniPlugin:              "antrea",
 							FeatureGates: akoov1alpha1.FeatureGates{
-								GatewayAPI: pointer.Bool(true),
+								GatewayAPI: ptr.To(true),
 							},
 						},
 					},
@@ -165,7 +165,7 @@ var _ = Describe("AKO", func() {
 							FullSyncFrequency: "1900",
 							IpFamily:          "V6",
 							Rbac: akoov1alpha1.AKORbacConfig{
-								PspEnabled:          pointer.Bool(true),
+								PspEnabled:          ptr.To(true),
 								PspPolicyAPIVersion: "test/1.2",
 							},
 							Log: akoov1alpha1.AKOLogConfig{
@@ -175,8 +175,8 @@ var _ = Describe("AKO", func() {
 								LogFile:               "test-avi.log",
 							},
 							IngressConfigs: akoov1alpha1.AKOIngressConfig{
-								DisableIngressClass:      pointer.Bool(true),
-								DefaultIngressController: pointer.Bool(true),
+								DisableIngressClass:      ptr.To(true),
+								DefaultIngressController: ptr.To(true),
 								ShardVSSize:              "MEDIUM",
 								ServiceType:              "NodePort",
 								NodeNetworkList: []akoov1alpha1.NodeNetwork{
@@ -186,10 +186,10 @@ var _ = Describe("AKO", func() {
 									},
 								},
 							},
-							DisableStaticRouteSync: pointer.BoolPtr(true),
+							DisableStaticRouteSync: ptr.To(true),
 							CniPlugin:              "antrea",
 							FeatureGates: akoov1alpha1.FeatureGates{
-								GatewayAPI: pointer.Bool(false),
+								GatewayAPI: ptr.To(false),
 							},
 						},
 					},

@@ -16,7 +16,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -280,7 +280,7 @@ func (r *AkoUserReconciler) createOrUpdateAviUser(aviUsername, aviPassword, tena
 			DefaultTenantRef: tenant.URL,
 			Access: []*models.UserRole{
 				{
-					AllTenants: pointer.BoolPtr(false),
+					AllTenants: ptr.To(false),
 					RoleRef:    role.URL,
 					TenantRef:  tenant.URL,
 				},
@@ -309,7 +309,7 @@ func (r *AkoUserReconciler) getOrCreateAkoUserRole(roleTenantRef *string) (*mode
 	//not found ako user role, create one
 	if aviclient.IsAviRoleNonExistentError(err) {
 		role = &models.Role{
-			Name:       pointer.StringPtr(akoov1alpha1.AkoUserRoleName),
+			Name:       ptr.To(akoov1alpha1.AkoUserRoleName),
 			Privileges: AkoRolePermission,
 			TenantRef:  roleTenantRef,
 		}
@@ -332,7 +332,7 @@ func (r *AkoUserReconciler) ensureAkoUserRole() (*models.Role, error) {
 	for i, permission := range role.Privileges {
 		if AkoRolePermissionMap[*permission.Resource] != *permission.Type {
 			needSync = true
-			role.Privileges[i].Type = pointer.StringPtr(AkoRolePermissionMap[*permission.Resource])
+			role.Privileges[i].Type = ptr.To(AkoRolePermissionMap[*permission.Resource])
 		}
 	}
 	if needSync {
@@ -365,8 +365,8 @@ func (r *AkoUserReconciler) createAviUserSecret(name, namespace, username, passw
 			{
 				UID:                obj.UID,
 				Name:               obj.Name,
-				Controller:         pointer.BoolPtr(true),
-				BlockOwnerDeletion: pointer.BoolPtr(true),
+				Controller:         ptr.To(true),
+				BlockOwnerDeletion: ptr.To(true),
 				Kind:               akoov1alpha1.AkoDeploymentConfigKind,
 				APIVersion:         akoov1alpha1.AkoDeploymentConfigVersion,
 			},
