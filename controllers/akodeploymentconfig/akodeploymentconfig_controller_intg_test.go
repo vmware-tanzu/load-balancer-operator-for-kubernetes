@@ -675,10 +675,8 @@ func intgTestAkoDeploymentConfigController() {
 								Expect(err).To(BeNil())
 								conditions.MarkFalse(obj, clusterv1.ReadyCondition, clusterv1.DeletingReason, clusterv1.ConditionSeverityInfo, "")
 								conditions.MarkTrue(obj, akoov1alpha1.AviResourceCleanupSucceededCondition)
-								Eventually(func() error {
-									err = ctx.Client.Status().Update(ctx, obj)
-									return err
-								}).Should(BeNil())
+								err = ctx.Client.Status().Update(ctx, obj)
+								Expect(err).To(BeNil())
 								deleteObjects(obj)
 							})
 
