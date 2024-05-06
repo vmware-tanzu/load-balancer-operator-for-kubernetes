@@ -393,10 +393,8 @@ func intgTestAkoDeploymentConfigController() {
 		BeforeEach(func() {
 			createObjects(akoDeploymentConfig, cluster, controllerCredentials, controllerCA)
 			conditions.MarkTrue(cluster, clusterv1.ReadyCondition)
-			Eventually(func() error {
-				err = ctx.Client.Status().Update(ctx, cluster)
-				return err
-			}).Should(BeNil())
+			err = ctx.Client.Status().Update(ctx, cluster)
+			Expect(err).To(BeNil())
 			_ = kcfg.CreateSecret(ctx, ctx.Client, cluster)
 		})
 		AfterEach(func() {
