@@ -147,7 +147,20 @@ func intgTestEnsureClusterHAProvider() {
 					}}
 					err = ctx.Client.Status().Update(ctx, service)
 					Expect(err).To(BeNil())
-					// Ensure updateControlPlaneEndpointToService won't set fqdn as ingress.ip
+
+					// Ensure service.Status.LoadBalancer.Ingress is not nil
+					Eventually(func() bool {
+						err := ctx.Client.Get(ctx, client.ObjectKey{Name: serviceName, Namespace: ctx.Namespace}, service)
+						if err != nil {
+							return false
+						}
+						if len(service.Status.LoadBalancer.Ingress) == 0 {
+							return false
+						}
+						return true
+					})
+
+					// Ensure updateControlPlaneEndpointToService won't use fqdn as ingress.ip
 					Consistently(func() bool {
 						err := ctx.Client.Get(ctx, client.ObjectKey{Name: serviceName, Namespace: ctx.Namespace}, service)
 						if err != nil {
