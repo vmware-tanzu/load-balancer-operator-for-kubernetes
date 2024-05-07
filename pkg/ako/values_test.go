@@ -75,6 +75,8 @@ var _ = Describe("AKO", func() {
 				Expect(k).To(Equal(v))
 			}
 
+			Expect(config.ReplicaCount).To(Equal(*akoDeploymentConfig.Spec.ExtraConfigs.ReplicaCount))
+
 			if len(akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.NodeNetworkList) != 0 {
 				nodeNetworkListJson, jsonerr := json.Marshal(akoDeploymentConfig.Spec.ExtraConfigs.IngressConfigs.NodeNetworkList)
 				Expect(jsonerr).ShouldNot(HaveOccurred())
@@ -108,6 +110,7 @@ var _ = Describe("AKO", func() {
 							CIDR: "10.1.0.0/24",
 						},
 						ExtraConfigs: akoov1alpha1.ExtraConfigs{
+							ReplicaCount:      ptr.To(2),
 							FullSyncFrequency: "1900",
 							Rbac: akoov1alpha1.AKORbacConfig{
 								PspEnabled:          ptr.To(true),

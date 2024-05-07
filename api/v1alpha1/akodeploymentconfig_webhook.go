@@ -178,6 +178,10 @@ func (r *AKODeploymentConfig) validateAVI(old *AKODeploymentConfig) field.ErrorL
 		aviClient = client
 	}
 
+	if err := r.validateReplicaCount(); err != nil {
+		allErrs = append(allErrs, err)
+	}
+
 	if old == nil {
 		// when old is nil, it is creating a new AKODeploymentConfig object, check following fields
 		if err := r.validateAviCloud(); err != nil {
@@ -221,6 +225,19 @@ func (r *AKODeploymentConfig) validateAVI(old *AKODeploymentConfig) field.ErrorL
 		}
 	}
 	return allErrs
+}
+
+// validateReplicaCount checks replica count is between 1 and 2 or is unset
+func (r *AKODeploymentConfig) validateReplicaCount() *field.Error {
+	if r.Spec.ExtraConfigs.ReplicaCount == nil {
+		return nil
+	}
+	if *r.Spec.ExtraConfigs.ReplicaCount < 1 || *r.Spec.ExtraConfigs.ReplicaCount > 2 {
+		return field.Invalid(field.NewPath("spec", "extraConfigs", "replicaCount"),
+			r.Spec.ExtraConfigs.ReplicaCount,
+			"replica count must be 1 or 2")
+	}
+	return nil
 }
 
 // validateAviSecret checks NSX Advanced Load Balancer related credentials or certificate secret is valid or not

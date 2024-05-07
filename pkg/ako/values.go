@@ -49,13 +49,18 @@ func NewValues(obj *akoov1alpha1.AKODeploymentConfig, clusterNameSpacedName stri
 	rbac := NewRbac(obj.Spec.ExtraConfigs.Rbac)
 	featureGates := NewFeatureGates(obj.Spec.ExtraConfigs.FeatureGates)
 
+	replicaCount := 1
+	if obj.Spec.ExtraConfigs.ReplicaCount != nil {
+		replicaCount = *obj.Spec.ExtraConfigs.ReplicaCount
+	}
+
 	return &Values{
 		LoadBalancerAndIngressService: LoadBalancerAndIngressService{
 			Name:      "ako-" + clusterNameSpacedName,
 			Namespace: akoov1alpha1.AviNamespace,
 			Config: Config{
 				IsClusterService:      "",
-				ReplicaCount:          1,
+				ReplicaCount:          replicaCount,
 				AKOSettings:           akoSettings,
 				NetworkSettings:       networkSettings,
 				L7Settings:            l7Settings,
