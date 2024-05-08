@@ -21,8 +21,8 @@ require (
 	k8s.io/client-go v0.27.13
 	k8s.io/klog/v2 v2.100.1
 	k8s.io/utils v0.0.0-20230209194617-a36077c30491
-	sigs.k8s.io/cluster-api v1.5.2
-	sigs.k8s.io/controller-runtime v0.15.1
+	sigs.k8s.io/cluster-api v1.5.8
+	sigs.k8s.io/controller-runtime v0.15.3
 )
 
 require (
@@ -47,7 +47,7 @@ require (
 	github.com/google/gnostic v0.6.9 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/uuid v1.3.0 // indirect
+	github.com/google/uuid v1.3.1 // indirect
 	github.com/imdario/mergo v0.3.13 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
@@ -65,7 +65,7 @@ require (
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	golang.org/x/net v0.23.0 // indirect
-	golang.org/x/oauth2 v0.10.0 // indirect
+	golang.org/x/oauth2 v0.11.0 // indirect
 	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/term v0.18.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
