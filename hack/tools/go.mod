@@ -3,7 +3,7 @@ module gitlab.eng.vmware.com/core-build/tkg-connectivity/hack/tools
 go 1.22
 
 require (
-	carvel.dev/ytt v0.48.0
+	carvel.dev/ytt v0.49.0
 	github.com/onsi/ginkgo v1.16.5
 	k8s.io/code-generator v0.29.0
 	sigs.k8s.io/controller-tools v0.14.0
