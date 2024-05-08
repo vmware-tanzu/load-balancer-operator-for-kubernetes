@@ -98,6 +98,13 @@ type AKODeploymentConfigSpec struct {
 
 // ExtraConfigs contains extra configurations for AKO Deployment
 type ExtraConfigs struct {
+	// Defines the number of AKO instances to deploy to allow of high availablity. Max number of replicas is two.
+	// Default value: 1
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2
+	// +optional
+	ReplicaCount *int `json:"replicaCount,omitempty"`
+
 	// Defines AKO instance is primary or not. Value `true` indicates that AKO instance is primary.
 	// In a multiple AKO deployment in a cluster, only one AKO instance should be primary.
 	// Default value: true.

@@ -359,6 +359,61 @@ func TestCreateNewAKODeploymentConfig(t *testing.T) {
 			},
 			expectErr: false,
 		},
+		{
+			name:              "replica count is unset",
+			adminSecret:       staticAdminSecret.DeepCopy(),
+			certificateSecret: staticCASecret.DeepCopy(),
+			adc:               staticADC.DeepCopy(),
+			customizeInput: func(adminSecret, certificateSecret *corev1.Secret, adc *AKODeploymentConfig) (*corev1.Secret, *corev1.Secret, *AKODeploymentConfig) {
+				adc.Spec.ExtraConfigs.ReplicaCount = nil
+				return adminSecret, certificateSecret, adc
+			},
+			expectErr: false,
+		},
+		{
+			name:              "replica count is 1",
+			adminSecret:       staticAdminSecret.DeepCopy(),
+			certificateSecret: staticCASecret.DeepCopy(),
+			adc:               staticADC.DeepCopy(),
+			customizeInput: func(adminSecret, certificateSecret *corev1.Secret, adc *AKODeploymentConfig) (*corev1.Secret, *corev1.Secret, *AKODeploymentConfig) {
+				adc.Spec.ExtraConfigs.ReplicaCount = ptr.To(1)
+				return adminSecret, certificateSecret, adc
+			},
+			expectErr: false,
+		},
+		{
+			name:              "replica count is 2",
+			adminSecret:       staticAdminSecret.DeepCopy(),
+			certificateSecret: staticCASecret.DeepCopy(),
+			adc:               staticADC.DeepCopy(),
+			customizeInput: func(adminSecret, certificateSecret *corev1.Secret, adc *AKODeploymentConfig) (*corev1.Secret, *corev1.Secret, *AKODeploymentConfig) {
+				adc.Spec.ExtraConfigs.ReplicaCount = ptr.To(2)
+				return adminSecret, certificateSecret, adc
+			},
+			expectErr: false,
+		},
+		{
+			name:              "should throw error if replica count is less than 1",
+			adminSecret:       staticAdminSecret.DeepCopy(),
+			certificateSecret: staticCASecret.DeepCopy(),
+			adc:               staticADC.DeepCopy(),
+			customizeInput: func(adminSecret, certificateSecret *corev1.Secret, adc *AKODeploymentConfig) (*corev1.Secret, *corev1.Secret, *AKODeploymentConfig) {
+				adc.Spec.ExtraConfigs.ReplicaCount = ptr.To(0)
+				return adminSecret, certificateSecret, adc
+			},
+			expectErr: true,
+		},
+		{
+			name:              "should throw error if replica count is greater than 2",
+			adminSecret:       staticAdminSecret.DeepCopy(),
+			certificateSecret: staticCASecret.DeepCopy(),
+			adc:               staticADC.DeepCopy(),
+			customizeInput: func(adminSecret, certificateSecret *corev1.Secret, adc *AKODeploymentConfig) (*corev1.Secret, *corev1.Secret, *AKODeploymentConfig) {
+				adc.Spec.ExtraConfigs.ReplicaCount = ptr.To(3)
+				return adminSecret, certificateSecret, adc
+			},
+			expectErr: true,
+		},
 	}
 
 	for _, tc := range testcases {

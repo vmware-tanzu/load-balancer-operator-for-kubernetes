@@ -465,6 +465,13 @@ spec:
                           the PodSecurityPolicy
                         type: string
                     type: object
+                  replicaCount:
+                    description: |-
+                      Defines the number of AKO instances to deploy to allow of high availablity. Max number of replicas is two.
+                      Default value: 1
+                    maximum: 2
+                    minimum: 1
+                    type: integer
                   servicesAPI:
                     description: |-
                       ServicesAPI specifies if enables AKO in services API mode: https://kubernetes-sigs.github.io/service-apis/.
