@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/bitly/go-simplejson v0.5.1
-	github.com/go-logr/logr v1.2.0
+	github.com/go-logr/logr v1.2.4
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.18.1
