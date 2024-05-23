@@ -94,7 +94,7 @@ $(JQ):
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST):
-	GOBIN=$(BIN_DIR) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20240215143116-d0396a3d6f9f
+	GOBIN=$(BIN_DIR) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20240522175850-2e9781e9fc60
 
 etcd: $(ETCD) ## Install etcd
 kube-apiserver: $(KUBE_APISERVER) ## Install kube-apiserver
