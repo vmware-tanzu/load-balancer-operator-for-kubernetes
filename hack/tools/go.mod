@@ -8,7 +8,7 @@ require (
 	github.com/onsi/ginkgo v1.16.5
 	k8s.io/code-generator v0.30.1
 	sigs.k8s.io/controller-tools v0.14.0
-	sigs.k8s.io/kind v0.22.0
+	sigs.k8s.io/kind v0.23.0
 	sigs.k8s.io/kustomize/kustomize/v5 v5.4.1
 )
 
