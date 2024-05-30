@@ -346,7 +346,7 @@ func (r *AkoUserReconciler) ensureAkoUserRole() (*models.Role, error) {
 // the desired AKO role are left as-is. It returns a bool
 // indicating whether the Role was changed.
 func syncAkoUserRole(role *models.Role) bool {
-	existingResources := sets.NewString()
+	existingResources := sets.New[string]()
 	updated := false
 
 	for i, permission := range role.Privileges {
