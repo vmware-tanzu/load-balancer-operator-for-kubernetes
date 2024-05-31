@@ -5,12 +5,16 @@ package user
 
 import (
 	"context"
+	"fmt"
+	"math/rand"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"github.com/vmware/alb-sdk/go/models"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -128,5 +132,124 @@ func AkoUserReconcilerTest() {
 			Expect(caSecret.Name).To(Equal("test-ca-secret"))
 			Expect(caSecret.Namespace).To(Equal("default"))
 		})
+	})
+}
+
+func SyncAkoUserRoleTest() {
+	Specify("role has no permissions", func() {
+		role := &models.Role{}
+
+		updated := syncAkoUserRole(role)
+		Expect(updated).To(BeTrue())
+		Expect(role.Privileges).To(HaveLen(len(AkoRolePermission)))
+		Expect(role.Privileges).To(ContainElements(AkoRolePermission))
+	})
+
+	Specify("role has some permissions with wrong type", func() {
+		role := &models.Role{}
+
+		for i, permission := range AkoRolePermission {
+			role.Privileges = append(role.Privileges, &models.Permission{
+				Resource: ptr.To(*permission.Resource),
+				Type:     ptr.To(*permission.Type),
+			})
+
+			if i%7 == 0 {
+				role.Privileges[i].Type = ptr.To("INCORRECT_TYPE")
+			}
+		}
+
+		updated := syncAkoUserRole(role)
+		Expect(updated).To(BeTrue())
+		Expect(role.Privileges).To(HaveLen(len(AkoRolePermission)))
+		Expect(role.Privileges).To(ContainElements(AkoRolePermission))
+	})
+
+	Specify("role has some permissions missing", func() {
+		role := &models.Role{}
+
+		for i, permission := range AkoRolePermission {
+			if i%7 == 0 {
+				continue
+			}
+
+			role.Privileges = append(role.Privileges, &models.Permission{
+				Resource: ptr.To(*permission.Resource),
+				Type:     ptr.To(*permission.Type),
+			})
+		}
+
+		updated := syncAkoUserRole(role)
+		Expect(updated).To(BeTrue())
+		Expect(role.Privileges).To(HaveLen(len(AkoRolePermission)))
+		Expect(role.Privileges).To(ContainElements(AkoRolePermission))
+	})
+
+	Specify("role has some extra permissions", func() {
+		role := &models.Role{}
+
+		for _, permission := range AkoRolePermission {
+			role.Privileges = append(role.Privileges, &models.Permission{
+				Resource: ptr.To(*permission.Resource),
+				Type:     ptr.To(*permission.Type),
+			})
+		}
+
+		var additionalPrivileges []*models.Permission
+		for i := range 10 {
+			additionalPrivileges = append(additionalPrivileges, &models.Permission{
+				Resource: ptr.To(fmt.Sprintf("ADDITIONAL_PERMISSION_%d", i)),
+				Type:     ptr.To(fmt.Sprintf("ADDITIONAL_TYPE_%d", i)),
+			})
+		}
+		role.Privileges = append(role.Privileges, additionalPrivileges...)
+
+		rand.Shuffle(len(role.Privileges), func(i, j int) {
+			role.Privileges[i], role.Privileges[j] = role.Privileges[j], role.Privileges[i]
+		})
+
+		updated := syncAkoUserRole(role)
+		Expect(updated).To(BeFalse())
+		Expect(role.Privileges).To(HaveLen(len(AkoRolePermission) + len(additionalPrivileges)))
+		Expect(role.Privileges).To(ContainElements(AkoRolePermission))
+		Expect(role.Privileges).To(ContainElements(additionalPrivileges))
+	})
+
+	Specify("role has a combination of missing, incorrect and extra permissions", func() {
+		role := &models.Role{}
+
+		for i, permission := range AkoRolePermission {
+			if i%7 == 0 {
+				continue
+			}
+
+			role.Privileges = append(role.Privileges, &models.Permission{
+				Resource: ptr.To(*permission.Resource),
+				Type:     ptr.To(*permission.Type),
+			})
+
+			if i%9 == 0 {
+				role.Privileges[len(role.Privileges)-1].Type = ptr.To("INCORRECT_TYPE")
+			}
+		}
+
+		var additionalPrivileges []*models.Permission
+		for i := range 10 {
+			additionalPrivileges = append(additionalPrivileges, &models.Permission{
+				Resource: ptr.To(fmt.Sprintf("ADDITIONAL_PERMISSION_%d", i)),
+				Type:     ptr.To(fmt.Sprintf("ADDITIONAL_TYPE_%d", i)),
+			})
+		}
+		role.Privileges = append(role.Privileges, additionalPrivileges...)
+
+		rand.Shuffle(len(role.Privileges), func(i, j int) {
+			role.Privileges[i], role.Privileges[j] = role.Privileges[j], role.Privileges[i]
+		})
+
+		updated := syncAkoUserRole(role)
+		Expect(updated).To(BeTrue())
+		Expect(role.Privileges).To(HaveLen(len(AkoRolePermission) + len(additionalPrivileges)))
+		Expect(role.Privileges).To(ContainElements(AkoRolePermission))
+		Expect(role.Privileges).To(ContainElements(additionalPrivileges))
 	})
 }

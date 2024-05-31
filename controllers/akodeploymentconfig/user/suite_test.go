@@ -54,4 +54,5 @@ func intgTests() {
 }
 
 func unitTests() {
+	Describe("AKO user reconciler unit tests", SyncAkoUserRoleTest)
 }
