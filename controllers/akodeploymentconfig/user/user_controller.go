@@ -16,6 +16,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -35,11 +36,14 @@ type AkoUserReconciler struct {
 func NewProvider(client client.Client,
 	aviClient aviclient.Client,
 	logger logr.Logger,
-	scheme *runtime.Scheme) *AkoUserReconciler {
-	return &AkoUserReconciler{Client: client,
+	scheme *runtime.Scheme,
+) *AkoUserReconciler {
+	return &AkoUserReconciler{
+		Client:    client,
 		aviClient: aviClient,
 		Log:       logger,
-		Scheme:    scheme}
+		Scheme:    scheme,
+	}
 }
 
 // ReconcileAviUser reconcile akodeploymentconfig clusters' avi user
@@ -306,7 +310,7 @@ func (r *AkoUserReconciler) createOrUpdateAviUser(aviUsername, aviPassword, tena
 // getOrCreateAkoUserRole get ako user's role, create one if not exist
 func (r *AkoUserReconciler) getOrCreateAkoUserRole(roleTenantRef *string) (*models.Role, error) {
 	role, err := r.aviClient.RoleGetByName(akoov1alpha1.AkoUserRoleName)
-	//not found ako user role, create one
+	// not found ako user role, create one
 	if aviclient.IsAviRoleNonExistentError(err) {
 		role = &models.Role{
 			Name:       ptr.To(akoov1alpha1.AkoUserRoleName),
@@ -327,18 +331,55 @@ func (r *AkoUserReconciler) ensureAkoUserRole() (*models.Role, error) {
 	if err != nil {
 		return role, err
 	}
-	// check if role needs to be sync
-	needSync := false
-	for i, permission := range role.Privileges {
-		if AkoRolePermissionMap[*permission.Resource] != *permission.Type {
-			needSync = true
-			role.Privileges[i].Type = ptr.To(AkoRolePermissionMap[*permission.Resource])
-		}
-	}
-	if needSync {
+
+	// check if role needs to be synced
+	if syncAkoUserRole(role) {
 		return r.aviClient.RoleUpdate(role)
 	}
+
 	return role, nil
+}
+
+// syncAkoUserRole checks the Role for the complete/correct
+// set of permissions and makes any additions/updates necessary.
+// Any additional permissions on the Role that are not part of
+// the desired AKO role are left as-is. It returns a bool
+// indicating whether the Role was changed.
+func syncAkoUserRole(role *models.Role) bool {
+	existingResources := sets.New[string]()
+	updated := false
+
+	for i, permission := range role.Privileges {
+		desiredType, ok := AkoRolePermissionMap[*permission.Resource]
+		if !ok {
+			// Existing AVI role has a permission that's not part of
+			// the desired AKO role: leave it as-is.
+			continue
+		}
+
+		existingResources.Insert(*permission.Resource)
+
+		if *permission.Type != desiredType {
+			// Existing AVI role has a permission that's part of the
+			// desired AKO role, but has the wrong type: update it.
+			role.Privileges[i].Type = ptr.To(desiredType)
+			updated = true
+		}
+	}
+
+	for resource, desiredType := range AkoRolePermissionMap {
+		if !existingResources.Has(resource) {
+			// Existing AVI role is missing a permission that's
+			// part of the desired AKO role: add it.
+			role.Privileges = append(role.Privileges, &models.Permission{
+				Resource: ptr.To(resource),
+				Type:     ptr.To(desiredType),
+			})
+			updated = true
+		}
+	}
+
+	return updated
 }
 
 // mcAVISecretNameNameSpace get avi user secret name/namespace in management cluster. There is no need to
@@ -371,7 +412,6 @@ func (r *AkoUserReconciler) createAviUserSecret(name, namespace, username, passw
 				APIVersion:         akoov1alpha1.AkoDeploymentConfigVersion,
 			},
 		}
-
 	}
 	secret.Data["username"] = []byte(username)
 	secret.Data["password"] = []byte(password)
