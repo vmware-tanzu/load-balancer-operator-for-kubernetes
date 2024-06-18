@@ -26,7 +26,6 @@ import (
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako"
 	ako_operator "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/test/builder"
-	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/test/util"
 	testutil "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/test/util"
 )
 
@@ -352,7 +351,7 @@ func intgTestAkoDeploymentConfigController() {
 			err := os.Setenv(ako_operator.IsControlPlaneHAProvider, "False")
 			Expect(err).ShouldNot(HaveOccurred())
 		})
-		It("shouldn't wait AIS if controlplane and dataplane has the same CIDR", func() {
+		It("shouldn't wait for AIS if controlplane and dataplane has the same CIDR", func() {
 			akoDeploymentConfig.Spec.ControlPlaneNetwork.CIDR = akoDeploymentConfig.Spec.DataNetwork.CIDR
 			createObjects(akoDeploymentConfig, cluster, controllerCredentials, controllerCA)
 			aviInfraSettingName = akoDeploymentConfig.Name + "-ais"
@@ -369,7 +368,7 @@ func intgTestAkoDeploymentConfigController() {
 			Expect(service.Annotations[akoov1alpha1.HAAVIInfraSettingAnnotationsKey]).To(BeEmpty())
 
 		})
-		It("should wait AIS before adding annotation to service", func() {
+		It("should wait for AIS before adding annotation to service", func() {
 			createObjects(akoDeploymentConfig, cluster, controllerCredentials, controllerCA)
 			aviInfraSettingName = akoDeploymentConfig.Name + "-ais"
 			ensureRuntimeObjectMatchExpectation(client.ObjectKey{
@@ -756,7 +755,7 @@ func intgTestAkoDeploymentConfigController() {
 						}, &akoov1alpha1.AKODeploymentConfig{}, true)
 
 						ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-							Name: util.CustomADCName,
+							Name: testutil.CustomADCName,
 						}, &akoov1alpha1.AKODeploymentConfig{}, true)
 					})
 
@@ -775,7 +774,7 @@ func intgTestAkoDeploymentConfigController() {
 						ensureClusterAviLabelValueMatchExpectation(client.ObjectKey{
 							Name:      cluster.Name,
 							Namespace: cluster.Namespace,
-						}, akoov1alpha1.AviClusterLabel, util.CustomADCName, true)
+						}, akoov1alpha1.AviClusterLabel, testutil.CustomADCName, true)
 
 						By("removing cluster's label")
 						latestCluster := &clusterv1.Cluster{
@@ -814,7 +813,7 @@ func intgTestAkoDeploymentConfigController() {
 						}, &akoov1alpha1.AKODeploymentConfig{}, true)
 
 						ensureRuntimeObjectMatchExpectation(client.ObjectKey{
-							Name: util.CustomADCName,
+							Name: testutil.CustomADCName,
 						}, &akoov1alpha1.AKODeploymentConfig{}, true)
 					})
 
@@ -833,7 +832,7 @@ func intgTestAkoDeploymentConfigController() {
 						ensureClusterAviLabelValueMatchExpectation(client.ObjectKey{
 							Name:      cluster.Name,
 							Namespace: cluster.Namespace,
-						}, akoov1alpha1.AviClusterLabel, util.CustomADCName, true)
+						}, akoov1alpha1.AviClusterLabel, testutil.CustomADCName, true)
 
 						By("removing cluster's label")
 						latestCluster := &clusterv1.Cluster{

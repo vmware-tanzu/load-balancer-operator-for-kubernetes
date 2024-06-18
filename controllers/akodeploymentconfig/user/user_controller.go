@@ -8,9 +8,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
-	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
-	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/aviclient"
-	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/utils"
 	"github.com/vmware/alb-sdk/go/models"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -21,6 +18,10 @@ import (
 	"sigs.k8s.io/cluster-api/util/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/aviclient"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/utils"
 )
 
 // AkoUserReconciler reconcile avi user related resources
@@ -391,12 +392,12 @@ func (r *AkoUserReconciler) deployManagementClusterSecret(
 		Name:      obj.Spec.AdminCredentialRef.Name,
 		Namespace: obj.Spec.AdminCredentialRef.Namespace,
 	}, adminCredential); err != nil {
-		log.Error(err, "Failed to find referenced AdminCredential Secret")
+		log.Error(err, "Failed to find referenced AdminCredential Secret", "secret namespace", obj.Spec.AdminCredentialRef.Namespace, "secret name", obj.Spec.AdminCredentialRef.Name)
 		return err
 	}
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cluster.Name + "-avi-credentials",
+			Name:      utils.AVIUserSecretName(cluster),
 			Namespace: cluster.Namespace,
 		},
 		Type: akoov1alpha1.AviClusterSecretType,
@@ -408,7 +409,7 @@ func (r *AkoUserReconciler) deployManagementClusterSecret(
 	}
 	err := r.Client.Create(ctx, secret)
 	if apierrors.IsAlreadyExists(err) {
-		log.Info("avi secret already exists, update avi-secret")
+		log.Info("avi secret already exists, update avi-secret", "secret namespace", secret.Namespace, "secret name", secret.Name)
 		return r.Client.Update(ctx, secret)
 	}
 	return err

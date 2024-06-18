@@ -87,7 +87,7 @@ func (r *ClusterReconciler) ReconcileAddonSecret(
 	}
 	secret := &corev1.Secret{}
 	if err = r.Get(ctx, client.ObjectKey{
-		Name:      r.akoAddonSecretName(cluster),
+		Name:      utils.AKOAddonSecretName(cluster),
 		Namespace: cluster.Namespace,
 	}, secret); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -125,7 +125,7 @@ func (r *ClusterReconciler) ReconcileAddonSecretDelete(
 
 	secret := &corev1.Secret{}
 	if err := r.Get(ctx, client.ObjectKey{
-		Name:      r.akoAddonSecretName(cluster),
+		Name:      utils.AKOAddonSecretName(cluster),
 		Namespace: cluster.Namespace,
 	}, secret); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -153,18 +153,6 @@ func (r *ClusterReconciler) ReconcileAddonSecretDelete(
 	return res, nil
 }
 
-func (r *ClusterReconciler) aviUserSecretName(cluster *clusterv1.Cluster) string {
-	return cluster.Name + "-avi-credentials"
-}
-
-func (r *ClusterReconciler) akoAddonSecretName(cluster *clusterv1.Cluster) string {
-	return cluster.Name + "-load-balancer-and-ingress-service-addon"
-}
-
-func (r *ClusterReconciler) akoAddonSecretNameForClusterClass(cluster *clusterv1.Cluster) string {
-	return cluster.Name + "-load-balancer-and-ingress-service-data-values"
-}
-
 func (r *ClusterReconciler) createAKOAddonSecret(cluster *clusterv1.Cluster, obj *akoov1alpha1.AKODeploymentConfig, aviUsersecret *corev1.Secret) (*corev1.Secret, error) {
 	secretStringData, err := AkoAddonSecretDataYaml(cluster, obj, aviUsersecret)
 	if err != nil {
@@ -172,7 +160,7 @@ func (r *ClusterReconciler) createAKOAddonSecret(cluster *clusterv1.Cluster, obj
 	}
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.akoAddonSecretName(cluster),
+			Name:      utils.AKOAddonSecretName(cluster),
 			Namespace: cluster.Namespace,
 			Annotations: map[string]string{
 				akoov1alpha1.TKGAddonAnnotationKey: "networking/load-balancer-and-ingress-service",
@@ -223,7 +211,7 @@ func AkoAddonSecretDataYaml(cluster *clusterv1.Cluster, obj *akoov1alpha1.AKODep
 func (r *ClusterReconciler) getClusterAviUserSecret(cluster *clusterv1.Cluster, ctx context.Context) (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
 	if err := r.Get(ctx, client.ObjectKey{
-		Name:      r.aviUserSecretName(cluster),
+		Name:      utils.AVIUserSecretName(cluster),
 		Namespace: cluster.Namespace,
 	}, secret); err != nil {
 		return secret, err
@@ -264,7 +252,7 @@ func (r *ClusterReconciler) patchAkoPackageRefToClusterBootstrap(ctx context.Con
 	expectedAKOClusterBootstrapPackage := &runv1alpha3.ClusterBootstrapPackage{
 		RefName: akoPackageRefName,
 		ValuesFrom: &runv1alpha3.ValuesFrom{
-			SecretRef: r.akoAddonSecretName(cluster),
+			SecretRef: utils.AKOAddonSecretName(cluster),
 		},
 	}
 
@@ -390,7 +378,7 @@ func ValidateClusterIpFamily(cluster *clusterv1.Cluster, adc *akoov1alpha1.AKODe
 	// When enable avi as control plane ha, backend server shouldn't use secondary ip type
 	// TODO:(chenlin) Remove validation after AKO supports configurable ip pool
 	if isVIPProvider && adcIpFamily == IPv6IpFamily && clusterIpFamily == DualStackIPv4Primary {
-		return errors.New("When enabling avi as control plane HA, AKO with IP family V6 can not work together with ipv4 primary dual-stack cluster")
+		return errors.New("when enabling avi as control plane HA, AKO with IP family V6 can not work together with ipv4 primary dual-stack cluster")
 	}
 	return nil
 }
