@@ -9,39 +9,39 @@ import (
 	"net/http/pprof"
 	"os"
 
+	"github.com/spf13/pflag"
+	runv1alpha3 "github.com/vmware-tanzu/tanzu-framework/apis/run/v1alpha3"
 	akov1beta1 "github.com/vmware/load-balancer-and-ingress-services-for-kubernetes/pkg/apis/ako/v1beta1"
-	"go.uber.org/zap/zapcore"
-
-	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	cliflag "k8s.io/component-base/cli/flag"
+	"k8s.io/component-base/logs"
+	logsv1 "k8s.io/component-base/logs/api/v1"
+	"k8s.io/klog/v2"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
-
-	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/controllers"
-
-	ako_operator "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
-	runv1alpha3 "github.com/vmware-tanzu/tanzu-framework/apis/run/v1alpha3"
-	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+
+	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/controllers"
+	ako_operator "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 )
 
 var (
-	scheme   = runtime.NewScheme()
-	setupLog = log.Log
+	scheme               = runtime.NewScheme()
+	setupLog             = ctrl.Log.WithName("setup")
+	logOptions           = logs.NewOptions()
+	metricsAddr          string
+	enableLeaderElection bool
+	profilerAddress      string
 )
 
 func initLog() {
-	f := func(ecfg *zapcore.EncoderConfig) {
-		ecfg.EncodeTime = zapcore.ISO8601TimeEncoder
-	}
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true),
-		zap.ConsoleEncoder(zap.EncoderConfigOption(f))))
+	ctrl.SetLogger(klog.Background())
 }
 
 func init() {
@@ -54,14 +54,31 @@ func init() {
 	_ = runv1alpha3.AddToScheme(scheme)
 }
 
+// InitFlags initializes the flags.
+func InitFlags(fs *pflag.FlagSet) {
+	logsv1.AddFlags(logOptions, fs)
+
+	fs.StringVar(&metricsAddr, "metrics-addr", "localhost:8080", "The address the metric endpoint binds to.")
+	fs.BoolVar(&enableLeaderElection, "enable-leader-election", false, "Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
+	fs.StringVar(&profilerAddress, "profiler-addr", "", "Bind address to expose the pprof profiler")
+}
+
 func main() {
-	var metricsAddr string
-	var enableLeaderElection bool
-	var profilerAddress string
-	flag.StringVar(&metricsAddr, "metrics-addr", "localhost:8080", "The address the metric endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false, "Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
-	flag.StringVar(&profilerAddress, "profiler-addr", "", "Bind address to expose the pprof profiler")
-	flag.Parse()
+
+	InitFlags(pflag.CommandLine)
+	pflag.CommandLine.SetNormalizeFunc(cliflag.WordSepNormalizeFunc)
+	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+	// Set log level 2 as default.
+	if err := pflag.CommandLine.Set("v", "2"); err != nil {
+		setupLog.Error(err, "Failed to set default log level")
+		os.Exit(1)
+	}
+	pflag.Parse()
+
+	if err := logsv1.ValidateAndApply(logOptions, nil); err != nil {
+		setupLog.Error(err, "Unable to start manager")
+		os.Exit(1)
+	}
 
 	if profilerAddress != "" {
 		setupLog.Info(
