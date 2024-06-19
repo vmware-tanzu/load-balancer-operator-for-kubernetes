@@ -67,7 +67,7 @@ func (r *HAProvider) CreateOrUpdateHAService(ctx context.Context, cluster *clust
 		Namespace: cluster.Namespace,
 	}, service); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.log.Info(serviceName + "service doesn't exist, start creating it...")
+			r.log.Info(serviceName + " service doesn't exist, start creating it...")
 			service, err = r.createService(ctx, cluster)
 			if err != nil {
 				return err
