@@ -8,24 +8,24 @@ import (
 	"fmt"
 	"time"
 
-	"k8s.io/client-go/kubernetes/scheme"
-
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
-	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
-	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako"
-	akoo "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/scheme"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/controllers/remote"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	akoov1alpha1 "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/api/v1alpha1"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako"
+	akoo "github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/ako-operator"
+	"github.com/vmware-tanzu/load-balancer-operator-for-kubernetes/pkg/utils"
 )
 
 const (
@@ -122,7 +122,7 @@ func (r *ClusterReconciler) cleanup(
 	//   - secret is <cluster-name>-load-balancer-and-ingress-service-data-values
 	secretName := r.akoAddonDataValueName()
 	if akoo.IsClusterClassBasedCluster(obj) {
-		secretName = r.akoAddonSecretNameForClusterClass(obj)
+		secretName = utils.AKOAddonSecretNameForClusterClass(obj)
 	}
 	if err := remoteClient.Get(ctx, client.ObjectKey{
 		Name:      secretName,

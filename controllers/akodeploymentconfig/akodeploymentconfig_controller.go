@@ -182,9 +182,12 @@ func (r *AKODeploymentConfigReconciler) secretToAKODeploymentConfig(c client.Cli
 		}
 
 		var requests []ctrl.Request
+		// enqueue if credentials or certificate of akoo is updated
 		for _, akoDeploymentConfig := range akoDeploymentConfigs.Items {
 			if akoDeploymentConfig.Spec.CertificateAuthorityRef.Name == secret.Name &&
-				akoDeploymentConfig.Spec.CertificateAuthorityRef.Namespace == secret.Namespace {
+				akoDeploymentConfig.Spec.CertificateAuthorityRef.Namespace == secret.Namespace ||
+				akoDeploymentConfig.Spec.AdminCredentialRef.Name == secret.Name &&
+					akoDeploymentConfig.Spec.AdminCredentialRef.Namespace == secret.Namespace {
 				requests = append(requests, ctrl.Request{
 					NamespacedName: types.NamespacedName{
 						Namespace: akoDeploymentConfig.Namespace,
