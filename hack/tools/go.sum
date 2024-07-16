@@ -1,5 +1,5 @@
-carvel.dev/ytt v0.49.1 h1:s9Qnb+wMsSRvaT08E4U7WCumwPs2kgdlIEfJ3G1NPeo=
-carvel.dev/ytt v0.49.1/go.mod h1:8ytmTEAsjvkDfNNV3U4ex/DoumV4JqnkIgaZgxqPxNQ=
+carvel.dev/ytt v0.50.0 h1:otS2H45ya406sikV17k9FP9Xo0MOVwbHByuA+cPvc4E=
+carvel.dev/ytt v0.50.0/go.mod h1:qnB4lXG2eR1F8f9sid21DYzU8hFGFAx/7HO2pvUysHk=
 github.com/BurntSushi/toml v1.2.1 h1:9F2/+DoOYIOksmaJFPw1tGFy1eDnIJXg+UHjuD8lTak=
 github.com/BurntSushi/toml v1.2.1/go.mod h1:CxXYINrC8qIiEnFrOxCa7Jy5BFHlXnUU2pbicEuybxQ=
 github.com/alessio/shellescape v1.4.1 h1:V7yhSDDn8LP4lc4jS8pFkt0zCnzVJlG5JXy9BVKJUX0=
