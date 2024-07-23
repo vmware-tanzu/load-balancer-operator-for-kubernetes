@@ -1,12 +1,12 @@
 module gitlab.eng.vmware.com/core-build/tkg-connectivity/hack/tools
 
 go 1.22
-toolchain go1.22.4
+toolchain go1.22.5
 
 require (
 	carvel.dev/ytt v0.49.1
 	github.com/onsi/ginkgo v1.16.5
-	k8s.io/code-generator v0.30.2
+	k8s.io/code-generator v0.30.3
 	sigs.k8s.io/controller-tools v0.14.0
 	sigs.k8s.io/kind v0.23.0
 	sigs.k8s.io/kustomize/kustomize/v5 v5.4.2
@@ -66,7 +66,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/api v0.29.0 // indirect
 	k8s.io/apiextensions-apiserver v0.29.0 // indirect
-	k8s.io/apimachinery v0.30.2 // indirect
+	k8s.io/apimachinery v0.30.3 // indirect
 	k8s.io/gengo/v2 v2.0.0-20240228010128-51d4e06bde70 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 // indirect
