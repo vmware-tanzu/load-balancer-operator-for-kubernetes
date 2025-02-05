@@ -7,6 +7,8 @@ IMG ?= ako-operator:$(IMAGE_TAG)
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd"
 
+GOPROXY ?= https://goproxy.io,direct
+
 # downstream cache to avoid docker pull limitation
 CACHE_IMAGE_REGISTRY ?= harbor-repo.vmware.com/dockerhub-proxy-cache
 
@@ -78,7 +80,11 @@ generate: $(CONTROLLER_GEN)
 
 # Build the docker image
 docker-build:
-	docker build . -t ${IMG} -f Dockerfile
+	docker build . -t ${IMG} \
+		--build-arg GOPROXY=$(GOPROXY) \
+		--build-arg GOLANG_IMAGE=$(GOLANG_IMAGE) \
+		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
+		-f Dockerfile
 
 # Push the docker image
 docker-push:
