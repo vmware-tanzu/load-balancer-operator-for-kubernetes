@@ -10,7 +10,7 @@ require (
 	github.com/onsi/gomega v1.33.1
 	github.com/pkg/errors v0.9.1
 	github.com/satori/go.uuid v1.2.0
-	github.com/spf13/pflag v1.0.5
+	github.com/spf13/pflag v1.0.6
 	github.com/vmware-tanzu/tanzu-framework/apis/run v0.0.0-20221104044415-a462bbe793b9
 	github.com/vmware/alb-sdk v0.0.0-20240502042605-947bfcf176dd
 	github.com/vmware/load-balancer-and-ingress-services-for-kubernetes v0.0.0-20231012053946-537d99c1eba2
