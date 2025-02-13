@@ -1,10 +1,10 @@
 module gitlab.eng.vmware.com/core-build/tkg-connectivity/hack/tools
 
 go 1.22
-toolchain go1.22.5
+toolchain go1.23.6
 
 require (
-	carvel.dev/ytt v0.49.1
+	carvel.dev/ytt v0.51.1
 	github.com/onsi/ginkgo v1.16.5
 	k8s.io/code-generator v0.30.2
 	sigs.k8s.io/controller-tools v0.14.0
