@@ -9,6 +9,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	"github.com/vmware/alb-sdk/go/models"
+	"golang.org/x/mod/semver"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -241,7 +242,7 @@ func (r *AkoUserReconciler) reconcileAviUserNormal(
 		aviPassword := string(mcSecret.Data["password"][:])
 
 		// ensures the AVI User exists and matches the mc secret
-		if _, err = r.createOrUpdateAviUser(aviUsername, aviPassword, obj.Spec.Tenant.Name); err != nil {
+		if err = r.createOrUpdateAviUser(log, aviUsername, aviPassword, obj.Spec.Tenant.Name); err != nil {
 			log.Error(err, "Failed to create/update cluster avi user")
 			return res, err
 		} else {
@@ -263,21 +264,31 @@ func (r *AkoUserReconciler) getAVIControllerCA(ctx context.Context, obj *akoov1a
 }
 
 // createOrUpdateAviUser create an avi user in avi controller
-func (r *AkoUserReconciler) createOrUpdateAviUser(aviUsername, aviPassword, tenantName string) (*models.User, error) {
+func (r *AkoUserReconciler) createOrUpdateAviUser(log logr.Logger, aviUsername, aviPassword, tenantName string) error {
+	version, err := r.aviClient.GetControllerVersion()
+	if err != nil {
+		return err
+	}
+	// Add v prefix if not present so semver can parse it
+	if len(version) > 0 && version[0] != 'v' {
+		version = "v" + version
+	}
+
 	aviUser, err := r.aviClient.UserGetByName(aviUsername)
 	// user not found, create one
 	if aviclient.IsAviUserNonExistentError(err) {
+		log.Info("AVI User not found, creating a new user", "user", aviUsername)
 		// for avi essential version the default tenant is admin
 		if tenantName == "" {
 			tenantName = "admin"
 		}
 		tenant, err := r.aviClient.TenantGet(tenantName)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		role, err := r.getOrCreateAkoUserRole(tenant.URL)
+		role, err := r.getOrCreateAkoUserRole(log, tenant.URL, version)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		aviUser = &models.User{
 			Name:             &aviUsername,
@@ -291,50 +302,67 @@ func (r *AkoUserReconciler) createOrUpdateAviUser(aviUsername, aviPassword, tena
 				},
 			},
 		}
-		return r.aviClient.UserCreate(aviUser)
+		// since v30.0.0, there is only enterprise edition
+		if semver.Compare(version, akoov1alpha1.AVIControllerEnterpriseOnlyVersion) >= 0 {
+			aviUser.Username = &aviUsername
+		}
+		if _, err := r.aviClient.UserCreate(aviUser); err != nil {
+			return err
+		}
+		return nil
+	} else if err != nil {
+		log.Info("Failed to get AVI User", "user", aviUsername, "error", err)
+		return err
 	}
 
-	if err == nil {
-		// ensure user's role align with latest essential permission when user found
-		if _, err := r.ensureAkoUserRole(); err != nil {
-			return nil, err
-		}
-		// Update the password when user found, this is needed when the AVI user was
-		// created before the mc Secret. And this operation will sync
-		// the User's password to be the same as mc Secret's
-		aviUser.Password = &aviPassword
-		return r.aviClient.UserUpdate(aviUser)
+	// ensure user's role align with latest essential permission when user found
+	if _, err := r.ensureAkoUserRole(log, version); err != nil {
+		return err
 	}
-	return nil, err
+	// Update the password when user found, this is needed when the AVI user was
+	// created before the mc Secret. And this operation will sync
+	// the User's password to be the same as mc Secret's
+	if aviUser.Password == nil || *aviUser.Password != aviPassword {
+		log.Info("AVI User found, updating the password")
+		aviUser.Password = &aviPassword
+		if _, err := r.aviClient.UserUpdate(aviUser); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // getOrCreateAkoUserRole get ako user's role, create one if not exist
-func (r *AkoUserReconciler) getOrCreateAkoUserRole(roleTenantRef *string) (*models.Role, error) {
+func (r *AkoUserReconciler) getOrCreateAkoUserRole(log logr.Logger, roleTenantRef *string, version string) (*models.Role, error) {
+	log.Info("Ensure AKO User Role")
 	role, err := r.aviClient.RoleGetByName(akoov1alpha1.AkoUserRoleName)
 	// not found ako user role, create one
 	if aviclient.IsAviRoleNonExistentError(err) {
+		log.V(3).Info("Creating AKO User Role since it's not found", "role", akoov1alpha1.AkoUserRoleName)
+		log.Info("current avi version", "version", version)
 		role = &models.Role{
 			Name:       ptr.To(akoov1alpha1.AkoUserRoleName),
-			Privileges: AkoRolePermission,
+			Privileges: filterAkoRolePermissionByVersion(log, AkoRolePermission, version),
 			TenantRef:  roleTenantRef,
 		}
 		return r.aviClient.RoleCreate(role)
 	}
 	if err == nil {
-		return r.ensureAkoUserRole()
+		return r.ensureAkoUserRole(log, version)
 	}
 	return role, err
 }
 
 // ensureAkoUserRole ensure ako-essential-role has the latest permission
-func (r *AkoUserReconciler) ensureAkoUserRole() (*models.Role, error) {
+func (r *AkoUserReconciler) ensureAkoUserRole(log logr.Logger, version string) (*models.Role, error) {
 	role, err := r.aviClient.RoleGetByName(akoov1alpha1.AkoUserRoleName)
 	if err != nil {
 		return role, err
 	}
 
 	// check if role needs to be synced
-	if syncAkoUserRole(role) {
+	if syncAkoUserRole(role, version) {
+		log.Info("Syncing AKO User Role with expected permissions")
 		return r.aviClient.RoleUpdate(role)
 	}
 
@@ -346,15 +374,18 @@ func (r *AkoUserReconciler) ensureAkoUserRole() (*models.Role, error) {
 // Any additional permissions on the Role that are not part of
 // the desired AKO role are left as-is. It returns a bool
 // indicating whether the Role was changed.
-func syncAkoUserRole(role *models.Role) bool {
+// It also filters out permissions that are deprecated in the current AVI version.
+func syncAkoUserRole(role *models.Role, version string) bool {
 	existingResources := sets.New[string]()
 	updated := false
 
 	for i, permission := range role.Privileges {
 		desiredType, ok := AkoRolePermissionMap[*permission.Resource]
 		if !ok {
-			// Existing AVI role has a permission that's not part of
-			// the desired AKO role: leave it as-is.
+			// Existing AVI role in AVI Controller has a permission that's not part of
+			// the desired AKO role defined in AkoRolePermissionMap: leave it as-is.
+			// Since those could come from a new AVI Controller version that AKO-Operator
+			// Might not be aware of.
 			continue
 		}
 
@@ -370,6 +401,11 @@ func syncAkoUserRole(role *models.Role) bool {
 
 	for resource, desiredType := range AkoRolePermissionMap {
 		if !existingResources.Has(resource) {
+			// Filter out permissions that are deprecated in the current AVI version.
+			if deprecateVersion, ok := deprecatePermissionMap[resource]; ok && semver.Compare(version, deprecateVersion) >= 0 {
+				// Skip adding deprecated permissions to the role
+				continue
+			}
 			// Existing AVI role is missing a permission that's
 			// part of the desired AKO role: add it.
 			role.Privileges = append(role.Privileges, &models.Permission{

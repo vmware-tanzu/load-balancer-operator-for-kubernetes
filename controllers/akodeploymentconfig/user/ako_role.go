@@ -4,7 +4,9 @@
 package user
 
 import (
+	"github.com/go-logr/logr"
 	"github.com/vmware/alb-sdk/go/models"
+	"golang.org/x/mod/semver"
 	"k8s.io/utils/ptr"
 )
 
@@ -319,4 +321,23 @@ var AkoRolePermission = []*models.Permission{
 		Type:     ptr.To("WRITE_ACCESS"),
 		Resource: ptr.To("PERMISSION_L4POLICYSET"),
 	},
+}
+
+var deprecatePermissionMap = map[string]string{
+	"PERMISSION_PINGACCESSAGENT": "v30.2.1",
+}
+
+func filterAkoRolePermissionByVersion(log logr.Logger, permissions []*models.Permission, version string) []*models.Permission {
+	filtered := []*models.Permission{}
+	for _, permission := range permissions {
+		if v, ok := deprecatePermissionMap[*permission.Resource]; ok && semver.Compare(version, v) >= 0 {
+			log.Info("Skip deprecated permission", "permission", *permission.Resource)
+			// Skip deprecated permission
+			continue
+		}
+
+		filtered = append(filtered, permission)
+
+	}
+	return filtered
 }
