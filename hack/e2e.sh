@@ -128,13 +128,6 @@ function fatal() { error "${@}" || exit "${?}"; }
 # safe for linux and darwin
 function base64d() { base64 -D 2>/dev/null || base64 -d; }
 
-# safe for linux and darwin
-function base64e() { base64 -w0 2>/dev/null || base64; }
-
-function md5safe() { md5sum 2>/dev/null || md5; }
-
-# base64e encodes STDIN to base64
-
 # kubectl_mgc executes kubectl against management cluster.
 function kubectl_mgc() { kubectl --context "kind-${KIND_MANAGEMENT_CLUSTER}" "${@}"; }
 
