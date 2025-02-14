@@ -16,11 +16,11 @@ require (
 	github.com/vmware/load-balancer-and-ingress-services-for-kubernetes v0.0.0-20231012053946-537d99c1eba2
 	golang.org/x/mod v0.14.0
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/api v0.29.6
-	k8s.io/apiextensions-apiserver v0.29.6
-	k8s.io/apimachinery v0.29.6
-	k8s.io/client-go v0.29.6
-	k8s.io/component-base v0.29.6
+	k8s.io/api v0.29.14
+	k8s.io/apiextensions-apiserver v0.29.14
+	k8s.io/apimachinery v0.29.14
+	k8s.io/client-go v0.29.14
+	k8s.io/component-base v0.29.14
 	k8s.io/klog/v2 v2.110.1
 	k8s.io/utils v0.0.0-20231127182322-b307cd553661
 	sigs.k8s.io/cluster-api v1.7.3
