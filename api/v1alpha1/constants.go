@@ -55,4 +55,6 @@ const (
 	HAAVIInfraSettingAnnotationsKey    = "aviinfrasetting.ako.vmware.com/name"
 
 	AKODeploymentConfigControllerName = "akodeploymentconfig-controller"
+
+	AVIControllerEnterpriseOnlyVersion = "v30.0.0"
 )

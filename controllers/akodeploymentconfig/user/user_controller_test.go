@@ -139,7 +139,7 @@ func SyncAkoUserRoleTest() {
 	Specify("role has no permissions", func() {
 		role := &models.Role{}
 
-		updated := syncAkoUserRole(role)
+		updated := syncAkoUserRole(role, "v20.0.0")
 		Expect(updated).To(BeTrue())
 		Expect(role.Privileges).To(HaveLen(len(AkoRolePermission)))
 		Expect(role.Privileges).To(ContainElements(AkoRolePermission))
@@ -159,7 +159,7 @@ func SyncAkoUserRoleTest() {
 			}
 		}
 
-		updated := syncAkoUserRole(role)
+		updated := syncAkoUserRole(role, "v20.0.0")
 		Expect(updated).To(BeTrue())
 		Expect(role.Privileges).To(HaveLen(len(AkoRolePermission)))
 		Expect(role.Privileges).To(ContainElements(AkoRolePermission))
@@ -179,7 +179,7 @@ func SyncAkoUserRoleTest() {
 			})
 		}
 
-		updated := syncAkoUserRole(role)
+		updated := syncAkoUserRole(role, "v20.0.0")
 		Expect(updated).To(BeTrue())
 		Expect(role.Privileges).To(HaveLen(len(AkoRolePermission)))
 		Expect(role.Privileges).To(ContainElements(AkoRolePermission))
@@ -208,7 +208,7 @@ func SyncAkoUserRoleTest() {
 			role.Privileges[i], role.Privileges[j] = role.Privileges[j], role.Privileges[i]
 		})
 
-		updated := syncAkoUserRole(role)
+		updated := syncAkoUserRole(role, "v20.0.0")
 		Expect(updated).To(BeFalse())
 		Expect(role.Privileges).To(HaveLen(len(AkoRolePermission) + len(additionalPrivileges)))
 		Expect(role.Privileges).To(ContainElements(AkoRolePermission))
@@ -246,10 +246,27 @@ func SyncAkoUserRoleTest() {
 			role.Privileges[i], role.Privileges[j] = role.Privileges[j], role.Privileges[i]
 		})
 
-		updated := syncAkoUserRole(role)
+		updated := syncAkoUserRole(role, "v20.0.0")
 		Expect(updated).To(BeTrue())
 		Expect(role.Privileges).To(HaveLen(len(AkoRolePermission) + len(additionalPrivileges)))
 		Expect(role.Privileges).To(ContainElements(AkoRolePermission))
 		Expect(role.Privileges).To(ContainElements(additionalPrivileges))
+	})
+
+	Specify("AVI Controller is higher than 30.2.1", func() {
+		role := &models.Role{}
+
+		updated := syncAkoUserRole(role, "v30.2.1")
+		newPermissions := []*models.Permission{}
+		for _, permission := range AkoRolePermission {
+			if *permission.Resource == "PERMISSION_PINGACCESSAGENT" {
+				continue
+			}
+			newPermissions = append(newPermissions, permission)
+
+		}
+		Expect(updated).To(BeTrue())
+		Expect(role.Privileges).To(HaveLen(len(AkoRolePermission) - 1))
+		Expect(role.Privileges).To(ContainElements(newPermissions))
 	})
 }
