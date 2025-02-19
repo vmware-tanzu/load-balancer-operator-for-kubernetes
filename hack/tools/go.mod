@@ -1,7 +1,6 @@
 module gitlab.eng.vmware.com/core-build/tkg-connectivity/hack/tools
 
-go 1.22
-toolchain go1.23.6
+go 1.23.1
 
 require (
 	carvel.dev/ytt v0.51.1
