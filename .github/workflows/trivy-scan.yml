@@ -33,6 +33,6 @@ jobs:
         output: 'trivy-results.sarif'
         ignore-unfixed: true
         severity: 'HIGH,CRITICAL'
-    - uses: github/codeql-action/upload-sarif@b611370bb5703a7efb587f9d136a52ea24c5c38c # v3.25.11
+    - uses: github/codeql-action/upload-sarif@b56ba49b26e50535fa1e7f7db0f4f7b4bf65d80d # v3.28.10
       with:
         sarif_file: 'trivy-results.sarif'
