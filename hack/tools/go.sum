@@ -1,7 +1,7 @@
 al.essio.dev/pkg/shellescape v1.5.1 h1:86HrALUujYS/h+GtqoB26SBEdkWfmMI6FubjXlsXyho=
 al.essio.dev/pkg/shellescape v1.5.1/go.mod h1:6sIqp7X2P6mThCQ7twERpZTuigpr6KbZWtls1U8I890=
-carvel.dev/ytt v0.51.1 h1:XWM+9tA+rJnhSel3dJf1jgrCES2wHw68cclkQhZcNRM=
-carvel.dev/ytt v0.51.1/go.mod h1:bvN7TWCAHhpPgdulWTQ+gi80aR6TOZ1PJPOEHcKtvQY=
+carvel.dev/ytt v0.51.2 h1:g4zjw99F6drrqJNElm5XC1Wo1B/EBAAf4A/AVTfqbwg=
+carvel.dev/ytt v0.51.2/go.mod h1:niVHGIX/6R4qy5e9U5s19qUbwNGBTStaExwCVUPSGdo=
 github.com/BurntSushi/toml v1.4.0 h1:kuoIxZQy2WRRk1pttg9asf+WVv6tWQuBNVmK8+nqPr0=
 github.com/BurntSushi/toml v1.4.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
 github.com/blang/semver/v4 v4.0.0 h1:1PFHFE6yCCTv8C1TeyNNarDzntLi7wMI5i/pzqYIsAM=
