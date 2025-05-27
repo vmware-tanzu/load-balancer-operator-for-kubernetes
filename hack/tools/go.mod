@@ -1,6 +1,7 @@
 module gitlab.eng.vmware.com/core-build/tkg-connectivity/hack/tools
 
-go 1.23.1
+go 1.23.3
+
 toolchain go1.23.6
 
 require (
@@ -8,7 +9,7 @@ require (
 	github.com/onsi/ginkgo v1.16.5
 	k8s.io/code-generator v0.32.2
 	sigs.k8s.io/controller-tools v0.17.2
-	sigs.k8s.io/kind v0.27.0
+	sigs.k8s.io/kind v0.29.0
 	sigs.k8s.io/kustomize/kustomize/v5 v5.6.0
 )
 
@@ -34,7 +35,6 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/gnostic-models v0.6.9 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/safetext v0.0.0-20220905092116-b49f7bc46da2 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/hashicorp/go-version v1.6.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
