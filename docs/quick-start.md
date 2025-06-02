@@ -229,4 +229,4 @@ curl -s http://127.0.0.1:8081/debug/pprof/trace > ./cpu-trace.out
 go tool trace -http=:8080 ./cpu-trace.out
 ```
 
-To get more data, please read [link](https://jvns.ca/blog/2017/09/24/profiling-go-with-pprof/)
+To get more data, please read [Profiling Go programs with pprof](https://jvns.ca/blog/2017/09/24/profiling-go-with-pprof/)
